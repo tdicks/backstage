@@ -7,3 +7,128 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+[x-cloak] {
+    display: none !important;
+}
+
+.session-markdown {
+    color: rgb(31 41 55);
+    line-height: 1.75;
+}
+
+.session-markdown > :first-child {
+    margin-top: 0;
+}
+
+.session-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.session-markdown h1,
+.session-markdown h2,
+.session-markdown h3,
+.session-markdown h4,
+.session-markdown h5,
+.session-markdown h6 {
+    color: rgb(17 24 39);
+    font-weight: 700;
+    line-height: 1.25;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.session-markdown h1 {
+    font-size: 1.875rem;
+}
+
+.session-markdown h2 {
+    font-size: 1.5rem;
+}
+
+.session-markdown h3 {
+    font-size: 1.25rem;
+}
+
+.session-markdown p,
+.session-markdown ul,
+.session-markdown ol,
+.session-markdown blockquote,
+.session-markdown pre,
+.session-markdown table {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.session-markdown ul,
+.session-markdown ol {
+    padding-left: 1.5rem;
+}
+
+.session-markdown ul {
+    list-style-type: disc;
+}
+
+.session-markdown ol {
+    list-style-type: decimal;
+}
+
+.session-markdown li + li {
+    margin-top: 0.25rem;
+}
+
+.session-markdown a {
+    color: rgb(79 70 229);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.session-markdown blockquote {
+    border-left: 4px solid rgb(209 213 219);
+    padding-left: 1rem;
+    color: rgb(75 85 99);
+    font-style: italic;
+}
+
+.session-markdown code {
+    border-radius: 0.375rem;
+    background-color: rgb(243 244 246);
+    padding: 0.125rem 0.375rem;
+    font-size: 0.875em;
+}
+
+.session-markdown pre {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    background-color: rgb(17 24 39);
+    padding: 1rem;
+    color: rgb(243 244 246);
+}
+
+.session-markdown pre code {
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.session-markdown hr {
+    margin: 1.5rem 0;
+    border-color: rgb(229 231 235);
+}
+
+.session-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.session-markdown th,
+.session-markdown td {
+    border: 1px solid rgb(229 231 235);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.session-markdown th {
+    background-color: rgb(249 250 251);
+    font-weight: 600;
+}

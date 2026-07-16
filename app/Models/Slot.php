@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Model;
+
+class Slot extends Model
+{
+    public const NAMES = [
+        'vocals',
+        'lead_guitar',
+        'rhythm_guitar',
+        'bass',
+        'drums',
+        'other',
+    ];
+
+    protected $fillable = [
+        'song_id',
+        'name',
+        'user_id',
+    ];
+
+    public static function options(): array
+    {
+        return collect(self::NAMES)
+            ->mapWithKeys(fn (string $value) => [$value => str($value)->replace('_', ' ')->title()->toString()])
+            ->all();
+    }
+
+    public function song(): BelongsTo
+    {
+        return $this->belongsTo(Song::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(SlotAssignment::class);
+    }
+}
