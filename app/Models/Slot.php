@@ -21,7 +21,15 @@ class Slot extends Model
         'song_id',
         'name',
         'user_id',
+        'position',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'position' => 'integer',
+        ];
+    }
 
     public static function options(): array
     {
@@ -43,5 +51,10 @@ class Slot extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(SlotAssignment::class);
+    }
+
+    public function isOpen(): bool
+    {
+        return $this->user_id === null;
     }
 }

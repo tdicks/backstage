@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('My Signups') }}
+            {{ __('My Sets') }}
         </h2>
     </x-slot>
 
@@ -9,29 +9,33 @@
         <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
             <div class="rounded-lg bg-white p-6 shadow-sm">
                 <p class="text-gray-700">
-                    These are the sets where you have a confirmed slot assignment.
+                    These are the sets you currently own and any pending slot approvals for them.
                 </p>
             </div>
 
             <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold text-gray-900">Slot proposals for you</h3>
-                    <span class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                        {{ $slotProposals->count() }} pending
+                    <h3 class="text-lg font-semibold text-gray-900">Pending slot approvals</h3>
+                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                        {{ $pendingSlotApprovals->count() }} pending
                     </span>
                 </div>
 
-                @if ($slotProposals->isEmpty())
-                    <p class="mt-3 text-sm text-gray-500">No pending slot proposals right now.</p>
+                @if ($pendingSlotApprovals->isEmpty())
+                    <p class="mt-3 text-sm text-gray-500">No pending slot approvals right now.</p>
                 @else
                     <div class="mt-4 space-y-3">
-                        @foreach ($slotProposals as $proposal)
+                        @foreach ($pendingSlotApprovals as $approval)
                             @php
-                                $set = $proposal->slot->song->set;
+                                $set = $approval->slot->song->set;
                                 $session = $set->session;
+                                $slotLabel = ucfirst(str_replace('_', ' ', $approval->slot->name));
+                                $targetName = $approval->target->name;
+                                $actorName = $approval->actor->name;
                             @endphp
+
                             <article
-                                class="rounded-md border border-indigo-100 bg-indigo-50/50 p-4"
+                                class="rounded-md border border-amber-100 bg-amber-50/50 p-4"
                                 x-data="{
                                     hidden: false,
                                     busy: false,
@@ -41,7 +45,7 @@
                                         this.error = '';
 
                                         try {
-                                            const response = await fetch('{{ route('slot-assignments.respond', $proposal) }}', {
+                                            const response = await fetch('{{ route('slot-assignments.respond', $approval) }}', {
                                                 method: 'POST',
                                                 headers: {
                                                     'Content-Type': 'application/json',
@@ -61,7 +65,7 @@
 
                                             this.hidden = true;
                                         } catch (e) {
-                                            this.error = 'Could not update proposal. Try again.';
+                                            this.error = 'Could not update approval. Try again.';
                                         } finally {
                                             this.busy = false;
                                         }
@@ -73,23 +77,29 @@
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <p class="font-semibold text-gray-900">
-                                            {{ $proposal->slot->song->artist }} - {{ $proposal->slot->song->title }}
+                                            {{ $approval->slot->song->artist }} - {{ $approval->slot->song->title }}
                                         </p>
                                         <p class="text-sm text-gray-700">
                                             {{ $session->name }} · {{ $session->date->format('D, M j, Y') }} · {{ $set->name }}
                                         </p>
-                                        <p class="mt-1 text-sm text-gray-700">
-                                            Slot: {{ ucfirst(str_replace('_', ' ', $proposal->slot->name)) }} · Proposed by {{ $proposal->actor->name }}
-                                        </p>
-                                        @if ($proposal->message)
-                                            <p class="mt-2 text-sm text-gray-600">{{ $proposal->message }}</p>
+                                        <p class="mt-1 text-sm text-gray-700">Slot: {{ $slotLabel }}</p>
+
+                                        @if ($approval->type === \App\Models\SlotAssignment::TYPE_REQUEST)
+                                            <p class="mt-1 text-sm text-gray-700">{{ $actorName }} requested this slot.</p>
+                                        @else
+                                            <p class="mt-1 text-sm text-gray-700">{{ $actorName }} recommended {{ $targetName }} for this slot.</p>
                                         @endif
+
+                                        @if ($approval->message)
+                                            <p class="mt-2 text-sm text-gray-600">{{ $approval->message }}</p>
+                                        @endif
+
                                         <p x-show="error" x-text="error" class="mt-2 text-sm text-red-700"></p>
                                     </div>
 
                                     <div class="flex gap-2">
-                                        <x-primary-button type="button" @click="respond('accepted')" x-bind:disabled="busy">Accept</x-primary-button>
-                                        <x-secondary-button type="button" @click="respond('rejected')" x-bind:disabled="busy">Decline</x-secondary-button>
+                                        <x-primary-button type="button" @click="respond('accepted')" x-bind:disabled="busy">Approve</x-primary-button>
+                                        <x-secondary-button type="button" @click="respond('rejected')" x-bind:disabled="busy">Reject</x-secondary-button>
                                     </div>
                                 </div>
                             </article>
@@ -98,9 +108,8 @@
                 @endif
             </section>
 
-            @forelse ($signedUpSets as $group)
+            @forelse ($ownedSets as $set)
                 @php
-                    $set = $group['set'];
                     $isPerformed = $set->performed;
                     $cardClasses = $isPerformed
                         ? 'border-gray-200 bg-gray-100 text-gray-500'
@@ -132,28 +141,30 @@
                     </div>
 
                     <div class="mt-5 space-y-4">
-                        @foreach ($group['songs'] as $songGroup)
-                            @php
-                                $song = $songGroup['song'];
-                            @endphp
-
+                        @forelse ($set->songs as $song)
                             <article class="rounded-md border border-gray-200 bg-white/60 p-4">
                                 <h4 class="font-semibold text-gray-900">{{ $song->artist }} - {{ $song->title }}</h4>
+                                @if ($song->notes)
+                                    <p class="mt-1 text-sm text-gray-600">{{ $song->notes }}</p>
+                                @endif
                                 <div class="mt-3 flex flex-wrap gap-2">
-                                    @foreach ($songGroup['slots'] as $slot)
+                                    @foreach ($song->slots as $slot)
                                         <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-medium text-white">
-                                            <span class="uppercase tracking-wide text-white/70">Slot</span>
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
+                                            <span class="text-white/70">-</span>
+                                            <span>{{ $slot->user?->name ?? 'Open' }}</span>
                                         </div>
                                     @endforeach
                                 </div>
                             </article>
-                        @endforeach
+                        @empty
+                            <p class="text-sm text-gray-500">No songs in this set yet.</p>
+                        @endforelse
                     </div>
                 </section>
             @empty
                 <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
-                    You have not signed up for any slots yet.
+                    You do not own any sets yet.
                 </div>
             @endforelse
         </div>

@@ -13,13 +13,17 @@ class Set extends Model
         'description',
         'owner_id',
         'jam_session_id',
+        'position',
         'performed',
+        'signups_open',
     ];
 
     protected function casts(): array
     {
         return [
+            'position' => 'integer',
             'performed' => 'boolean',
+            'signups_open' => 'boolean',
         ];
     }
 
@@ -35,7 +39,9 @@ class Set extends Model
 
     public function songs(): HasMany
     {
-        return $this->hasMany(Song::class);
+        return $this->hasMany(Song::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 
     public function songRequests(): HasMany

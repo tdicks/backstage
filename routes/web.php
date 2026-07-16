@@ -4,18 +4,22 @@ use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JamSessionController;
+use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetController;
 use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\SlotAssignmentController;
 use App\Http\Controllers\SlotController;
 use App\Http\Controllers\SongController;
+use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/sessions');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
+    Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserAdministrationController::class, 'index'])->name('users.index');
@@ -33,10 +37,13 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');
     Route::patch('/sets/{set}', [SetController::class, 'update'])->name('sets.update');
+    Route::patch('/sets/{set}/close-signups', [SetController::class, 'closeSignups'])->name('sets.close-signups');
+    Route::patch('/sets/{set}/open-signups', [SetController::class, 'openSignups'])->name('sets.open-signups');
     Route::delete('/sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
     Route::post('/sets/{set}/song-requests', [SongRequestController::class, 'store'])->name('song-requests.store');
 
     Route::post('/sets/{set}/songs', [SongController::class, 'store'])->name('songs.store');
+    Route::patch('/sets/{set}/songs/reorder', [SongController::class, 'reorder'])->name('songs.reorder');
     Route::patch('/songs/{song}', [SongController::class, 'update'])->name('songs.update');
     Route::delete('/songs/{song}', [SongController::class, 'destroy'])->name('songs.destroy');
 
@@ -44,6 +51,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/songs/{song}/slots', [SlotController::class, 'store'])->name('slots.store');
     Route::post('/slots/{slot}/take', [SlotController::class, 'take'])->name('slots.take');
+    Route::post('/slots/{slot}/release', [SlotController::class, 'release'])->name('slots.release');
     Route::patch('/slots/{slot}', [SlotController::class, 'update'])->name('slots.update');
     Route::delete('/slots/{slot}', [SlotController::class, 'destroy'])->name('slots.destroy');
 

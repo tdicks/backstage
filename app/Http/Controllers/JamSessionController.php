@@ -59,6 +59,7 @@ class JamSessionController extends Controller
 
         return view('sessions.show', [
             'session' => $jamSession,
+            'sessions' => JamSession::query()->orderByDesc('date')->get(['id', 'name', 'date']),
             'slotOptions' => Slot::options(),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()->orderBy('name')->get(),

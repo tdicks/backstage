@@ -12,6 +12,11 @@ class SlotAssignmentController extends Controller
     public function request(Request $request, Slot $slot): RedirectResponse
     {
         $user = $request->user();
+        $slot->load('song.set');
+
+        if (! $slot->song->set->signups_open) {
+            return back()->with('status', 'Sign ups are closed for this set.');
+        }
 
         if ($slot->user_id === $user->id) {
             return back()->with('status', 'You already have this slot.');
@@ -31,6 +36,11 @@ class SlotAssignmentController extends Controller
     public function propose(Request $request, Slot $slot): RedirectResponse
     {
         $actor = $request->user();
+        $slot->load('song.set');
+
+        if (! $slot->song->set->signups_open) {
+            return back()->with('status', 'Sign ups are closed for this set.');
+        }
 
         $validated = $request->validate([
             'target_user_id' => ['required', 'integer', 'exists:users,id'],
@@ -68,7 +78,10 @@ class SlotAssignmentController extends Controller
         }
 
         if ($slotAssignment->type === SlotAssignment::TYPE_PROPOSAL) {
-            $canRespond = $canRespond || $slotAssignment->target_user_id === $user->id || $slotAssignment->actor_user_id === $user->id;
+            $canRespond = $canRespond
+                || $slotAssignment->target_user_id === $user->id
+                || $slotAssignment->actor_user_id === $user->id
+                || $slotAssignment->slot->song->set->owner_id === $user->id;
         }
 
         if (! $canRespond) {

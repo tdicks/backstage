@@ -61,21 +61,28 @@ class SongRequestController extends Controller
             ];
 
             if ($validated['status'] === SongRequest::STATUS_ACCEPTED) {
+                $nextSongPosition = ((int) Song::query()
+                    ->where('set_id', $songRequest->set_id)
+                    ->max('position')) + 1;
+
                 $song = Song::create([
                     'set_id' => $songRequest->set_id,
                     'artist' => $songRequest->artist,
                     'title' => $songRequest->title,
                     'notes' => $songRequest->notes,
+                    'position' => $nextSongPosition,
                 ]);
 
                 $templateId = $validated['band_template_id'] ?? $songRequest->band_template_id;
 
                 if ($templateId) {
                     $template = BandTemplate::query()->with('slots')->findOrFail($templateId);
+                    $nextSlotPosition = ((int) $song->slots()->max('position')) + 1;
 
                     foreach ($template->slots as $templateSlot) {
                         $song->slots()->create([
                             'name' => $templateSlot->name,
+                            'position' => $nextSlotPosition++,
                         ]);
                     }
                 }

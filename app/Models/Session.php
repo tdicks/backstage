@@ -24,6 +24,8 @@ class Session extends Model
 
     public function sets(): HasMany
     {
-        return $this->hasMany(Set::class);
+        return $this->hasMany(Set::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 }

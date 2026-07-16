@@ -13,7 +13,15 @@ class Song extends Model
         'title',
         'notes',
         'set_id',
+        'position',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'position' => 'integer',
+        ];
+    }
 
     public function set(): BelongsTo
     {
@@ -22,6 +30,8 @@ class Song extends Model
 
     public function slots(): HasMany
     {
-        return $this->hasMany(Slot::class);
+        return $this->hasMany(Slot::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 }
