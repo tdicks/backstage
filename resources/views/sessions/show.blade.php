@@ -87,7 +87,7 @@
             @refresh-session-sets.window="refresh()"
         >
             @if ($session->description)
-                <div class="session-markdown rounded-lg bg-white p-6 shadow-sm">
+                <div class="session-markdown rounded-lg bg-slate-50 p-6 shadow-sm">
                     {!! Illuminate\Support\Str::markdown($session->description) !!}
                 </div>
             @endif

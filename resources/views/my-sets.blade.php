@@ -7,24 +7,28 @@
 
     <div class="py-12">
         <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-            <div class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
-                <p class="text-slate-700">
+            <div class="rounded-lg bg-white p-6 shadow-sm">
+                <p class="text-gray-700">
                     These are the sets you currently own and any pending slot approvals for them.
                 </p>
             </div>
 
-            <section class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
+            <section
+                class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+                x-data="{ pendingCount: {{ $pendingSlotApprovals->count() }} }"
+                @pending-approval-processed.window="pendingCount = Math.max(0, pendingCount - 1)"
+            >
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold text-slate-900">Pending slot approvals</h3>
-                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                    <h3 class="text-lg font-semibold text-gray-900">Pending slot approvals</h3>
+                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800" x-text="`${pendingCount} pending`">
                         {{ $pendingSlotApprovals->count() }} pending
                     </span>
                 </div>
 
                 @if ($pendingSlotApprovals->isEmpty())
-                    <p class="mt-3 text-sm text-slate-500">No pending slot approvals right now.</p>
+                    <p class="mt-3 text-sm text-gray-500">No pending slot approvals right now.</p>
                 @else
-                    <div class="mt-4 space-y-3">
+                    <div class="mt-4 space-y-3" x-show="pendingCount > 0">
                         @foreach ($pendingSlotApprovals as $approval)
                             @php
                                 $set = $approval->slot->song->set;
@@ -35,7 +39,7 @@
                             @endphp
 
                             <article
-                                class="rounded-lg border border-amber-100 bg-gradient-to-r from-amber-50/80 to-slate-50 p-4 shadow-sm"
+                                class="rounded-md border border-amber-100 bg-amber-50/50 p-4"
                                 x-data="{
                                     hidden: false,
                                     busy: false,
@@ -64,6 +68,7 @@
                                             }
 
                                             this.hidden = true;
+                                            window.dispatchEvent(new CustomEvent('pending-approval-processed'));
                                         } catch (e) {
                                             this.error = 'Could not update approval. Try again.';
                                         } finally {
@@ -76,22 +81,22 @@
                             >
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <p class="font-semibold text-slate-900">
+                                        <p class="font-semibold text-gray-900">
                                             {{ $approval->slot->song->artist }} - {{ $approval->slot->song->title }}
                                         </p>
-                                        <p class="text-sm text-slate-700">
+                                        <p class="text-sm text-gray-700">
                                             {{ $session->name }} · {{ $session->date->format('D, M j, Y') }} · {{ $set->name }}
                                         </p>
-                                        <p class="mt-1 text-sm text-slate-700">Slot: {{ $slotLabel }}</p>
+                                        <p class="mt-1 text-sm text-gray-700">Slot: {{ $slotLabel }}</p>
 
                                         @if ($approval->type === \App\Models\SlotAssignment::TYPE_REQUEST)
-                                            <p class="mt-1 text-sm text-slate-700">{{ $actorName }} requested this slot.</p>
+                                            <p class="mt-1 text-sm text-gray-700">{{ $actorName }} requested this slot.</p>
                                         @else
-                                            <p class="mt-1 text-sm text-slate-700">{{ $actorName }} recommended {{ $targetName }} for this slot.</p>
+                                            <p class="mt-1 text-sm text-gray-700">{{ $actorName }} recommended {{ $targetName }} for this slot.</p>
                                         @endif
 
                                         @if ($approval->message)
-                                            <p class="mt-2 text-sm text-slate-600">{{ $approval->message }}</p>
+                                            <p class="mt-2 text-sm text-gray-600">{{ $approval->message }}</p>
                                         @endif
 
                                         <p x-show="error" x-text="error" class="mt-2 text-sm text-red-700"></p>
@@ -105,6 +110,7 @@
                             </article>
                         @endforeach
                     </div>
+                    <p class="mt-3 text-sm text-gray-500" x-show="pendingCount === 0" x-cloak>No pending slot approvals right now.</p>
                 @endif
             </section>
 
@@ -142,28 +148,28 @@
 
                     <div class="mt-5 space-y-4">
                         @forelse ($set->songs as $song)
-                            <article class="rounded-md border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-                                <h4 class="font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h4>
+                            <article class="rounded-md border border-gray-200 bg-white/60 p-4">
+                                <h4 class="font-semibold text-gray-900">{{ $song->artist }} - {{ $song->title }}</h4>
                                 @if ($song->notes)
-                                    <p class="mt-1 text-sm text-slate-600">{{ $song->notes }}</p>
+                                    <p class="mt-1 text-sm text-gray-600">{{ $song->notes }}</p>
                                 @endif
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($song->slots as $slot)
-                                        <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-medium text-white">
+                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slot->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800' }}">
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
-                                            <span class="text-white/70">-</span>
+                                            <span>-</span>
                                             <span>{{ $slot->user?->name ?? 'Open' }}</span>
                                         </div>
                                     @endforeach
                                 </div>
                             </article>
                         @empty
-                            <p class="text-sm text-slate-500">No songs in this set yet.</p>
+                            <p class="text-sm text-gray-500">No songs in this set yet.</p>
                         @endforelse
                     </div>
                 </section>
             @empty
-                <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50/95 p-8 text-center text-slate-500">
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
                     You do not own any sets yet.
                 </div>
             @endforelse

@@ -22,7 +22,7 @@ class JamSessionController extends Controller
         'Showing Richard Ottaway to the Thin Lizzy vinyls...',
         'Showing Ethan Bishop to the blackgaze room...',
         "Setting Tom Potter's time machine to 1982...",
-        'Checking if the fog machine is set to maximum drama...',
+        'Setting the fog machine to maximum drama...',
         'Arguing about whether this riff is in drop D...',
         'Waking the drummer from a 17-minute solo dream...',
         'Polishing the leather jackets for stage readiness...',

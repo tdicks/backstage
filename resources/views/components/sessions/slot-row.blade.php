@@ -210,10 +210,27 @@
 >
     <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
     <td class="px-3 py-3">
-        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slotModel->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800' }}" x-text="assignedUserName">{{ $slotModel->user?->name ?? 'Open' }}</span>
+        <span
+            class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm"
+            x-bind:class="slotIsOpen ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800'"
+            x-text="assignedUserName"
+        >{{ $slotModel->user?->name ?? 'Open' }}</span>
     </td>
     <td class="px-3 py-3">
         <div class="flex flex-wrap gap-2">
+            @if ($canManageSet)
+                <button
+                    type="button"
+                    @click="openEditSlot = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-rose-600 hover:text-rose-700 focus:ring-rose-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
+                    aria-label="Edit Slot"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit Slot' : 'Edit Slot' }}"
+                >
+                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Edit Slot</span>
+                </button>
+            @endif
+
             @if ($slotModel->user_id === auth()->id())
                 <button
                     type="button"
@@ -230,13 +247,18 @@
             @endif
 
             @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())
-                <x-secondary-button
+                <button
                     type="button"
-                    class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-show="slotIsOpen && !assignedToCurrentUser"
                     @click="takeSlot()"
                     x-bind:disabled="busyAction"
-                >Take Slot</x-secondary-button>
+                    aria-label="Take slot"
+                    title="Take this slot as set owner"
+                >
+                    <x-heroicon-m-arrow-down-on-square class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Take Slot</span>
+                </button>
             @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
                 <button
                     type="button"
@@ -264,19 +286,6 @@
                 >
                     <x-heroicon-m-user-plus class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Recommend</span>
-                </button>
-            @endif
-
-            @if ($canManageSet)
-                <button
-                    type="button"
-                    @click="openEditSlot = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    aria-label="Edit Slot"
-                    title="Edit Slot"
-                >
-                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Edit Slot</span>
                 </button>
             @endif
         </div>
