@@ -4,22 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\SlotAssignment;
 use App\Models\Slot;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class SlotAssignmentController extends Controller
 {
-    public function request(Request $request, Slot $slot): RedirectResponse
+    public function request(Request $request, Slot $slot): JsonResponse|RedirectResponse
     {
         $user = $request->user();
         $slot->load('song.set');
 
         if (! $slot->song->set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
-        }
-
-        if (! $slot->isOpen()) {
-            return back()->with('status', 'This slot is already assigned.');
         }
 
         if ($slot->user_id === $user->id) {
@@ -34,20 +31,22 @@ class SlotAssignmentController extends Controller
             'message' => $request->string('message')->toString() ?: null,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Request submitted to set owner.',
+            ], 201);
+        }
+
         return back()->with('status', 'Request submitted to set owner.');
     }
 
-    public function propose(Request $request, Slot $slot): RedirectResponse
+    public function propose(Request $request, Slot $slot): JsonResponse|RedirectResponse
     {
         $actor = $request->user();
         $slot->load('song.set');
 
         if (! $slot->song->set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
-        }
-
-        if (! $slot->isOpen()) {
-            return back()->with('status', 'This slot is already assigned.');
         }
 
         $validated = $request->validate([
@@ -63,10 +62,16 @@ class SlotAssignmentController extends Controller
             'message' => $validated['message'] ?? null,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Proposal sent.',
+            ], 201);
+        }
+
         return back()->with('status', 'Proposal sent.');
     }
 
-    public function respond(Request $request, SlotAssignment $slotAssignment): RedirectResponse
+    public function respond(Request $request, SlotAssignment $slotAssignment): JsonResponse|RedirectResponse
     {
         if ($slotAssignment->status !== SlotAssignment::STATUS_PENDING) {
             return back()->with('status', 'This assignment has already been processed.');
@@ -104,7 +109,22 @@ class SlotAssignmentController extends Controller
         if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
             $slotAssignment->slot->update([
                 'user_id' => $slotAssignment->target_user_id,
-                'guest_name' => null,
+            ]);
+        }
+
+        if ($request->expectsJson()) {
+            $slotAssignment->slot->load('user');
+
+            return response()->json([
+                'message' => 'Assignment response recorded.',
+                'slot' => [
+                    'id' => $slotAssignment->slot->id,
+                    'name' => $slotAssignment->slot->name,
+                    'label' => Slot::options()[$slotAssignment->slot->name] ?? $slotAssignment->slot->name,
+                    'user_id' => $slotAssignment->slot->user_id,
+                    'user_name' => $slotAssignment->slot->user?->name ?? 'Open',
+                    'is_open' => $slotAssignment->slot->isOpen(),
+                ],
             ]);
         }
 

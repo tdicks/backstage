@@ -18,7 +18,39 @@
         openEditSong: false,
         openAddSlot: false,
         songCollapsed: false,
-        songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}'
+        songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}',
+        busyAction: false,
+        actionError: '',
+        refreshSessionSets() {
+            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        async submitAddSlot(event) {
+            this.busyAction = true;
+            this.actionError = '';
+
+            try {
+                const response = await fetch('{{ route('slots.store', $song) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: new FormData(event.target),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                this.openAddSlot = false;
+                this.refreshSessionSets();
+            } catch (e) {
+                this.actionError = 'Could not add slot. Try again.';
+            } finally {
+                this.busyAction = false;
+            }
+        },
     }"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
@@ -107,7 +139,7 @@
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h5 class="text-lg font-semibold text-slate-900">Add Slot</h5>
-                <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4">
+                <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4" @submit.prevent="submitAddSlot($event)">
                     @csrf
                     <div>
                         <x-input-label :value="'Slot Name'" />
@@ -119,7 +151,7 @@
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-secondary-button type="button" @click="openAddSlot = false">Cancel</x-secondary-button>
-                        <x-primary-button>Add Slot</x-primary-button>
+                        <x-primary-button x-bind:disabled="busyAction">Add Slot</x-primary-button>
                     </div>
                 </form>
             </div>

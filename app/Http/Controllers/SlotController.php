@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Song;
 use App\Models\Slot;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class SlotController extends Controller
 {
-    public function store(Request $request, Song $song): RedirectResponse
+    public function store(Request $request, Song $song): JsonResponse|RedirectResponse
     {
         $this->authorize('update', $song);
 
@@ -25,10 +26,16 @@ class SlotController extends Controller
             'position' => $nextPosition,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot added.',
+            ], 201);
+        }
+
         return back()->with('status', 'Slot added.');
     }
 
-    public function update(Request $request, Slot $slot): RedirectResponse
+    public function update(Request $request, Slot $slot): JsonResponse|RedirectResponse
     {
         $this->authorize('update', $slot);
 
@@ -44,10 +51,17 @@ class SlotController extends Controller
             'position' => $validated['position'] ?? $slot->position,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot updated.',
+                'slot' => $this->slotPayload($slot->fresh('user')),
+            ]);
+        }
+
         return back()->with('status', 'Slot updated.');
     }
 
-    public function take(Request $request, Slot $slot): RedirectResponse
+    public function take(Request $request, Slot $slot): JsonResponse|RedirectResponse
     {
         $slot->load('song.set');
 
@@ -63,10 +77,17 @@ class SlotController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot assigned to you.',
+                'slot' => $this->slotPayload($slot->fresh('user')),
+            ]);
+        }
+
         return back()->with('status', 'Slot assigned to you.');
     }
 
-    public function release(Request $request, Slot $slot): RedirectResponse
+    public function release(Request $request, Slot $slot): JsonResponse|RedirectResponse
     {
         if ($slot->user_id !== $request->user()->id) {
             abort(403);
@@ -76,18 +97,45 @@ class SlotController extends Controller
             'user_id' => null,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot released.',
+                'slot' => $this->slotPayload($slot->fresh('user')),
+            ]);
+        }
+
         return back()->with('status', 'Slot released.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Slot $slot): RedirectResponse
+    public function destroy(Slot $slot): JsonResponse|RedirectResponse
     {
         $this->authorize('delete', $slot);
 
         $slot->delete();
 
+        if (request()->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot deleted.',
+            ]);
+        }
+
         return back()->with('status', 'Slot deleted.');
+    }
+
+    private function slotPayload(Slot $slot): array
+    {
+        $slot->loadMissing('user');
+
+        return [
+            'id' => $slot->id,
+            'name' => $slot->name,
+            'label' => Slot::options()[$slot->name] ?? $slot->name,
+            'user_id' => $slot->user_id,
+            'user_name' => $slot->user?->name ?? 'Open',
+            'is_open' => $slot->isOpen(),
+        ];
     }
 }

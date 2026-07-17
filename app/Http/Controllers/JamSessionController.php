@@ -12,6 +12,22 @@ use Illuminate\View\View;
 
 class JamSessionController extends Controller
 {
+    private const LOADING_ONE_LINERS = [
+        'Loading the Spinal Tap DVD...',
+        'Dusting off the Marshall stack...',
+        'Feeding the bass players...',
+        "Changing some guitar strings...",
+        "Confiscating the singer's beer...",
+        'Showing Michael Lewis to the Iron Maiden vinyls...',
+        'Showing Richard Ottaway to the Thin Lizzy vinyls...',
+        'Showing Ethan Bishop to the blackgaze room...',
+        "Setting Tom Potter's time machine to 1982...",
+        'Checking if the fog machine is set to maximum drama...',
+        'Arguing about whether this riff is in drop D...',
+        'Waking the drummer from a 17-minute solo dream...',
+        'Polishing the leather jackets for stage readiness...',
+    ];
+
     public function index(): View
     {
         $sessions = JamSession::query()
@@ -47,7 +63,20 @@ class JamSessionController extends Controller
      */
     public function show(JamSession $jamSession): View
     {
+        $jamSession->loadCount('sets');
+
+        return view('sessions.show', [
+            'session' => $jamSession,
+            'loadingOneLiner' => self::LOADING_ONE_LINERS[array_rand(self::LOADING_ONE_LINERS)],
+        ]);
+    }
+
+    public function sets(JamSession $jamSession): View
+    {
+        $this->authorize('view', $jamSession);
+
         $jamSession->load([
+            'sets.session',
             'sets.owner',
             'sets.songRequests.requester',
             'sets.songRequests.responder',
@@ -57,7 +86,7 @@ class JamSessionController extends Controller
             'sets.songs.slots.assignments.target',
         ]);
 
-        return view('sessions.show', [
+        return view('sessions.partials.set-cards', [
             'session' => $jamSession,
             'sessions' => JamSession::query()->orderByDesc('date')->get(['id', 'name', 'date']),
             'slotOptions' => Slot::options(),

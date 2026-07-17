@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('sessions', JamSessionController::class)
         ->except(['create', 'edit'])
         ->parameters(['sessions' => 'jamSession']);
+    Route::get('/sessions/{jamSession}/sets', [JamSessionController::class, 'sets'])->name('sessions.sets');
     Route::get('/sessions/{jamSession}/check-ins', [JamRegisterController::class, 'attendees'])->name('sessions.check-ins');
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
