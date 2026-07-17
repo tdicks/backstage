@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-900">User Directory</h2>
+        <h2 class="text-xl font-semibold text-slate-100">User Directory</h2>
     </x-slot>
 
     <div class="py-12">

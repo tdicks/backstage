@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
+use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\MySignupsController;
 use App\Http\Controllers\MySetsController;
@@ -15,6 +16,12 @@ use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/sessions');
+
+Route::get('/jam-register', [JamRegisterController::class, 'index'])->name('jam-register.index');
+Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name('jam-register.users');
+Route::get('/jam-register/sessions/{jamSession}/users/{user}/status', [JamRegisterController::class, 'status'])->name('jam-register.status');
+Route::post('/jam-register/sessions/{jamSession}/check-in', [JamRegisterController::class, 'signIn'])->name('jam-register.sign-in');
+Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegisterController::class, 'signOut'])->name('jam-register.sign-out');
 
 Route::middleware('auth')->group(function () {
     Route::get('/my-signups', MySignupsController::class)->name('my-signups.index');
@@ -34,8 +41,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('sessions', JamSessionController::class)
         ->except(['create', 'edit'])
         ->parameters(['sessions' => 'jamSession']);
+    Route::get('/sessions/{jamSession}/check-ins', [JamRegisterController::class, 'attendees'])->name('sessions.check-ins');
+    Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');
+    Route::get('/sets/{set}/summary', [SetController::class, 'summary'])->name('sets.summary');
     Route::patch('/sets/{set}', [SetController::class, 'update'])->name('sets.update');
     Route::patch('/sets/{set}/close-signups', [SetController::class, 'closeSignups'])->name('sets.close-signups');
     Route::patch('/sets/{set}/open-signups', [SetController::class, 'openSignups'])->name('sets.open-signups');

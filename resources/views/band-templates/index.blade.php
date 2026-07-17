@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between" x-data="{ openCreate: false }">
-            <h2 class="text-xl font-semibold text-gray-900">Band Templates</h2>
+            <h2 class="text-xl font-semibold text-slate-100">Band Templates</h2>
             @can('create', App\Models\BandTemplate::class)
                 <x-secondary-button @click="openCreate = true">New Template</x-secondary-button>
 

@@ -132,3 +132,23 @@
     background-color: rgb(249 250 251);
     font-weight: 600;
 }
+
+button:not(:disabled),
+input[type='button']:not(:disabled),
+input[type='submit']:not(:disabled),
+input[type='reset']:not(:disabled),
+select:not(:disabled),
+summary,
+a[href],
+[role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+}
+
+button:disabled,
+input[type='button']:disabled,
+input[type='submit']:disabled,
+input[type='reset']:disabled,
+select:disabled,
+[role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
+}

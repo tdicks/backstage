@@ -14,7 +14,6 @@ class Set extends Model
         'owner_id',
         'jam_session_id',
         'position',
-        'feature_set',
         'performed',
         'signups_open',
     ];
@@ -23,7 +22,6 @@ class Set extends Model
     {
         return [
             'position' => 'integer',
-            'feature_set' => 'boolean',
             'performed' => 'boolean',
             'signups_open' => 'boolean',
         ];

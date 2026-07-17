@@ -204,35 +204,3 @@ test('set owner can change which jam session the set belongs to', function () {
 
     expect($set->refresh()->jam_session_id)->toBe($targetSession->id);
 });
-
-test('non-admin cannot update feature set flag', function () {
-    $owner = User::factory()->create();
-
-    $session = JamSession::create([
-        'name' => 'Feature Guard Session',
-        'date' => now()->addDays(8),
-        'description' => null,
-    ]);
-
-    $set = Set::create([
-        'name' => 'Feature Guard Set',
-        'description' => null,
-        'owner_id' => $owner->id,
-        'jam_session_id' => $session->id,
-        'position' => 1,
-        'feature_set' => false,
-        'performed' => false,
-        'signups_open' => true,
-    ]);
-
-    $this->actingAs($owner)
-        ->patch(route('sets.update', $set), [
-            'name' => 'Feature Guard Set',
-            'description' => null,
-            'performed' => 0,
-            'feature_set' => 1,
-        ])
-        ->assertRedirect();
-
-    expect($set->refresh()->feature_set)->toBeFalse();
-});

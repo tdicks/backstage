@@ -9,19 +9,34 @@
 @php
     $canManageSet = auth()->user()->is_admin || $set->owner_id === auth()->id();
     $isSetOwner = $set->owner_id === auth()->id();
-    $pendingSongRequests = $set->songRequests->where('status', 'pending');
+    $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
+    $filledSlots = $set->songs->sum(fn ($song) => $song->slots->whereNotNull('user_id')->count());
+    $healthRatio = $totalSlots > 0 ? $filledSlots / $totalSlots : 0;
+    $healthDotClass = match (true) {
+        $healthRatio >= 1 => 'bg-emerald-400',
+        $healthRatio >= 0.75 => 'bg-lime-500',
+        $healthRatio >= 0.5 => 'bg-amber-400',
+        $healthRatio > 0 => 'bg-orange-500',
+        default => 'bg-rose-600',
+    };
     $summarySlotNames = collect(array_keys($slotOptions))
         ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
         ->values();
 @endphp
 
 <section
-    class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+    class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm"
     x-data="{
         openSong: false,
         openSongRequest: false,
         openSetEdit: false,
         openSummary: false,
+        summaryData: null,
+        summaryLoading: false,
+        summaryLoaded: false,
+        summaryError: '',
+        summaryLastUpdated: '',
+        summaryPollId: null,
         setCollapsed: false,
         setKey: 'backstage:u{{ auth()->id() }}:set:{{ $set->id }}',
         canReorderSongs: @js($isSetOwner),
@@ -41,7 +56,7 @@
             const draggedEl = songsContainer ? songsContainer.querySelector(`[data-song-id='${songId}']`) : null;
 
             if (draggedEl && event.dataTransfer) {
-                // Show the whole song card as the drag preview, even though drag starts on the handle.
+                // Keep the full card under cursor while dragging from the grip handle.
                 event.dataTransfer.setDragImage(draggedEl, 24, 16);
             }
 
@@ -118,167 +133,322 @@
             } finally {
                 this.reorderBusy = false;
             }
+        },
+        async loadSummary(initial = false) {
+            if (initial && !this.summaryLoaded) {
+                this.summaryLoading = true;
+            }
+
+            this.summaryError = '';
+
+            try {
+                const response = await fetch('{{ route('sets.summary', $set) }}', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load summary');
+                }
+
+                const payload = await response.json();
+                this.summaryData = payload;
+                this.summaryLoaded = true;
+                this.summaryLastUpdated = new Date().toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                });
+            } catch (e) {
+                this.summaryError = 'Could not load the live summary right now.';
+            } finally {
+                this.summaryLoading = false;
+            }
+        },
+        openSummaryModal() {
+            this.openSummary = true;
+            this.loadSummary(true);
+            this.startSummaryPolling();
+        },
+        closeSummaryModal() {
+            this.openSummary = false;
+            this.stopSummaryPolling();
+        },
+        startSummaryPolling() {
+            this.stopSummaryPolling();
+            this.summaryPollId = setInterval(() => {
+                if (this.openSummary) {
+                    this.loadSummary(false);
+                }
+            }, 15000);
+        },
+        stopSummaryPolling() {
+            if (this.summaryPollId) {
+                clearInterval(this.summaryPollId);
+                this.summaryPollId = null;
+            }
         }
     }"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'"
     x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0')"
-    @keydown.escape.window="openSummary = false; openSetEdit = false; openSong = false; openSongRequest = false"
+    @keydown.escape.window="closeSummaryModal(); openSetEdit = false; openSong = false; openSongRequest = false"
 >
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div
+        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
+        @click="setCollapsed = !setCollapsed"
+        role="button"
+        tabindex="0"
+        @keydown.enter.prevent="setCollapsed = !setCollapsed"
+        @keydown.space.prevent="setCollapsed = !setCollapsed"
+        x-bind:aria-expanded="(!setCollapsed).toString()"
+        x-bind:title="setCollapsed ? 'Click to show set songs and assignments' : 'Click to hide set songs and assignments'"
+        aria-label="Toggle set details"
+    >
         <div>
-            <div class="flex flex-wrap items-center gap-2">
-                <h3 class="text-lg font-semibold text-gray-900">{{ $set->name }}</h3>
-                @if ($set->feature_set)
-                    <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Feature Set</span>
-                @endif
-            </div>
-            <div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+            <h3 class="text-lg font-semibold text-slate-900">{{ $set->name }}</h3>
+            <div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                 <span class="inline-flex items-center gap-1.5" title="Set owner">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6z" />
-                        <path fill-rule="evenodd" d="M4 15a6 6 0 1112 0v1H4v-1z" clip-rule="evenodd" />
-                    </svg>
+                    <x-heroicon-m-user class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span class="sr-only">Set owner</span>
                     <span>{{ $set->owner->name }}</span>
                 </span>
 
                 @if ($set->performed)
                     <span class="inline-flex items-center" title="Performed">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414l2.543 2.543 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
+                        <x-heroicon-m-check-circle class="h-4 w-4 text-emerald-600" aria-hidden="true" />
                         <span class="sr-only">Performed</span>
                     </span>
                 @else
                     <span class="inline-flex items-center" title="Planned">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-sky-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 102 0V6zm-1 8a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd" />
-                        </svg>
+                        <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
                         <span class="sr-only">Not performed yet</span>
                     </span>
                 @endif
 
                 <span class="inline-flex items-center" title="Sign ups {{ $set->signups_open ? 'open' : 'closed' }}">
                     @if ($set->signups_open)
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M12 7a2 2 0 10-4 0v2h4V7z" />
-                            <path fill-rule="evenodd" d="M5 9a2 2 0 00-2 2v3a3 3 0 003 3h8a3 3 0 003-3v-3a2 2 0 00-2-2h-1V7a4 4 0 10-8 0v2H5zM9 7a1 1 0 112 0v2H9V7z" clip-rule="evenodd" />
-                            <path d="M14.5 12a.5.5 0 01.5.5v1a.5.5 0 11-1 0v-1a.5.5 0 01.5-.5z" fill="white" />
-                        </svg>
+                        <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
                         <span class="sr-only">Sign ups open</span>
                     @else
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-700" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M5 8V7a5 5 0 0110 0v1a2 2 0 012 2v4a3 3 0 01-3 3H6a3 3 0 01-3-3v-4a2 2 0 012-2zm2 0h6V7a3 3 0 10-6 0v1z" clip-rule="evenodd" />
-                        </svg>
+                        <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" aria-hidden="true" />
                         <span class="sr-only">Sign ups closed</span>
                     @endif
                 </span>
+
+                @if (auth()->user()->is_admin)
+                    <span
+                        class="inline-flex items-center"
+                        title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
+                    >
+                        <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
+                        <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
+                    </span>
+                @endif
             </div>
             @if ($set->description)
-                <p class="mt-2 text-sm text-gray-700">{{ $set->description }}</p>
+                <p class="mt-2 text-sm text-slate-700">{{ $set->description }}</p>
             @endif
         </div>
 
-        <div class="flex items-center gap-2">
-            <x-secondary-button
+        <div class="flex items-center gap-2" @click.stop>
+            <button
                 type="button"
-                @click="setCollapsed = !setCollapsed"
-                x-bind:aria-label="setCollapsed ? 'Expand set' : 'Collapse set'"
-                x-bind:title="setCollapsed ? 'Expand set' : 'Collapse set'"
-                class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100"
+                @click="openSummaryModal()"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                aria-label="Summary"
+                title="Summary"
             >
-                <svg x-show="!setCollapsed" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                </svg>
-                <svg x-show="setCollapsed" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-            </x-secondary-button>
-            <x-secondary-button @click="openSummary = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Summary</x-secondary-button>
+                <x-heroicon-m-queue-list class="h-4 w-4" aria-hidden="true" />
+                <span class="sr-only">Summary</span>
+            </button>
             @if ($canManageSet)
                 @if ($set->signups_open)
                     <form method="POST" action="{{ route('sets.close-signups', $set) }}">
                         @csrf
                         @method('PATCH')
-                        <x-secondary-button type="submit" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Close Sign Ups</x-secondary-button>
+                        <button
+                            type="submit"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            aria-label="Close Sign Ups"
+                            title="Close Sign Ups"
+                        >
+                            <x-heroicon-m-lock-closed class="h-4 w-4" aria-hidden="true" />
+                            <span class="sr-only">Close Sign Ups</span>
+                        </button>
                     </form>
                 @else
                     <form method="POST" action="{{ route('sets.open-signups', $set) }}">
                         @csrf
                         @method('PATCH')
-                        <x-secondary-button type="submit" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Re-open Sign Ups</x-secondary-button>
+                        <button
+                            type="submit"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            aria-label="Re-open Sign Ups"
+                            title="Re-open Sign Ups"
+                        >
+                            <x-heroicon-m-lock-open class="h-4 w-4" aria-hidden="true" />
+                            <span class="sr-only">Re-open Sign Ups</span>
+                        </button>
                     </form>
                 @endif
-                <x-secondary-button @click="openSetEdit = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Edit Set</x-secondary-button>
-                <x-secondary-button @click="openSong = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Add Song</x-secondary-button>
+                <button
+                    type="button"
+                    @click="openSetEdit = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Edit Set"
+                    title="Edit Set"
+                >
+                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Edit Set</span>
+                </button>
+                <button
+                    type="button"
+                    @click="openSong = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Add Song"
+                    title="Add Song"
+                >
+                    <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Add Song</span>
+                </button>
             @else
                 @if ($set->signups_open)
-                    <x-secondary-button @click="openSongRequest = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Request Song</x-secondary-button>
+                    <x-secondary-button @click="openSongRequest = true" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Request Song</x-secondary-button>
                 @endif
             @endif
         </div>
     </div>
 
-    <div x-show="openSummary" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSummary = false"></div>
-    <div x-show="openSummary" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="w-full max-w-6xl rounded-lg bg-white p-6 shadow-xl">
-            <div class="flex items-center justify-between gap-3">
-                <h4 class="text-lg font-semibold">Set Summary: {{ $set->name }}</h4>
-                <x-secondary-button type="button" @click="openSummary = false">Close</x-secondary-button>
+    <div x-show="openSummary" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
+    <div x-show="openSummary" x-cloak class="fixed inset-0 z-50 flex items-start justify-center p-2 sm:items-center sm:p-4">
+        <div class="flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+            <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+                <div>
+                    <h4 class="text-lg font-semibold text-slate-900">Set Summary: {{ $set->name }}</h4>
+                    <p class="mt-1 text-sm text-slate-600">Set owner: {{ $set->owner->name }}</p>
+                </div>
+                <x-secondary-button type="button" @click="closeSummaryModal()" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Close</x-secondary-button>
             </div>
 
-            @if ($set->songs->isEmpty())
-                <p class="mt-4 text-sm text-gray-500">No songs in this set yet.</p>
-            @elseif ($summarySlotNames->isEmpty())
-                <p class="mt-4 text-sm text-gray-500">No slots have been created for this set yet.</p>
-            @else
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full border border-gray-200 text-sm">
-                        <thead class="bg-gray-50">
+            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+
+            <p class="mt-3 text-xs text-slate-600" x-show="summaryLoading && summaryLoaded">Refreshing live status...</p>
+            <p class="mt-4 text-sm text-slate-600" x-show="summaryLoading && !summaryLoaded">Loading summary...</p>
+            <p class="mt-4 text-sm text-rose-600" x-show="summaryError" x-text="summaryError"></p>
+
+            <template x-if="summaryLoaded && summaryData && summaryData.songs && summaryData.songs.length === 0">
+                <p class="mt-4 text-sm text-slate-600">No songs in this set yet.</p>
+            </template>
+
+            <template x-if="summaryLoaded && summaryData && summaryData.slot_names && summaryData.slot_names.length === 0 && summaryData.songs && summaryData.songs.length > 0">
+                <p class="mt-4 text-sm text-slate-600">No slots have been created for this set yet.</p>
+            </template>
+
+            <div x-show="summaryLoaded && summaryData && summaryData.songs && summaryData.songs.length > 0 && summaryData.slot_names && summaryData.slot_names.length > 0" class="mt-4 space-y-3">
+                <div class="space-y-3 md:hidden">
+                    <template x-for="song in summaryData.songs" :key="`mobile-${song.id}`">
+                        <article class="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+                            <h5 class="text-sm font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></h5>
+                            <div class="mt-3 space-y-2">
+                                <template x-for="slot in summaryData.slot_names" :key="`mobile-${song.id}-${slot.name}`">
+                                    <div class="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
+                                        <span class="text-xs font-medium uppercase tracking-wide text-slate-600" x-text="slot.label"></span>
+                                        <div class="text-right">
+                                            <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'user'">
+                                                <div class="space-y-1">
+                                                    <span
+                                                        class="text-sm font-medium"
+                                                        x-bind:class="song.slot_map[slot.name].checked_in ? 'text-emerald-700' : 'text-slate-900'"
+                                                        x-text="song.slot_map[slot.name].display"
+                                                    ></span>
+                                                    <span
+                                                        x-show="song.slot_map[slot.name].checked_in"
+                                                        class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                                                    >
+                                                        Checked in
+                                                    </span>
+                                                </div>
+                                            </template>
+                                            <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'open'">
+                                                <span class="text-sm font-medium text-amber-700">Open</span>
+                                            </template>
+                                            <template x-if="!song.slot_map[slot.name] || song.slot_map[slot.name].state === 'empty'">
+                                                <span class="text-sm text-slate-500">-</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </article>
+                    </template>
+                </div>
+
+                <div class="hidden overflow-x-auto md:block">
+                    <table class="min-w-full border border-slate-200 text-sm text-slate-900">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <th class="border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">Artist/Title</th>
-                                @foreach ($summarySlotNames as $slotName)
-                                    <th class="border border-gray-200 px-3 py-2 text-left font-semibold text-gray-700">
-                                        {{ $slotOptions[$slotName] ?? ucfirst(str_replace('_', ' ', $slotName)) }}
-                                    </th>
-                                @endforeach
+                                <th class="border border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">Artist/Title</th>
+                                <template x-for="slot in summaryData.slot_names" :key="slot.name">
+                                    <th class="border border-slate-200 px-3 py-2 text-left font-semibold text-slate-700" x-text="slot.label"></th>
+                                </template>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($set->songs as $song)
+                            <template x-for="song in summaryData.songs" :key="song.id">
                                 <tr class="align-top">
-                                    <td class="border border-gray-200 px-3 py-2 font-medium text-gray-900">
-                                        {{ $song->artist }} - {{ $song->title }}
+                                    <td class="border border-slate-200 px-3 py-2 font-medium text-slate-900">
+                                        <span x-text="`${song.artist} - ${song.title}`"></span>
                                     </td>
-                                    @foreach ($summarySlotNames as $slotName)
-                                        @php
-                                            $slot = $song->slots->firstWhere('name', $slotName);
-                                        @endphp
-                                        <td class="border border-gray-200 px-3 py-2">
-                                            @if (! $slot)
-                                                <span class="text-xs text-gray-400">-</span>
-                                            @elseif ($slot->user)
-                                                <span class="font-medium text-emerald-700">{{ $slot->user->name }}</span>
-                                            @elseif ($slot->guest_name)
-                                                <span class="font-medium text-indigo-700">{{ $slot->guest_name }}</span>
-                                            @else
+                                    <template x-for="slot in summaryData.slot_names" :key="`${song.id}-${slot.name}`">
+                                        <td class="border border-slate-200 px-3 py-2">
+                                            <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'user'">
+                                                <div class="space-y-1">
+                                                    <span
+                                                        class="font-medium"
+                                                        x-bind:class="song.slot_map[slot.name].checked_in ? 'text-emerald-700' : 'text-slate-900'"
+                                                        x-text="song.slot_map[slot.name].display"
+                                                    ></span>
+                                                    <span
+                                                        x-show="song.slot_map[slot.name].checked_in"
+                                                        class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                                                    >
+                                                        Checked in
+                                                    </span>
+                                                </div>
+                                            </template>
+                                            <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'open'">
                                                 <span class="text-amber-700">Open</span>
-                                            @endif
+                                            </template>
+                                            <template x-if="!song.slot_map[slot.name] || song.slot_map[slot.name].state === 'empty'">
+                                                <span class="text-xs text-slate-500">-</span>
+                                            </template>
                                         </td>
-                                    @endforeach
+                                    </template>
                                 </tr>
-                            @endforeach
+                            </template>
                         </tbody>
                     </table>
                 </div>
-            @endif
+            </div>
+
+            <div class="shrink-0 border-t border-slate-200 bg-white/95 px-4 py-2 text-xs text-slate-500 backdrop-blur sm:px-6">
+                <span x-show="summaryLastUpdated" x-cloak>
+                    Last updated <span x-text="summaryLastUpdated"></span>
+                </span>
+            </div>
+            </div>
         </div>
     </div>
 
     @if ($canManageSet)
         <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
         <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+            <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Edit Set</h4>
                 <form method="POST" action="{{ route('sets.update', $set) }}" class="mt-4 space-y-4">
                     @csrf
@@ -311,18 +481,12 @@
                             </select>
                         </div>
                     @endif
-                    @if (auth()->user()->is_admin)
-                        <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                            <input type="checkbox" name="feature_set" value="1" @checked($set->feature_set) class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
-                            Mark as feature set
-                        </label>
-                    @endif
                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                         <input type="checkbox" name="performed" value="1" @checked($set->performed) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
                         Mark as performed
                     </label>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openSetEdit = false">Cancel</x-secondary-button>
+                        <x-secondary-button type="button" @click="openSetEdit = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
                         <x-primary-button>Save</x-primary-button>
                     </div>
                 </form>
@@ -336,7 +500,7 @@
 
         <div x-show="openSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSong = false"></div>
         <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Add Song to {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('songs.store', $set) }}" class="mt-4 space-y-4">
                     @csrf
@@ -375,7 +539,7 @@
                         </div>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button type="button" @click="openSong = false">Cancel</x-secondary-button>
+                        <x-secondary-button type="button" @click="openSong = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
                         <x-primary-button>Add Song</x-primary-button>
                     </div>
                 </form>
@@ -385,7 +549,7 @@
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false"></div>
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
-                <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>
+                <h4 class="text-lg font-semibold">Request a Song for {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4">
                     @csrf
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -403,7 +567,7 @@
                         <textarea id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button type="button" @click="openSongRequest = false">Cancel</x-secondary-button>
+                        <x-secondary-button type="button" @click="openSongRequest = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
                         <x-primary-button>Send Request</x-primary-button>
                     </div>
                 </form>
@@ -415,24 +579,24 @@
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         <p x-show="reorderFeedback" x-text="reorderFeedback" class="text-sm text-emerald-700"></p>
         @if ($isSetOwner)
-            <p class="text-xs text-gray-500">Tip: drag songs to reorder them.</p>
+            <p class="text-xs text-slate-500">Tip: drag songs to reorder them.</p>
         @endif
 
-        @if ($canManageSet && $pendingSongRequests->isNotEmpty())
-            <div class="rounded-md border border-amber-200 bg-amber-50 p-4">
+        @if ($canManageSet && $set->songRequests->where('status', 'pending')->isNotEmpty())
+            <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4">
                 <h4 class="text-sm font-semibold text-amber-900">Song requests</h4>
                 <div class="mt-3 space-y-3">
-                    @foreach ($pendingSongRequests as $songRequest)
-                        <div class="rounded-md border border-amber-200 bg-white p-4">
+                    @foreach ($set->songRequests->where('status', 'pending') as $songRequest)
+                        <div class="rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50/70 to-white p-4 shadow-sm">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <p class="font-semibold text-gray-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</p>
-                                    <p class="text-sm text-gray-600">Requested by {{ $songRequest->requester->name }}</p>
+                                    <p class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</p>
+                                    <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester->name }}</p>
                                     @if ($songRequest->bandTemplate)
-                                        <p class="text-sm text-gray-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
+                                        <p class="text-sm text-slate-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
                                     @endif
                                     @if ($songRequest->notes)
-                                        <p class="mt-1 text-sm text-gray-700">{{ $songRequest->notes }}</p>
+                                        <p class="mt-1 text-sm text-slate-700">{{ $songRequest->notes }}</p>
                                     @endif
                                 </div>
 
@@ -441,7 +605,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <div>
-                                            <label class="block text-xs font-medium uppercase tracking-wide text-gray-500" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
+                                            <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
                                             <select id="band_template_id_{{ $songRequest->id }}" name="band_template_id" class="mt-1 w-full rounded-md border-gray-300 text-sm">
                                                 <option value="">None</option>
                                                 @foreach ($templates as $template)
@@ -456,7 +620,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="status" value="rejected">
-                                        <x-secondary-button type="submit" class="w-full justify-center">Reject</x-secondary-button>
+                                        <x-secondary-button class="w-full justify-center border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Reject</x-secondary-button>
                                     </form>
                                 </div>
                             </div>
@@ -477,22 +641,8 @@
                     :can-manage-set="$canManageSet"
                 />
             @empty
-                <p class="rounded border border-dashed border-gray-300 p-4 text-sm text-gray-500">No songs in this set yet.</p>
+                <p class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>
             @endforelse
         </div>
-
-        @if (! $canManageSet && $pendingSongRequests->isNotEmpty())
-            <div class="rounded-md border border-indigo-200 bg-indigo-50/60 p-3">
-                <h4 class="text-xs font-semibold uppercase tracking-wide text-indigo-900">Pending song suggestions</h4>
-                <ul class="mt-2 space-y-1.5 text-sm text-indigo-900">
-                    @foreach ($pendingSongRequests as $songRequest)
-                        <li class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span class="font-medium">{{ $songRequest->artist }} - {{ $songRequest->title }}</span>
-                            <span class="text-indigo-700/80">by {{ $songRequest->requester->name }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
     </div>
 </section>

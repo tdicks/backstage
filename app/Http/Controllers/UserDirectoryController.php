@@ -13,7 +13,7 @@ class UserDirectoryController extends Controller
         $query = trim($request->string('q')->toString());
 
         $users = User::query()
-            ->select(['id', 'name', 'bio', 'is_admin'])
+            ->select(['id', 'name', 'bio'])
             ->when($query !== '', function ($builder) use ($query): void {
                 $builder->where(function ($nested) use ($query): void {
                     $nested->where('name', 'like', "%{$query}%")

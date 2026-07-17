@@ -8,11 +8,11 @@
 ])
 
 <tr
-    class="border-t border-gray-100 align-top"
+    class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     x-data="{
         openPropose: false,
         openEditSlot: false,
-        assignedUserName: @js($slotModel->user?->name ?? $slotModel->guest_name ?? 'Open'),
+        assignedUserName: @js($slotModel->user?->name ?? 'Open'),
         slotIsOpen: @js($slotModel->isOpen()),
         assignedToCurrentUser: @js($slotModel->user_id === auth()->id()),
         hasPendingOwnRequest: @js($slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === auth()->id())),
@@ -116,16 +116,25 @@
     }"
     @keydown.escape.window="openPropose = false; openEditSlot = false"
 >
-    <td class="py-3">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
-    <td class="py-3">
-        <span x-text="assignedUserName">{{ $slotModel->user?->name ?? $slotModel->guest_name ?? 'Open' }}</span>
+    <td class="px-3 py-3 font-medium text-slate-700">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
+    <td class="px-3 py-3">
+        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slotModel->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800' }}" x-text="assignedUserName">{{ $slotModel->user?->name ?? 'Open' }}</span>
     </td>
-    <td class="py-3">
+    <td class="px-3 py-3">
         <div class="flex flex-wrap gap-2">
             @if ($slotModel->user_id === auth()->id())
                 <form method="POST" action="{{ route('slots.release', $slotModel) }}">
                     @csrf
-                    <x-secondary-button type="submit" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-show="assignedToCurrentUser" title="Give up this slot and make it available for others">Remove Me</x-secondary-button>
+                    <button
+                        type="submit"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 opacity-60 transition hover:text-slate-800 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:opacity-100"
+                        x-show="assignedToCurrentUser"
+                        title="Give up this slot and make it available for others"
+                        aria-label="Remove Me"
+                    >
+                        <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Remove Me</span>
+                    </button>
                 </form>
             @endif
 
@@ -138,33 +147,57 @@
                     x-bind:disabled="busyAction"
                 >Take Slot</x-secondary-button>
             @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
-                <x-secondary-button
+                <button
                     type="button"
-                    class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-show="slotIsOpen && !assignedToCurrentUser && !hasPendingOwnRequest"
                     @click="requestSlot()"
                     x-bind:disabled="busyAction"
+                    aria-label="Request slot"
                     title="Request this slot to be assigned to you. The session owner will need to approve your request."
-                >Request</x-secondary-button>
+                >
+                    <x-heroicon-m-hand-raised class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Request</span>
+                </button>
             @endif
 
             @if ($set->signups_open && $slotModel->isOpen())
-                <x-secondary-button @click="openPropose = true" x-show="slotIsOpen" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-bind:disabled="busyAction" title="Recommend someone for this slot">Recommend</x-secondary-button>
+                <button
+                    type="button"
+                    @click="openPropose = true"
+                    x-show="slotIsOpen"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    x-bind:disabled="busyAction"
+                    aria-label="Recommend"
+                    title="Recommend someone for this slot"
+                >
+                    <x-heroicon-m-user-plus class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Recommend</span>
+                </button>
             @endif
 
             @if ($canManageSet)
-                <x-secondary-button @click="openEditSlot = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Edit Slot</x-secondary-button>
+                <button
+                    type="button"
+                    @click="openEditSlot = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Edit Slot"
+                    title="Edit Slot"
+                >
+                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Edit Slot</span>
+                </button>
             @endif
         </div>
 
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+            <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h6 class="text-base font-semibold text-slate-900">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
                 <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
                     <div>
                         <x-input-label :value="'User'" />
-                        <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
+                        <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-md border-gray-300" required>
                             @foreach ($users as $user)
                                 @if ($user != auth()->user())
                                     <option value="{{ $user->id }}">{{ $user->name }}</option>
@@ -174,7 +207,7 @@
                     </div>
                     <div>
                         <x-input-label :value="'Message (optional)'" />
-                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-md border-gray-300"></textarea>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-secondary-button type="button" @click="openPropose = false">Cancel</x-secondary-button>
@@ -187,14 +220,14 @@
         @if ($canManageSet)
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                     <h6 class="text-base font-semibold text-slate-900">Edit Slot</h6>
                     <form method="POST" action="{{ route('slots.update', $slotModel) }}" class="mt-4 space-y-4">
                         @csrf
                         @method('PATCH')
                         <div>
                             <x-input-label :value="'Slot Name'" />
-                            <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                            <select name="name" class="mt-1 w-full rounded-md border-gray-300">
                                 @foreach ($slotOptions as $slotValue => $slotLabel)
                                     <option value="{{ $slotValue }}" @selected($slotModel->name === $slotValue)>{{ $slotLabel }}</option>
                                 @endforeach
@@ -202,17 +235,12 @@
                         </div>
                         <div>
                             <x-input-label :value="'Assigned User (optional)'" />
-                            <select name="user_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                            <select name="user_id" class="mt-1 w-full rounded-md border-gray-300">
                                 <option value="">Open</option>
                                 @foreach ($users as $user)
                                     <option value="{{ $user->id }}" @selected($slotModel->user_id === $user->id)>{{ $user->name }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div>
-                            <x-input-label :value="'Manual Performer Name (optional)'" />
-                            <x-text-input name="guest_name" :value="$slotModel->guest_name" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" maxlength="255" placeholder="Enter performer name" />
-                            <p class="mt-1 text-xs text-slate-500">Use this when the performer does not have an account on Backstage. Leave both fields blank to mark the slot as open.</p>
                         </div>
                         <div class="flex justify-end gap-2">
                             <x-secondary-button type="button" @click="openEditSlot = false">Cancel</x-secondary-button>
@@ -233,7 +261,7 @@
             <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
             @foreach ($slotModel->assignments->where('status', 'pending') as $assignment)
                 <div
-                    class="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-gray-700"
+                    class="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
                     x-data="{
                         hidden: false,
                         busy: false,

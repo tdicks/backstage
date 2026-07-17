@@ -1,0 +1,119 @@
+<?php
+
+use App\Models\JamSession;
+use App\Models\JamSessionSignIn;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+function createJamSession(array $overrides = []): JamSession
+{
+	return JamSession::query()->create(array_merge([
+		'name' => 'Friday Jam',
+		'date' => now()->toDateString(),
+		'description' => null,
+	], $overrides));
+}
+
+test('it returns matching users for jam register search', function () {
+	User::factory()->create(['name' => 'Alice Player']);
+	User::factory()->create(['name' => 'Bob Drummer']);
+
+	$response = $this->getJson(route('jam-register.users', ['q' => 'ali']));
+
+	$response->assertOk();
+	$response->assertJsonCount(1, 'users');
+	$response->assertJsonPath('users.0.name', 'Alice Player');
+});
+
+test('it signs a user in and reports status', function () {
+	$session = createJamSession();
+	$user = User::factory()->create();
+
+	$signInResponse = $this->postJson(route('jam-register.sign-in', $session), [
+		'user_id' => $user->id,
+	]);
+
+	$signInResponse->assertOk();
+	$signInResponse->assertJsonPath('signed_in', true);
+
+	$this->assertDatabaseHas('jam_session_sign_ins', [
+		'jam_session_id' => $session->id,
+		'user_id' => $user->id,
+	]);
+
+	$statusResponse = $this->getJson(route('jam-register.status', [$session, $user]));
+
+	$statusResponse->assertOk();
+	$statusResponse->assertJsonPath('signed_in', true);
+	$statusResponse->assertJsonPath('user.id', $user->id);
+});
+
+test('it signs a user out', function () {
+	$session = createJamSession();
+	$user = User::factory()->create();
+
+	JamSessionSignIn::query()->create([
+		'jam_session_id' => $session->id,
+		'user_id' => $user->id,
+		'signed_in_at' => now(),
+	]);
+
+	$response = $this->postJson(route('jam-register.sign-out', [$session, $user]), [
+		'user_id' => $user->id,
+	]);
+
+	$response->assertOk();
+	$response->assertJsonPath('signed_in', false);
+
+	$this->assertDatabaseMissing('jam_session_sign_ins', [
+		'jam_session_id' => $session->id,
+		'user_id' => $user->id,
+	]);
+});
+
+test('admin can see attendees and sign everyone out', function () {
+	$admin = User::factory()->create(['is_admin' => true]);
+	$session = createJamSession();
+	$alice = User::factory()->create(['name' => 'Alice']);
+	$bob = User::factory()->create(['name' => 'Bob']);
+
+	JamSessionSignIn::query()->create([
+		'jam_session_id' => $session->id,
+		'user_id' => $alice->id,
+		'signed_in_at' => now()->subMinutes(2),
+	]);
+	JamSessionSignIn::query()->create([
+		'jam_session_id' => $session->id,
+		'user_id' => $bob->id,
+		'signed_in_at' => now()->subMinute(),
+	]);
+
+	$attendeesResponse = $this->actingAs($admin)
+		->getJson(route('sessions.check-ins', $session));
+
+	$attendeesResponse->assertOk();
+	$attendeesResponse->assertJsonPath('count', 2);
+
+	$signOutAllResponse = $this->actingAs($admin)
+		->postJson(route('sessions.check-ins.sign-out-all', $session));
+
+	$signOutAllResponse->assertOk();
+	$signOutAllResponse->assertJsonPath('count', 2);
+
+	$this->assertDatabaseCount('jam_session_sign_ins', 0);
+});
+
+test('non admin cannot access admin check-in endpoints', function () {
+	$member = User::factory()->create(['is_admin' => false]);
+	$session = createJamSession();
+
+	$this->actingAs($member)
+		->getJson(route('sessions.check-ins', $session))
+		->assertForbidden();
+
+	$this->actingAs($member)
+		->postJson(route('sessions.check-ins.sign-out-all', $session))
+		->assertForbidden();
+});

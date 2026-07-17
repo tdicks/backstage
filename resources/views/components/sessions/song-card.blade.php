@@ -8,9 +8,10 @@
 ])
 
 <article
-    class="rounded-md border border-gray-200 p-4 transition"
-    x-bind:class="draggingSongId === {{ $song->id }} ? 'opacity-70 ring-2 ring-amber-300 border-amber-300 bg-amber-50/40' : ''"
+    class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
+    draggable="{{ $isSetOwner ? 'true' : 'false' }}"
+    @dragstart="onSongDragStart($event, {{ $song->id }})"
     @dragover="onSongDragOver($event)"
     @drop="onSongDrop({{ $song->id }})"
     x-data="{
@@ -23,47 +24,46 @@
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
     @keydown.escape.window="openEditSong = false; openAddSlot = false"
 >
-    <div class="flex flex-wrap items-start justify-between gap-2">
+    <div
+        class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
+        @click="songCollapsed = !songCollapsed"
+        role="button"
+        tabindex="0"
+        @keydown.enter.prevent="songCollapsed = !songCollapsed"
+        @keydown.space.prevent="songCollapsed = !songCollapsed"
+        x-bind:aria-expanded="(!songCollapsed).toString()"
+        x-bind:title="songCollapsed ? 'Click to show song slots and assignments' : 'Click to hide song slots and assignments'"
+        aria-label="Toggle song details"
+    >
         <div>
-            <h4 class="font-semibold text-gray-900">{{ $song->artist }} - {{ $song->title }}</h4>
+            <h4 class="text-base font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h4>
             @if ($song->notes)
-                <p class="text-sm text-gray-600">{{ $song->notes }}</p>
+                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $song->notes }}</p>
             @endif
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex flex-wrap items-center gap-2" @click.stop>
             @if ($canManageSet)
                 <button
                     type="button"
-                    draggable="true"
-                    @dragstart="onSongDragStart($event, {{ $song->id }})"
-                    @dragend="onSongDragEnd()"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 cursor-grab active:cursor-grabbing"
-                    aria-label="Drag to reorder song"
-                    title="Drag to reorder song"
+                    @click="openEditSong = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Edit song"
+                    title="Edit song"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01" />
-                    </svg>
+                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Edit Song</span>
                 </button>
-            @endif
-            <x-secondary-button
-                type="button"
-                @click="songCollapsed = !songCollapsed"
-                x-bind:aria-label="songCollapsed ? 'Expand song' : 'Collapse song'"
-                x-bind:title="songCollapsed ? 'Expand song' : 'Collapse song'"
-                class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100"
-            >
-                <svg x-show="!songCollapsed" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-                </svg>
-                <svg x-show="songCollapsed" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-            </x-secondary-button>
-            @if ($canManageSet)
-                <x-secondary-button @click="openEditSong = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Edit Song</x-secondary-button>
-                <x-secondary-button @click="openAddSlot = true" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100">Add Slot</x-secondary-button>
+                <button
+                    type="button"
+                    @click="openAddSlot = true"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Add slot"
+                    title="Add slot"
+                >
+                    <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Add Slot</span>
+                </button>
             @endif
         </div>
     </div>
@@ -71,7 +71,7 @@
     @if ($canManageSet)
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+            <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h5 class="text-lg font-semibold text-slate-900">Edit Song</h5>
                 <form method="POST" action="{{ route('songs.update', $song) }}" class="mt-4 space-y-4">
                     @csrf
@@ -79,16 +79,16 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <x-input-label :value="'Artist'" />
-                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full" required />
                         </div>
                         <div>
                             <x-input-label :value="'Title'" />
-                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full" required />
                         </div>
                     </div>
                     <div>
                         <x-input-label :value="'Notes'" />
-                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $song->notes }}</textarea>
+                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-md border-gray-300">{{ $song->notes }}</textarea>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-secondary-button type="button" @click="openEditSong = false">Cancel</x-secondary-button>
@@ -105,13 +105,13 @@
 
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+            <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h5 class="text-lg font-semibold text-slate-900">Add Slot</h5>
                 <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4">
                     @csrf
                     <div>
                         <x-input-label :value="'Slot Name'" />
-                        <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
+                        <select name="name" class="mt-1 w-full rounded-md border-gray-300" required>
                             @foreach ($slotOptions as $slotValue => $slotLabel)
                                 <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                             @endforeach
@@ -126,13 +126,13 @@
         </div>
     @endif
 
-    <div class="mt-4 overflow-x-auto" x-show="!songCollapsed" x-transition>
+    <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white/80" x-show="!songCollapsed" x-transition>
         <table class="min-w-full text-sm">
             <thead>
-                <tr class="text-left text-gray-500">
-                    <th class="py-2">Slot</th>
-                    <th class="py-2">Assigned</th>
-                    <th class="py-2">Actions</th>
+                <tr class="bg-slate-50 text-left text-slate-600">
+                    <th class="px-3 py-2">Slot</th>
+                    <th class="px-3 py-2">Assigned</th>
+                    <th class="px-3 py-2">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -147,7 +147,7 @@
                     />
                 @empty
                     <tr>
-                        <td colspan="3" class="py-3 text-sm text-gray-500">No slots yet.</td>
+                        <td colspan="3" class="px-3 py-4 text-sm text-slate-500">No slots yet.</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -16,23 +16,12 @@ class SlotController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::NAMES)],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'guest_name' => ['nullable', 'string', 'max:255'],
         ]);
-
-        $guestName = isset($validated['guest_name']) ? trim((string) $validated['guest_name']) : null;
-
-        if (($validated['user_id'] ?? null) && filled($guestName)) {
-            return back()->withErrors([
-                'guest_name' => 'Choose either a registered user or a manual performer name, not both.',
-            ])->withInput();
-        }
 
         $nextPosition = ((int) $song->slots()->max('position')) + 1;
 
         $song->slots()->create([
-            'name' => $validated['name'],
-            'user_id' => $validated['user_id'] ?? null,
-            'guest_name' => filled($guestName) ? $guestName : null,
+            ...$validated,
             'position' => $nextPosition,
         ]);
 
@@ -46,22 +35,12 @@ class SlotController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::NAMES)],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'guest_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
-
-        $guestName = isset($validated['guest_name']) ? trim((string) $validated['guest_name']) : null;
-
-        if (($validated['user_id'] ?? null) && filled($guestName)) {
-            return back()->withErrors([
-                'guest_name' => 'Choose either a registered user or a manual performer name, not both.',
-            ])->withInput();
-        }
 
         $slot->update([
             'name' => $validated['name'],
             'user_id' => $validated['user_id'] ?? null,
-            'guest_name' => filled($guestName) ? $guestName : null,
             'position' => $validated['position'] ?? $slot->position,
         ]);
 
@@ -82,7 +61,6 @@ class SlotController extends Controller
 
         $slot->update([
             'user_id' => $request->user()->id,
-            'guest_name' => null,
         ]);
 
         return back()->with('status', 'Slot assigned to you.');
@@ -96,7 +74,6 @@ class SlotController extends Controller
 
         $slot->update([
             'user_id' => null,
-            'guest_name' => null,
         ]);
 
         return back()->with('status', 'Slot released.');

@@ -3,31 +3,89 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamSession;
+use App\Models\JamSessionSignIn;
 use App\Models\Set;
+use App\Models\Slot;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class SetController extends Controller
 {
+    public function summary(Set $set): JsonResponse
+    {
+        $this->authorize('view', $set->session);
+
+        $set->load([
+            'songs.slots.user:id,name',
+        ]);
+
+        $checkedInUserIds = JamSessionSignIn::query()
+            ->where('jam_session_id', $set->jam_session_id)
+            ->pluck('user_id')
+            ->all();
+
+        $slotOptions = Slot::options();
+        $slotNames = collect(array_keys($slotOptions))
+            ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
+            ->values();
+
+        $songs = $set->songs->map(function ($song) use ($slotNames, $slotOptions, $checkedInUserIds) {
+            $slotMap = [];
+
+            foreach ($slotNames as $slotName) {
+                $slot = $song->slots->firstWhere('name', $slotName);
+
+                if (! $slot) {
+                    $slotMap[$slotName] = [
+                        'state' => 'empty',
+                        'display' => '-',
+                        'checked_in' => false,
+                    ];
+                    continue;
+                }
+
+                if ($slot->user) {
+                    $slotMap[$slotName] = [
+                        'state' => 'user',
+                        'display' => $slot->user->name,
+                        'checked_in' => in_array($slot->user->id, $checkedInUserIds, true),
+                    ];
+                    continue;
+                }
+
+                $slotMap[$slotName] = [
+                    'state' => 'open',
+                    'display' => 'Open',
+                    'checked_in' => false,
+                ];
+            }
+
+            return [
+                'id' => $song->id,
+                'artist' => $song->artist,
+                'title' => $song->title,
+                'slot_map' => $slotMap,
+            ];
+        })->values();
+
+        return response()->json([
+            'slot_names' => $slotNames->map(fn (string $name) => [
+                'name' => $name,
+                'label' => $slotOptions[$name] ?? ucfirst(str_replace('_', ' ', $name)),
+            ])->values(),
+            'songs' => $songs,
+        ]);
+    }
+
     public function store(Request $request, JamSession $jamSession): RedirectResponse
     {
         $this->authorize('create', Set::class);
-
-        $isAdmin = $request->user()->is_admin;
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
         ]);
-
-        if ($isAdmin) {
-            $validated = [
-                ...$validated,
-                ...$request->validate([
-                    'feature_set' => ['nullable', 'boolean'],
-                ]),
-            ];
-        }
 
         $nextPosition = ((int) $jamSession->sets()->max('position')) + 1;
 
@@ -35,7 +93,6 @@ class SetController extends Controller
             ...$validated,
             'owner_id' => $request->user()->id,
             'position' => $nextPosition,
-            'feature_set' => $isAdmin ? (bool) ($validated['feature_set'] ?? false) : false,
             'performed' => false,
         ]);
 
@@ -58,7 +115,6 @@ class SetController extends Controller
 
         if ($isAdmin) {
             $rules['owner_id'] = ['required', 'integer', 'exists:users,id'];
-            $rules['feature_set'] = ['nullable', 'boolean'];
         }
 
         $validated = $request->validate($rules);
@@ -67,7 +123,6 @@ class SetController extends Controller
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'position' => $validated['position'] ?? $set->position,
-            'feature_set' => $isAdmin ? (bool) ($validated['feature_set'] ?? false) : $set->feature_set,
             'performed' => (bool) ($validated['performed'] ?? false),
             'jam_session_id' => $validated['jam_session_id'] ?? $set->jam_session_id,
         ];
