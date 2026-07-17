@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         View::composer('layouts.navigation', function ($view): void {
             $view->with('navJamSessions', JamSession::query()
+                ->visibleTo(request()->user())
                 ->orderByDesc('date')
                 ->get(['id', 'name', 'date']));
         });

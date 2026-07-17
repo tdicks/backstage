@@ -29,6 +29,23 @@
     x-data="{
         openSong: false,
         openSongRequest: false,
+        songArtistQuery: '',
+        songTitleQuery: '',
+        selectedArtistName: '',
+        artistSuggestions: [],
+        titleSuggestions: [],
+        artistLookupBusy: false,
+        titleLookupBusy: false,
+        artistLookupError: '',
+        titleLookupError: '',
+        showArtistSuggestions: false,
+        showTitleSuggestions: false,
+        artistLookupTimer: null,
+        titleLookupTimer: null,
+        artistLookupToken: 0,
+        titleLookupToken: 0,
+        artistLookupUrl: @js(route('lookups.deezer.artists')),
+        titleLookupUrl: @js(route('lookups.deezer.tracks')),
         openSetEdit: false,
         openSummary: false,
         summaryData: null,
@@ -43,8 +60,15 @@
         reorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
+        signupsToggleBusy: false,
+        signupsToggleError: '',
+        addSongBusy: false,
+        addSongError: '',
         dragSongId: null,
         draggingSongId: null,
+        refreshSessionSets() {
+            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
         onSongDragStart(event, songId) {
             if (!this.canReorderSongs) {
                 return;
@@ -134,6 +158,35 @@
                 this.reorderBusy = false;
             }
         },
+        async toggleSignups(open) {
+            this.signupsToggleBusy = true;
+            this.signupsToggleError = '';
+
+            try {
+                const response = await fetch(open ? '{{ route('sets.open-signups', $set) }}' : '{{ route('sets.close-signups', $set) }}', {
+                    method: 'PATCH',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: JSON.stringify({}),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Signups toggle failed');
+                }
+
+                this.refreshSessionSets();
+            } catch (e) {
+                this.signupsToggleError = open
+                    ? 'Could not re-open sign ups. Try again.'
+                    : 'Could not close sign ups. Try again.';
+            } finally {
+                this.signupsToggleBusy = false;
+            }
+        },
         async loadSummary(initial = false) {
             if (initial && !this.summaryLoaded) {
                 this.summaryLoading = true;
@@ -192,6 +245,185 @@
                 clearInterval(this.summaryPollId);
                 this.summaryPollId = null;
             }
+        },
+        openAddSongModal() {
+            this.openSong = true;
+            this.addSongError = '';
+            this.resetSongAutocomplete();
+        },
+        async submitAddSong(event) {
+            this.addSongBusy = true;
+            this.addSongError = '';
+
+            try {
+                const response = await fetch('{{ route('songs.store', $set) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: new FormData(event.target),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                this.openSong = false;
+                this.resetSongAutocomplete();
+                this.refreshSessionSets();
+            } catch (e) {
+                this.addSongError = 'Could not add song. Try again.';
+            } finally {
+                this.addSongBusy = false;
+            }
+        },
+        resetSongAutocomplete() {
+            this.songArtistQuery = '';
+            this.songTitleQuery = '';
+            this.selectedArtistName = '';
+            this.artistSuggestions = [];
+            this.titleSuggestions = [];
+            this.artistLookupBusy = false;
+            this.titleLookupBusy = false;
+            this.artistLookupError = '';
+            this.titleLookupError = '';
+            this.showArtistSuggestions = false;
+            this.showTitleSuggestions = false;
+            if (this.artistLookupTimer) {
+                clearTimeout(this.artistLookupTimer);
+                this.artistLookupTimer = null;
+            }
+            if (this.titleLookupTimer) {
+                clearTimeout(this.titleLookupTimer);
+                this.titleLookupTimer = null;
+            }
+        },
+        queueArtistLookup() {
+            this.artistLookupError = '';
+            this.showTitleSuggestions = false;
+            this.titleSuggestions = [];
+
+            if (this.artistLookupTimer) {
+                clearTimeout(this.artistLookupTimer);
+            }
+
+            const query = this.songArtistQuery.trim();
+            if (query.length < 2) {
+                this.artistSuggestions = [];
+                this.showArtistSuggestions = false;
+                this.selectedArtistName = '';
+                return;
+            }
+
+            this.artistLookupTimer = setTimeout(() => this.fetchArtistSuggestions(query), 250);
+        },
+        async fetchArtistSuggestions(query) {
+            const token = ++this.artistLookupToken;
+            this.artistLookupBusy = true;
+
+            try {
+                const response = await fetch(`${this.artistLookupUrl}?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error('Artist lookup failed');
+                }
+
+                const payload = await response.json();
+                if (token !== this.artistLookupToken) {
+                    return;
+                }
+
+                this.artistSuggestions = payload.artists || [];
+
+                this.showArtistSuggestions = this.artistSuggestions.length > 0;
+            } catch (e) {
+                if (token !== this.artistLookupToken) {
+                    return;
+                }
+
+                this.artistLookupError = 'Could not fetch artist suggestions right now.';
+                this.artistSuggestions = [];
+                this.showArtistSuggestions = false;
+            } finally {
+                if (token === this.artistLookupToken) {
+                    this.artistLookupBusy = false;
+                }
+            }
+        },
+        selectArtistSuggestion(artistName) {
+            this.songArtistQuery = artistName;
+            this.selectedArtistName = artistName;
+            this.artistSuggestions = [];
+            this.showArtistSuggestions = false;
+            this.songTitleQuery = '';
+            this.titleSuggestions = [];
+            this.showTitleSuggestions = false;
+            this.titleLookupError = '';
+        },
+        queueTitleLookup() {
+            this.titleLookupError = '';
+
+            if (this.titleLookupTimer) {
+                clearTimeout(this.titleLookupTimer);
+            }
+
+            const query = this.songTitleQuery.trim();
+            const artist = (this.selectedArtistName || this.songArtistQuery).trim();
+            if (query.length < 2 || artist.length < 2) {
+                this.titleSuggestions = [];
+                this.showTitleSuggestions = false;
+                return;
+            }
+
+            this.titleLookupTimer = setTimeout(() => this.fetchTitleSuggestions(artist, query), 250);
+        },
+        async fetchTitleSuggestions(artist, query) {
+            const token = ++this.titleLookupToken;
+            this.titleLookupBusy = true;
+
+            try {
+                const response = await fetch(`${this.titleLookupUrl}?artist=${encodeURIComponent(artist)}&q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error('Title lookup failed');
+                }
+
+                const payload = await response.json();
+                if (token !== this.titleLookupToken) {
+                    return;
+                }
+
+                this.titleSuggestions = payload.titles || [];
+
+                this.showTitleSuggestions = this.titleSuggestions.length > 0;
+            } catch (e) {
+                if (token !== this.titleLookupToken) {
+                    return;
+                }
+
+                this.titleLookupError = 'Could not fetch song suggestions right now.';
+                this.titleSuggestions = [];
+                this.showTitleSuggestions = false;
+            } finally {
+                if (token === this.titleLookupToken) {
+                    this.titleLookupBusy = false;
+                }
+            }
+        },
+        selectTitleSuggestion(title) {
+            this.songTitleQuery = title;
+            this.titleSuggestions = [];
+            this.showTitleSuggestions = false;
         }
     }"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'"
@@ -268,33 +500,29 @@
             </button>
             @if ($canManageSet)
                 @if ($set->signups_open)
-                    <form method="POST" action="{{ route('sets.close-signups', $set) }}">
-                        @csrf
-                        @method('PATCH')
-                        <button
-                            type="submit"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                            aria-label="Close Sign Ups"
-                            title="Close Sign Ups"
-                        >
-                            <x-heroicon-m-lock-closed class="h-4 w-4" aria-hidden="true" />
-                            <span class="sr-only">Close Sign Ups</span>
-                        </button>
-                    </form>
+                    <button
+                        type="button"
+                        @click="toggleSignups(false)"
+                        x-bind:disabled="signupsToggleBusy"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                        aria-label="Close Sign Ups"
+                        title="Close Sign Ups"
+                    >
+                        <x-heroicon-m-lock-closed class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Close Sign Ups</span>
+                    </button>
                 @else
-                    <form method="POST" action="{{ route('sets.open-signups', $set) }}">
-                        @csrf
-                        @method('PATCH')
-                        <button
-                            type="submit"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                            aria-label="Re-open Sign Ups"
-                            title="Re-open Sign Ups"
-                        >
-                            <x-heroicon-m-lock-open class="h-4 w-4" aria-hidden="true" />
-                            <span class="sr-only">Re-open Sign Ups</span>
-                        </button>
-                    </form>
+                    <button
+                        type="button"
+                        @click="toggleSignups(true)"
+                        x-bind:disabled="signupsToggleBusy"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                        aria-label="Re-open Sign Ups"
+                        title="Re-open Sign Ups"
+                    >
+                        <x-heroicon-m-lock-open class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Re-open Sign Ups</span>
+                    </button>
                 @endif
                 <button
                     type="button"
@@ -308,7 +536,7 @@
                 </button>
                 <button
                     type="button"
-                    @click="openSong = true"
+                    @click="openAddSongModal()"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     aria-label="Add Song"
                     title="Add Song"
@@ -498,20 +726,79 @@
             </div>
         </div>
 
-        <div x-show="openSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSong = false"></div>
+        <div x-show="openSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
         <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Add Song to {{ $set->name }}</h4>
-                <form method="POST" action="{{ route('songs.store', $set) }}" class="mt-4 space-y-4">
+                <form method="POST" action="{{ route('songs.store', $set) }}" class="mt-4 space-y-4" @submit.prevent="submitAddSong($event)">
                     @csrf
+                    <p x-show="addSongError" x-text="addSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
+                        <div class="relative">
                             <x-input-label :value="'Artist'" />
-                            <x-text-input name="artist" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input
+                                name="artist"
+                                x-model="songArtistQuery"
+                                @input="queueArtistLookup()"
+                                @focus="showArtistSuggestions = artistSuggestions.length > 0"
+                                @keydown.escape="showArtistSuggestions = false"
+                                class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
+                                autocomplete="off"
+                                required
+                            />
+                            <p class="mt-1 text-xs text-slate-500">Start typing an artist to fetch Deezer suggestions.</p>
+                            <div x-show="artistLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up artists...</div>
+                            <div x-show="artistLookupError" x-cloak x-text="artistLookupError" class="mt-1 text-xs text-rose-600"></div>
+                            <ul
+                                x-show="showArtistSuggestions"
+                                x-cloak
+                                class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                                @click.outside="showArtistSuggestions = false"
+                            >
+                                <template x-for="artist in artistSuggestions" :key="`artist-${artist}`">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            @click="selectArtistSuggestion(artist)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                                            x-text="artist"
+                                        ></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
-                        <div>
+                        <div class="relative">
                             <x-input-label :value="'Title'" />
-                            <x-text-input name="title" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input
+                                name="title"
+                                x-model="songTitleQuery"
+                                @input="queueTitleLookup()"
+                                @focus="showTitleSuggestions = titleSuggestions.length > 0"
+                                @keydown.escape="showTitleSuggestions = false"
+                                class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
+                                autocomplete="off"
+                                required
+                            />
+                            <p class="mt-1 text-xs text-slate-500">Song suggestions are scoped to the selected artist.</p>
+                            <div x-show="titleLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up songs...</div>
+                            <div x-show="titleLookupError" x-cloak x-text="titleLookupError" class="mt-1 text-xs text-rose-600"></div>
+                            <ul
+                                x-show="showTitleSuggestions"
+                                x-cloak
+                                class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                                @click.outside="showTitleSuggestions = false"
+                            >
+                                <template x-for="title in titleSuggestions" :key="`title-${title}`">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            @click="selectTitleSuggestion(title)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                                            x-text="title"
+                                        ></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
                     <div>
@@ -539,8 +826,8 @@
                         </div>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button type="button" @click="openSong = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
-                        <x-primary-button>Add Song</x-primary-button>
+                        <x-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
+                        <x-primary-button x-bind:disabled="addSongBusy">Add Song</x-primary-button>
                     </div>
                 </form>
             </div>
@@ -576,6 +863,7 @@
     @endif
 
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
+        <p x-show="signupsToggleError" x-text="signupsToggleError" class="text-sm text-red-700"></p>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         <p x-show="reorderFeedback" x-text="reorderFeedback" class="text-sm text-emerald-700"></p>
         @if ($isSetOwner)

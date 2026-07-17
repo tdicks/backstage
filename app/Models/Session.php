@@ -13,12 +13,16 @@ class Session extends Model
         'name',
         'date',
         'description',
+        'is_closed',
+        'is_hidden',
     ];
 
     protected function casts(): array
     {
         return [
             'date' => 'date',
+            'is_closed' => 'boolean',
+            'is_hidden' => 'boolean',
         ];
     }
 

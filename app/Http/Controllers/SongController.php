@@ -6,13 +6,14 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SongController extends Controller
 {
-    public function store(Request $request, Set $set): RedirectResponse
+    public function store(Request $request, Set $set): JsonResponse|RedirectResponse
     {
         $this->authorize('update', $set);
 
@@ -54,6 +55,17 @@ class SongController extends Controller
                     'position' => $nextSlotPosition++,
                 ]);
             }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Song added to set.',
+                'song' => [
+                    'id' => $song->id,
+                    'artist' => $song->artist,
+                    'title' => $song->title,
+                ],
+            ]);
         }
 
         return back()->with('status', 'Song added to set.');

@@ -103,35 +103,37 @@
     @if ($canManageSet)
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h5 class="text-lg font-semibold text-slate-900">Edit Song</h5>
-                <form method="POST" action="{{ route('songs.update', $song) }}" class="mt-4 space-y-4">
+                <form id="edit_song_form_{{ $song->id }}" method="POST" action="{{ route('songs.update', $song) }}" class="mt-4 space-y-4">
                     @csrf
                     @method('PATCH')
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <x-input-label :value="'Artist'" />
-                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full" required />
+                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                         </div>
                         <div>
                             <x-input-label :value="'Title'" />
-                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full" required />
+                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                         </div>
                     </div>
                     <div>
                         <x-input-label :value="'Notes'" />
-                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-md border-gray-300">{{ $song->notes }}</textarea>
+                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $song->notes }}</textarea>
                     </div>
+                </form>
+                <div class="mt-4 flex items-center justify-between gap-3">
+                    <form method="POST" action="{{ route('songs.destroy', $song) }}">
+                        @csrf
+                        @method('DELETE')
+                        <x-danger-button type="submit">Delete Song</x-danger-button>
+                    </form>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openEditSong = false">Cancel</x-secondary-button>
-                        <x-primary-button>Save</x-primary-button>
+                        <x-secondary-button type="button" @click="openEditSong = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
+                        <x-primary-button type="submit" form="edit_song_form_{{ $song->id }}">Save</x-primary-button>
                     </div>
-                </form>
-                <form method="POST" action="{{ route('songs.destroy', $song) }}" class="mt-4">
-                    @csrf
-                    @method('DELETE')
-                    <x-danger-button type="submit">Delete Song</x-danger-button>
-                </form>
+                </div>
             </div>
         </div>
 

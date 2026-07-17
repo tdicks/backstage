@@ -13,7 +13,7 @@ use Illuminate\View\View;
 class JamSessionController extends Controller
 {
     private const LOADING_ONE_LINERS = [
-        'Loading the Spinal Tap DVD...',
+        'Inserting the Spinal Tap video cassette...',
         'Dusting off the Marshall stack...',
         'Feeding the bass players...',
         "Changing some guitar strings...",
@@ -22,15 +22,22 @@ class JamSessionController extends Controller
         'Showing Richard Ottaway to the Thin Lizzy vinyls...',
         'Showing Ethan Bishop to the blackgaze room...',
         "Setting Tom Potter's time machine to 1982...",
+        'Tuning the triangle for optimal resonance...',
         'Setting the fog machine to maximum drama...',
         'Arguing about whether this riff is in drop D...',
         'Waking the drummer from a 17-minute solo dream...',
         'Polishing the leather jackets for stage readiness...',
+        'Searching eBay for Jackson Soloists...',
+        "Trotting down the Witch's Brew for a pint...",
+        "Searching for Quo's fourth chord...",
+        'Asking Darius for more guitars in the monitors...',
+        "Yeah but these go to eleven..."
     ];
 
     public function index(): View
     {
         $sessions = JamSession::query()
+            ->visibleTo(request()->user())
             ->withCount('sets')
             ->latest('date')
             ->get();
@@ -51,9 +58,13 @@ class JamSessionController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
+            'is_hidden' => ['nullable', 'boolean'],
         ]);
 
-        JamSession::create($validated);
+        JamSession::create([
+            ...$validated,
+            'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
+        ]);
 
         return to_route('sessions.index')->with('status', 'Jam session created.');
     }
@@ -63,6 +74,8 @@ class JamSessionController extends Controller
      */
     public function show(JamSession $jamSession): View
     {
+        $this->authorize('view', $jamSession);
+
         $jamSession->loadCount('sets');
 
         return view('sessions.show', [
@@ -88,7 +101,10 @@ class JamSessionController extends Controller
 
         return view('sessions.partials.set-cards', [
             'session' => $jamSession,
-            'sessions' => JamSession::query()->orderByDesc('date')->get(['id', 'name', 'date']),
+            'sessions' => JamSession::query()
+                ->visibleTo(request()->user())
+                ->orderByDesc('date')
+                ->get(['id', 'name', 'date']),
             'slotOptions' => Slot::options(),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()->orderBy('name')->get(),
@@ -106,9 +122,15 @@ class JamSessionController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
+            'is_closed' => ['nullable', 'boolean'],
+            'is_hidden' => ['nullable', 'boolean'],
         ]);
 
-        $jamSession->update($validated);
+        $jamSession->update([
+            ...$validated,
+            'is_closed' => (bool) ($validated['is_closed'] ?? false),
+            'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
+        ]);
 
         return back()->with('status', 'Jam session updated.');
     }

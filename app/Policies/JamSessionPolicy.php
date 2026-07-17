@@ -20,7 +20,7 @@ class JamSessionPolicy
      */
     public function view(User $user, JamSession $jamSession): bool
     {
-        return true;
+        return $user->is_admin || ! $jamSession->is_hidden;
     }
 
     /**

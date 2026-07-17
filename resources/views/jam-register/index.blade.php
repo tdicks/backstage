@@ -173,11 +173,11 @@
 		}
 	}">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-8 flex items-center gap-4">
+			<div class="mb-8 flex items-center justify-center gap-4">
 				<x-application-logo class="h-12 w-12 fill-current text-slate-100" />
 				<div>
-					<h1 class="text-3xl font-semibold">Jam Register</h1>
-					<p class="text-sm text-slate-300">Backstage sign-in.</p>
+					<h1 class="text-3xl font-semibold">Backstage</h1>
+					<p class="text-sm text-slate-300">Jam check-in.</p>
 				</div>
 			</div>
 
@@ -205,7 +205,7 @@
 
 					<h4 class="mt-4 text-lg font-semibold text-slate-900" x-show="selectedSessionName && !showSessionPicker" x-text="`Tonight's jam is ${selectedSessionName}`"></h4>
 
-					<div class="mt-5">
+					<div class="mt-5" x-show="selectedSessionId && !showSessionPicker" x-cloak>
 						<x-input-label for="register_name" value="Your Name" />
 						<input
 							id="register_name"
@@ -231,7 +231,7 @@
 					</div>
 
 					<div class="mt-6 flex flex-wrap items-center gap-3">
-						<p class="text-sm text-slate-600">Select your name to continue.</p>
+						<p class="text-sm text-slate-600" x-show="suggestions.length > 0" x-cloak>Select your name to continue.</p>
 					</div>
 				</section>
 			</div>

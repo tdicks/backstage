@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,13 +14,26 @@ class JamSession extends Model
         'name',
         'date',
         'description',
+        'is_closed',
+        'is_hidden',
     ];
 
     protected function casts(): array
     {
         return [
             'date' => 'date',
+            'is_closed' => 'boolean',
+            'is_hidden' => 'boolean',
         ];
+    }
+
+    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    {
+        if ($user?->is_admin) {
+            return $query;
+        }
+
+        return $query->where('is_hidden', false);
     }
 
     public function sets(): HasMany

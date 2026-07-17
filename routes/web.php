@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
+use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\MySignupsController;
@@ -69,6 +70,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/slots/{slot}/requests', [SlotAssignmentController::class, 'request'])->name('slot-assignments.request');
     Route::post('/slots/{slot}/proposals', [SlotAssignmentController::class, 'propose'])->name('slot-assignments.propose');
     Route::patch('/slot-assignments/{slotAssignment}/respond', [SlotAssignmentController::class, 'respond'])->name('slot-assignments.respond');
+
+    Route::get('/lookups/deezer/artists', [DeezerLookupController::class, 'artists'])->name('lookups.deezer.artists');
+    Route::get('/lookups/deezer/tracks', [DeezerLookupController::class, 'tracks'])->name('lookups.deezer.tracks');
 
     Route::resource('band-templates', BandTemplateController::class)->except(['show', 'create', 'edit']);
 });
