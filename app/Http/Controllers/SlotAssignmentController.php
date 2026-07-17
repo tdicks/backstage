@@ -18,6 +18,10 @@ class SlotAssignmentController extends Controller
             return back()->with('status', 'Sign ups are closed for this set.');
         }
 
+        if (! $slot->isOpen()) {
+            return back()->with('status', 'This slot is already assigned.');
+        }
+
         if ($slot->user_id === $user->id) {
             return back()->with('status', 'You already have this slot.');
         }
@@ -40,6 +44,10 @@ class SlotAssignmentController extends Controller
 
         if (! $slot->song->set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
+        }
+
+        if (! $slot->isOpen()) {
+            return back()->with('status', 'This slot is already assigned.');
         }
 
         $validated = $request->validate([
@@ -96,6 +104,7 @@ class SlotAssignmentController extends Controller
         if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
             $slotAssignment->slot->update([
                 'user_id' => $slotAssignment->target_user_id,
+                'guest_name' => null,
             ]);
         }
 

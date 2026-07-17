@@ -152,10 +152,13 @@
                                 @endif
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($song->slots as $slot)
-                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $slot->user ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
+                                        @php
+                                            $assignedName = $slot->user?->name ?? $slot->guest_name;
+                                        @endphp
+                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $assignedName ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
-                                            <span class="{{ $slot->user ? 'text-emerald-500' : 'text-amber-500' }}">-</span>
-                                            <span>{{ $slot->user?->name ?? 'Open' }}</span>
+                                            <span class="{{ $assignedName ? 'text-emerald-500' : 'text-amber-500' }}">-</span>
+                                            <span>{{ $assignedName ?? 'Open' }}</span>
                                         </div>
                                     @endforeach
                                 </div>

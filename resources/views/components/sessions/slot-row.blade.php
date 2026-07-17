@@ -12,7 +12,7 @@
     x-data="{
         openPropose: false,
         openEditSlot: false,
-        assignedUserName: @js($slotModel->user?->name ?? 'Open'),
+        assignedUserName: @js($slotModel->user?->name ?? $slotModel->guest_name ?? 'Open'),
         slotIsOpen: @js($slotModel->isOpen()),
         assignedToCurrentUser: @js($slotModel->user_id === auth()->id()),
         hasPendingOwnRequest: @js($slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === auth()->id())),
@@ -118,7 +118,7 @@
 >
     <td class="py-3">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
     <td class="py-3">
-        <span x-text="assignedUserName">{{ $slotModel->user?->name ?? 'Open' }}</span>
+        <span x-text="assignedUserName">{{ $slotModel->user?->name ?? $slotModel->guest_name ?? 'Open' }}</span>
     </td>
     <td class="py-3">
         <div class="flex flex-wrap gap-2">
@@ -208,6 +208,11 @@
                                     <option value="{{ $user->id }}" @selected($slotModel->user_id === $user->id)>{{ $user->name }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div>
+                            <x-input-label :value="'Manual Performer Name (optional)'" />
+                            <x-text-input name="guest_name" :value="$slotModel->guest_name" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" maxlength="255" placeholder="Enter performer name" />
+                            <p class="mt-1 text-xs text-slate-500">Use this when the performer does not have an account on Backstage. Leave both fields blank to mark the slot as open.</p>
                         </div>
                         <div class="flex justify-end gap-2">
                             <x-secondary-button type="button" @click="openEditSlot = false">Cancel</x-secondary-button>

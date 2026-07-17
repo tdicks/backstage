@@ -259,6 +259,8 @@
                                                 <span class="text-xs text-gray-400">-</span>
                                             @elseif ($slot->user)
                                                 <span class="font-medium text-emerald-700">{{ $slot->user->name }}</span>
+                                            @elseif ($slot->guest_name)
+                                                <span class="font-medium text-indigo-700">{{ $slot->guest_name }}</span>
                                             @else
                                                 <span class="text-amber-700">Open</span>
                                             @endif
