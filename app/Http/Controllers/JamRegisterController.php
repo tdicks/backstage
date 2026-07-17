@@ -40,7 +40,6 @@ class JamRegisterController extends Controller
 	public function signIn(Request $request, JamSession $jamSession): JsonResponse
 	{
 		$this->abortIfHidden($jamSession);
-		$this->authorize('view', $jamSession);
 
 		$validated = $request->validate([
 			'user_id' => ['required', 'integer', 'exists:users,id'],
@@ -72,7 +71,6 @@ class JamRegisterController extends Controller
 	public function status(JamSession $jamSession, User $user): JsonResponse
 	{
 		$this->abortIfHidden($jamSession);
-		$this->authorize('view', $jamSession);
 
 		$signIn = JamSessionSignIn::query()
 			->where('jam_session_id', $jamSession->id)
@@ -92,7 +90,6 @@ class JamRegisterController extends Controller
 	public function signOut(JamSession $jamSession, User $user): JsonResponse
 	{
 		$this->abortIfHidden($jamSession);
-		$this->authorize('view', $jamSession);
 
 		JamSessionSignIn::query()
 			->where('jam_session_id', $jamSession->id)
