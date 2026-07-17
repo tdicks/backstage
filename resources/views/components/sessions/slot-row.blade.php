@@ -125,7 +125,7 @@
             @if ($slotModel->user_id === auth()->id())
                 <form method="POST" action="{{ route('slots.release', $slotModel) }}">
                     @csrf
-                    <x-secondary-button type="submit" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-show="assignedToCurrentUser">Release Slot</x-secondary-button>
+                    <x-secondary-button type="submit" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-show="assignedToCurrentUser" title="Give up this slot and make it available for others">Remove Me</x-secondary-button>
                 </form>
             @endif
 
@@ -144,11 +144,12 @@
                     x-show="slotIsOpen && !assignedToCurrentUser && !hasPendingOwnRequest"
                     @click="requestSlot()"
                     x-bind:disabled="busyAction"
+                    title="Request this slot to be assigned to you. The session owner will need to approve your request."
                 >Request</x-secondary-button>
             @endif
 
             @if ($set->signups_open && $slotModel->isOpen())
-                <x-secondary-button @click="openPropose = true" x-show="slotIsOpen" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-bind:disabled="busyAction">Recommend</x-secondary-button>
+                <x-secondary-button @click="openPropose = true" x-show="slotIsOpen" class="opacity-60 transition-opacity hover:opacity-100 focus:opacity-100" x-bind:disabled="busyAction" title="Recommend someone for this slot">Recommend</x-secondary-button>
             @endif
 
             @if ($canManageSet)
@@ -158,12 +159,12 @@
 
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                <h6 class="text-base font-semibold">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
+            <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                <h6 class="text-base font-semibold text-slate-900">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
                 <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
                     <div>
                         <x-input-label :value="'User'" />
-                        <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-md border-gray-300" required>
+                        <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
                             @foreach ($users as $user)
                                 @if ($user != auth()->user())
                                     <option value="{{ $user->id }}">{{ $user->name }}</option>
@@ -173,7 +174,7 @@
                     </div>
                     <div>
                         <x-input-label :value="'Message (optional)'" />
-                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-secondary-button type="button" @click="openPropose = false">Cancel</x-secondary-button>
@@ -186,14 +187,14 @@
         @if ($canManageSet)
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                    <h6 class="text-base font-semibold">Edit Slot</h6>
+                <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                    <h6 class="text-base font-semibold text-slate-900">Edit Slot</h6>
                     <form method="POST" action="{{ route('slots.update', $slotModel) }}" class="mt-4 space-y-4">
                         @csrf
                         @method('PATCH')
                         <div>
                             <x-input-label :value="'Slot Name'" />
-                            <select name="name" class="mt-1 w-full rounded-md border-gray-300">
+                            <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
                                 @foreach ($slotOptions as $slotValue => $slotLabel)
                                     <option value="{{ $slotValue }}" @selected($slotModel->name === $slotValue)>{{ $slotLabel }}</option>
                                 @endforeach
@@ -201,7 +202,7 @@
                         </div>
                         <div>
                             <x-input-label :value="'Assigned User (optional)'" />
-                            <select name="user_id" class="mt-1 w-full rounded-md border-gray-300">
+                            <select name="user_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
                                 <option value="">Open</option>
                                 @foreach ($users as $user)
                                     <option value="{{ $user->id }}" @selected($slotModel->user_id === $user->id)>{{ $user->name }}</option>

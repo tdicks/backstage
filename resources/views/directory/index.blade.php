@@ -25,7 +25,12 @@
 
             @forelse ($users as $user)
                 <article class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ $user->name }}</h3>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ $user->name }}</h3>
+                        @if ($user->is_admin)
+                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-700">Admin</span>
+                        @endif
+                    </div>
                     <p class="mt-2 text-sm text-gray-700">{{ $user->bio ?: 'No bio yet.' }}</p>
                 </article>
             @empty

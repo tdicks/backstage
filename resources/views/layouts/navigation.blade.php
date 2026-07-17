@@ -13,14 +13,14 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
+                    <a href="{{ route('my-signups.index') }}">
                         <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <div class="relative" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
+                    <div class="relative inline-flex items-center" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
                         <button
                             @click="openJamSessions = !openJamSessions"
                             class="inline-flex items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('sessions.*') ? 'border-indigo-400 text-gray-900 focus:border-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300' }} focus:outline-none"
@@ -39,7 +39,7 @@
                             x-transition:leave="transition ease-in duration-75"
                             x-transition:leave-start="opacity-100 scale-100"
                             x-transition:leave-end="opacity-0 scale-95"
-                            class="absolute start-0 z-50 mt-2 w-72 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
+                            class="absolute left-0 top-full z-50 mt-1 w-72 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                             style="display: none;"
                             @click="openJamSessions = false"
                         >
@@ -59,7 +59,7 @@
                             </div>
                         </div>
                     </div>
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    <x-nav-link :href="route('my-signups.index')" :active="request()->routeIs('my-signups.*')">
                         <span>{{ __('My Signups') }}</span>
                         @if ($pendingSlotProposalCount > 0)
                             <span class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800">
@@ -73,21 +73,6 @@
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                         {{ __('User Directory') }}
                     </x-nav-link>
-                    @if (Auth::user()->is_admin)
-                    <span class="inline-flex items-center self-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-600">
-                        Admin
-                    </span>
-                    <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
-                        <span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-700">
-                            {{ __('Users') }}
-                        </span>
-                    </x-nav-link>
-                    <x-nav-link :href="route('band-templates.index')" :active="request()->routeIs('band-templates.*')">
-                        <span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-700">
-                            {{ __('Band Templates') }}
-                        </span>
-                    </x-nav-link>
-                    @endif
                 </div>
             </div>
 
@@ -126,6 +111,19 @@
                                 {{ __('Log Out') }}
                             </x-dropdown-link>
                         </form>
+
+                        @if (Auth::user()->is_admin)
+                            <div class="my-1 border-t border-gray-100"></div>
+                            <div class="px-4 py-1 text-xs font-medium uppercase tracking-wide text-slate-600">Admin</div>
+                            <x-dropdown-link :href="route('admin.users.index')">
+                                {{ __('Users') }}
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('band-templates.index')">
+                                {{ __('Band Templates') }}
+                            </x-dropdown-link>
+                        @endif
+
+
                     </x-slot>
                 </x-dropdown>
             </div>
@@ -153,7 +151,7 @@
                     {{ $navSession->name }}
                 </x-responsive-nav-link>
             @endforeach
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+            <x-responsive-nav-link :href="route('my-signups.index')" :active="request()->routeIs('my-signups.*')">
                 <span>{{ __('My Signups') }}</span>
                 @if ($pendingSlotProposalCount > 0)
                     <span class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800">
@@ -167,19 +165,6 @@
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                 {{ __('User Directory') }}
             </x-responsive-nav-link>
-            @if (Auth::user()->is_admin)
-            <div class="px-4 pt-2 text-xs font-medium uppercase tracking-wide text-slate-600">Admin</div>
-            <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
-                <span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-700">
-                    {{ __('Users Admin') }}
-                </span>
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('band-templates.index')" :active="request()->routeIs('band-templates.*')">
-                <span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-700">
-                    {{ __('Band Templates') }}
-                </span>
-            </x-responsive-nav-link>
-            @endif
         </div>
 
         <!-- Responsive Settings Options -->
@@ -193,6 +178,16 @@
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
+
+                @if (Auth::user()->is_admin)
+                    <div class="px-4 pt-2 text-xs font-medium uppercase tracking-wide text-slate-600">Admin</div>
+                    <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                        {{ __('Users') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('band-templates.index')" :active="request()->routeIs('band-templates.*')">
+                        {{ __('Band Templates') }}
+                    </x-responsive-nav-link>
+                @endif
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">

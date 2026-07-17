@@ -44,3 +44,32 @@ test('admin can send a password reset email', function () {
 
     Notification::assertSentTo($user, ResetPassword::class);
 });
+
+test('admin can toggle another user role', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $user = User::factory()->create(['is_admin' => false]);
+
+    $this->actingAs($admin)
+        ->patch(route('admin.users.update', $user), [
+            'email' => $user->email,
+            'is_admin' => 1,
+        ])
+        ->assertRedirect();
+
+    expect($user->refresh()->is_admin)->toBeTrue();
+});
+
+test('admin cannot toggle their own role', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($admin)
+        ->from(route('admin.users.index'))
+        ->patch(route('admin.users.update', $admin), [
+            'email' => $admin->email,
+            'is_admin' => 0,
+        ])
+        ->assertRedirect(route('admin.users.index'))
+        ->assertSessionHasErrors('role');
+
+    expect($admin->refresh()->is_admin)->toBeTrue();
+});

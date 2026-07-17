@@ -8,10 +8,9 @@
 ])
 
 <article
-    class="rounded-md border border-gray-200 p-4"
+    class="rounded-md border border-gray-200 p-4 transition"
+    x-bind:class="draggingSongId === {{ $song->id }} ? 'opacity-70 ring-2 ring-amber-300 border-amber-300 bg-amber-50/40' : ''"
     data-song-id="{{ $song->id }}"
-    draggable="{{ $isSetOwner ? 'true' : 'false' }}"
-    @dragstart="onSongDragStart($event, {{ $song->id }})"
     @dragover="onSongDragOver($event)"
     @drop="onSongDrop({{ $song->id }})"
     x-data="{
@@ -33,6 +32,21 @@
         </div>
 
         <div class="flex gap-2">
+            @if ($canManageSet)
+                <button
+                    type="button"
+                    draggable="true"
+                    @dragstart="onSongDragStart($event, {{ $song->id }})"
+                    @dragend="onSongDragEnd()"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 cursor-grab active:cursor-grabbing"
+                    aria-label="Drag to reorder song"
+                    title="Drag to reorder song"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01" />
+                    </svg>
+                </button>
+            @endif
             <x-secondary-button
                 type="button"
                 @click="songCollapsed = !songCollapsed"
@@ -57,24 +71,24 @@
     @if ($canManageSet)
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-                <h5 class="text-lg font-semibold">Edit Song</h5>
+            <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                <h5 class="text-lg font-semibold text-slate-900">Edit Song</h5>
                 <form method="POST" action="{{ route('songs.update', $song) }}" class="mt-4 space-y-4">
                     @csrf
                     @method('PATCH')
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <x-input-label :value="'Artist'" />
-                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full" required />
+                            <x-text-input name="artist" :value="$song->artist" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                         </div>
                         <div>
                             <x-input-label :value="'Title'" />
-                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full" required />
+                            <x-text-input name="title" :value="$song->title" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                         </div>
                     </div>
                     <div>
                         <x-input-label :value="'Notes'" />
-                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-md border-gray-300">{{ $song->notes }}</textarea>
+                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $song->notes }}</textarea>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-secondary-button type="button" @click="openEditSong = false">Cancel</x-secondary-button>
@@ -91,13 +105,13 @@
 
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                <h5 class="text-lg font-semibold">Add Slot</h5>
+            <div class="w-full max-w-md rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                <h5 class="text-lg font-semibold text-slate-900">Add Slot</h5>
                 <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4">
                     @csrf
                     <div>
                         <x-input-label :value="'Slot Name'" />
-                        <select name="name" class="mt-1 w-full rounded-md border-gray-300" required>
+                        <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
                             @foreach ($slotOptions as $slotValue => $slotLabel)
                                 <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                             @endforeach

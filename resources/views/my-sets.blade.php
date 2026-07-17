@@ -121,6 +121,9 @@
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <h3 class="text-lg font-semibold">{{ $set->name }}</h3>
+                                @if ($set->feature_set)
+                                    <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Feature Set</span>
+                                @endif
                                 @if ($isPerformed)
                                     <span class="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-700">Performed</span>
                                 @else
@@ -149,9 +152,9 @@
                                 @endif
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($song->slots as $slot)
-                                        <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-medium text-white">
+                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {{ $slot->user ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800' }}">
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
-                                            <span class="text-white/70">-</span>
+                                            <span class="{{ $slot->user ? 'text-emerald-500' : 'text-amber-500' }}">-</span>
                                             <span>{{ $slot->user?->name ?? 'Open' }}</span>
                                         </div>
                                     @endforeach

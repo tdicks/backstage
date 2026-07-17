@@ -53,14 +53,34 @@ class UserAdministrationController extends Controller
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'is_admin' => ['nullable', 'boolean'],
         ]);
 
-        $user->forceFill([
+        $updates = [
             'email' => $validated['email'],
-            'email_verified_at' => null,
-        ])->save();
+        ];
 
-        return back()->with('status', 'User email updated.');
+        if (array_key_exists('is_admin', $validated)) {
+            if ($request->user()->is($user)) {
+                return back()->withErrors([
+                    'role' => 'You cannot change your own role.',
+                ]);
+            }
+
+            $updates['is_admin'] = (bool) $validated['is_admin'];
+        }
+
+        if ($validated['email'] !== $user->email) {
+            $updates['email_verified_at'] = null;
+        }
+
+        $user->forceFill($updates)->save();
+
+        if (array_key_exists('is_admin', $validated) && $validated['email'] === $user->email) {
+            return back()->with('status', 'User role updated.');
+        }
+
+        return back()->with('status', 'User updated.');
     }
 
     public function sendPasswordResetLink(Request $request, User $user): RedirectResponse

@@ -16,22 +16,22 @@
             @can('update', $session)
                 <div x-show="openEditSession" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
                 <div x-show="openEditSession" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div class="w-full max-w-xl rounded-lg bg-white p-6 shadow-xl">
-                        <h3 class="text-lg font-semibold">Edit Jam Session</h3>
+                    <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                        <h3 class="text-lg font-semibold text-slate-900">Edit Jam Session</h3>
                         <form method="POST" action="{{ route('sessions.update', $session) }}" class="mt-4 space-y-4">
                             @csrf
                             @method('PATCH')
                             <div>
                                 <x-input-label for="session_name" value="Name" />
-                                <x-text-input id="session_name" name="name" :value="$session->name" class="mt-1 block w-full" required />
+                                <x-text-input id="session_name" name="name" :value="$session->name" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                             </div>
                             <div>
                                 <x-input-label for="session_date" value="Date" />
-                                <x-text-input id="session_date" type="date" name="date" :value="$session->date->toDateString()" class="mt-1 block w-full" required />
+                                <x-text-input id="session_date" type="date" name="date" :value="$session->date->toDateString()" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                             </div>
                             <div>
                                 <x-input-label for="session_description" value="Description (Markdown)" />
-                                <textarea id="session_description" name="description" rows="6" class="mt-1 w-full rounded-md border-gray-300">{{ $session->description }}</textarea>
+                                <textarea id="session_description" name="description" rows="6" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $session->description }}</textarea>
                             </div>
                             <div class="flex justify-end gap-3">
                                 <x-secondary-button type="button" @click="openEditSession = false">Cancel</x-secondary-button>
@@ -49,18 +49,24 @@
 
             <div x-show="openSet" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
             <div x-show="openSet" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-                    <h3 class="text-lg font-semibold">New Set for {{ $session->name }}</h3>
+                <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                    <h3 class="text-lg font-semibold text-slate-900">New Set for {{ $session->name }}</h3>
                     <form method="POST" action="{{ route('sets.store', $session) }}" class="mt-4 space-y-4">
                         @csrf
                         <div>
                             <x-input-label for="set_name" value="Set Name" />
-                            <x-text-input id="set_name" name="name" class="mt-1 block w-full" required />
+                            <x-text-input id="set_name" name="name" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                         </div>
                         <div>
                             <x-input-label for="set_description" value="Description" />
-                            <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                            <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                         </div>
+                        @if (auth()->user()->is_admin)
+                            <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                <input type="checkbox" name="feature_set" value="1" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
+                                Mark as feature set
+                            </label>
+                        @endif
                         <div class="flex justify-end gap-3">
                             <x-secondary-button type="button" @click="openSet = false">Cancel</x-secondary-button>
                             <x-primary-button>Create Set</x-primary-button>

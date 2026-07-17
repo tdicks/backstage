@@ -6,7 +6,7 @@ use App\Models\SlotAssignment;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class DashboardController extends Controller
+class MySignupsController extends Controller
 {
     public function __invoke(Request $request): View
     {
@@ -50,7 +50,7 @@ class DashboardController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return view('dashboard', [
+        return view('my-signups', [
             'signedUpSets' => $signedUpSets,
             'slotProposals' => $slotProposals,
         ]);

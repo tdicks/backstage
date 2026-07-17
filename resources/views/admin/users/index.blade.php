@@ -99,10 +99,24 @@
                                         </form>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4">
-                                        @if ($user->is_admin)
-                                            <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{{ __('Admin') }}</span>
+                                        @if ($user->id === auth()->id())
+                                            @if ($user->is_admin)
+                                                <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800" title="You cannot change your own role">{{ __('Admin') }}</span>
+                                            @else
+                                                <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700" title="You cannot change your own role">{{ __('User') }}</span>
+                                            @endif
                                         @else
-                                            <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">{{ __('User') }}</span>
+                                            <form method="POST" action="{{ route('admin.users.update', $user) }}" onsubmit="return confirm('{{ $user->is_admin ? 'Change this user to regular User?' : 'Grant admin access to this user?' }}')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="email" value="{{ $user->email }}">
+                                                <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
+                                                @if ($user->is_admin)
+                                                    <button type="submit" class="inline-flex cursor-pointer rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1" title="Tap or click to set as User">{{ __('Admin') }}</button>
+                                                @else
+                                                    <button type="submit" class="inline-flex cursor-pointer rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1" title="Tap or click to set as Admin">{{ __('User') }}</button>
+                                                @endif
+                                            </form>
                                         @endif
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">

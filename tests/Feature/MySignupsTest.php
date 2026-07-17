@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('dashboard shows the signed up sets, songs, and slots', function () {
+test('my signups shows the signed up sets, songs, and slots', function () {
     $user = User::factory()->create();
     $session = JamSession::create([
         'name' => 'Friday Night Jam',
@@ -40,7 +40,7 @@ test('dashboard shows the signed up sets, songs, and slots', function () {
     ]);
 
     $this->actingAs($user)
-        ->get(route('dashboard'))
+        ->get(route('my-signups.index'))
         ->assertOk()
         ->assertSee('My Signups')
         ->assertSee('Opening Set')
@@ -50,7 +50,7 @@ test('dashboard shows the signed up sets, songs, and slots', function () {
         ->assertSee('bg-gray-100', false);
 });
 
-test('dashboard shows pending slot proposals for the current user', function () {
+test('my signups shows pending slot proposals for the current user', function () {
     $targetUser = User::factory()->create(['name' => 'Target User']);
     $actorUser = User::factory()->create(['name' => 'Actor User']);
     $otherUser = User::factory()->create(['name' => 'Other User']);
@@ -101,7 +101,7 @@ test('dashboard shows pending slot proposals for the current user', function () 
     ]);
 
     $this->actingAs($targetUser)
-        ->get(route('dashboard'))
+        ->get(route('my-signups.index'))
         ->assertOk()
         ->assertSee('Slot proposals for you')
         ->assertSee('Muse - Hysteria')

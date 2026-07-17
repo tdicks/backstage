@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JamSessionController;
+use App\Http\Controllers\MySignupsController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetController;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/sessions');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/my-signups', MySignupsController::class)->name('my-signups.index');
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 

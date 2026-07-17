@@ -13,10 +13,21 @@ class SetController extends Controller
     {
         $this->authorize('create', Set::class);
 
+        $isAdmin = $request->user()->is_admin;
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
         ]);
+
+        if ($isAdmin) {
+            $validated = [
+                ...$validated,
+                ...$request->validate([
+                    'feature_set' => ['nullable', 'boolean'],
+                ]),
+            ];
+        }
 
         $nextPosition = ((int) $jamSession->sets()->max('position')) + 1;
 
@@ -24,6 +35,7 @@ class SetController extends Controller
             ...$validated,
             'owner_id' => $request->user()->id,
             'position' => $nextPosition,
+            'feature_set' => $isAdmin ? (bool) ($validated['feature_set'] ?? false) : false,
             'performed' => false,
         ]);
 
@@ -46,6 +58,7 @@ class SetController extends Controller
 
         if ($isAdmin) {
             $rules['owner_id'] = ['required', 'integer', 'exists:users,id'];
+            $rules['feature_set'] = ['nullable', 'boolean'];
         }
 
         $validated = $request->validate($rules);
@@ -54,6 +67,7 @@ class SetController extends Controller
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'position' => $validated['position'] ?? $set->position,
+            'feature_set' => $isAdmin ? (bool) ($validated['feature_set'] ?? false) : $set->feature_set,
             'performed' => (bool) ($validated['performed'] ?? false),
             'jam_session_id' => $validated['jam_session_id'] ?? $set->jam_session_id,
         ];

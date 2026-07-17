@@ -25,6 +25,7 @@ class Session extends Model
     public function sets(): HasMany
     {
         return $this->hasMany(Set::class)
+            ->orderByDesc('feature_set')
             ->orderBy('position')
             ->orderBy('id');
     }
