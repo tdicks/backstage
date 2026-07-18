@@ -7,6 +7,7 @@ use App\Models\Slot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SlotAssignmentController extends Controller
 {
@@ -50,7 +51,11 @@ class SlotAssignmentController extends Controller
         }
 
         $validated = $request->validate([
-            'target_user_id' => ['required', 'integer', 'exists:users,id'],
+            'target_user_id' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('hide_from_slot_proposals', false)),
+            ],
             'message' => ['nullable', 'string'],
         ]);
 

@@ -18,3 +18,23 @@ test('user directory is searchable by name and bio', function () {
         ->assertSee('Loves funk bass lines')
         ->assertDontSee('Bobby Drums');
 });
+
+test('user directory excludes users who hide themselves', function () {
+    $viewer = User::factory()->create();
+    User::factory()->create([
+        'name' => 'Visible User',
+        'bio' => 'Shows up in the directory',
+        'hide_from_directory' => false,
+    ]);
+    User::factory()->create([
+        'name' => 'Hidden User',
+        'bio' => 'Should be hidden',
+        'hide_from_directory' => true,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('directory.index'))
+        ->assertOk()
+        ->assertSee('Visible User')
+        ->assertDontSee('Hidden User');
+});

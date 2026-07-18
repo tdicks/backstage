@@ -27,6 +27,8 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'bio' => ['nullable', 'string'],
+            'hide_from_directory' => ['nullable', 'boolean'],
+            'hide_from_slot_proposals' => ['nullable', 'boolean'],
         ];
     }
 }

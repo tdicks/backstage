@@ -9,6 +9,9 @@
 
 @php
     $setLocked = $set->performed;
+    $proposalUsers = $users
+        ->where('id', '!=', auth()->id())
+        ->where('hide_from_slot_proposals', false);
 @endphp
 
 <tr
@@ -24,7 +27,7 @@
         busyAction: false,
         actionError: '',
         actionFeedback: '',
-        proposeTargetUserId: @js($users->where('id', '!=', auth()->id())->first()?->id),
+        proposeTargetUserId: @js($proposalUsers->first()?->id),
         proposeMessage: '',
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
@@ -97,6 +100,11 @@
         },
         async submitProposal() {
             if (this.setLocked) {
+                return;
+            }
+
+            if (!this.proposeTargetUserId) {
+                this.actionError = 'No users are available for proposals.';
                 return;
             }
 
@@ -311,7 +319,7 @@
                     @click="openPropose = true"
                     x-show="slotIsOpen"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    x-bind:disabled="busyAction"
+                    x-bind:disabled="busyAction || !proposeTargetUserId"
                     aria-label="Recommend"
                     title="Recommend someone for this slot"
                 >
@@ -327,23 +335,25 @@
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h6 class="text-base font-semibold text-slate-900">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
                 <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
-                    <div>
-                        <x-input-label :value="'User'" />
-                        <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-md border-gray-300" required>
-                            @foreach ($users as $user)
-                                @if ($user != auth()->user())
+                    @if ($proposalUsers->isNotEmpty())
+                        <div>
+                            <x-input-label :value="'User'" />
+                            <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-md border-gray-300" required>
+                                @foreach ($proposalUsers as $user)
                                     <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                @endif
-                            @endforeach
-                        </select>
-                    </div>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-600">No users are currently available for slot proposals.</p>
+                    @endif
                     <div>
                         <x-input-label :value="'Message (optional)'" />
                         <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-md border-gray-300"></textarea>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openPropose = false">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button x-bind:disabled="busyAction">Send Proposal</x-modal-primary-button>
+                        <x-modal-primary-button x-bind:disabled="busyAction || !proposeTargetUserId">Send Proposal</x-modal-primary-button>
                     </div>
                 </form>
             </div>

@@ -12,7 +12,7 @@ use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'bio'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'bio', 'hide_from_directory', 'hide_from_slot_proposals'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -31,6 +31,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_admin' => 'boolean',
+            'hide_from_directory' => 'boolean',
+            'hide_from_slot_proposals' => 'boolean',
             'password' => 'hashed',
         ];
     }

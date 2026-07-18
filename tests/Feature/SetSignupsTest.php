@@ -106,6 +106,51 @@ test('closed signups block new slot requests', function () {
     expect(SlotAssignment::query()->count())->toBe(0);
 });
 
+test('cannot propose slots to users who hide from proposals', function () {
+    $owner = User::factory()->create();
+    $actor = User::factory()->create();
+    $hiddenTarget = User::factory()->create([
+        'hide_from_slot_proposals' => true,
+    ]);
+
+    $session = JamSession::create([
+        'name' => 'Proposal Privacy Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Proposal Privacy Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Schism',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($actor)
+        ->post(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $hiddenTarget->id,
+            'message' => 'You should play this.',
+        ])
+        ->assertSessionHasErrors('target_user_id');
+
+    expect(SlotAssignment::query()->count())->toBe(0);
+});
+
 test('admin can change set owner from set update endpoint', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $owner = User::factory()->create();
