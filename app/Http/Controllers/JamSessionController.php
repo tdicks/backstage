@@ -38,9 +38,15 @@ class JamSessionController extends Controller
             ->latest('date')
             ->get();
 
+        $hasArchivedJamSessions = JamSession::query()
+            ->visibleTo(request()->user())
+            ->where('is_archived', true)
+            ->exists();
+
         return view('sessions.index', [
             'sessions' => $sessions,
             'isArchiveView' => false,
+            'hasArchivedJamSessions' => $hasArchivedJamSessions,
             'pageTitle' => 'Jam Sessions',
         ]);
     }

@@ -86,7 +86,7 @@
                     </div>
                 @endforelse
             </div>
-            @if (! ($isArchiveView ?? false))
+            @if (! ($isArchiveView ?? false) && ($hasArchivedJamSessions ?? false))
                 <p class="mt-4 text-sm text-slate-500">
                     Looking for an older jam? Check our <a href="{{ route('sessions.archive') }}" class="underline">archive</a>!
                 </p>
