@@ -9,6 +9,7 @@
 
 @php
     $setLocked = $set->performed;
+    $noProposalUsersMessage = 'No users are currently available for slot proposals.';
     $proposalUsers = $users
         ->where('id', '!=', auth()->id())
         ->where('hide_from_slot_proposals', false);
@@ -104,7 +105,7 @@
             }
 
             if (!this.proposeTargetUserId) {
-                this.actionError = 'No users are available for proposals.';
+                this.actionError = @js($noProposalUsersMessage);
                 return;
             }
 
@@ -345,7 +346,7 @@
                             </select>
                         </div>
                     @else
-                        <p class="text-sm text-gray-600">No users are currently available for slot proposals.</p>
+                        <p class="text-sm text-gray-600">{{ $noProposalUsersMessage }}</p>
                     @endif
                     <div>
                         <x-input-label :value="'Message (optional)'" />
