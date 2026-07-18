@@ -1117,7 +1117,7 @@
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
-                <h4 class="text-lg font-semibold">Request a Song for {{ $set->name }}</h4>
+                <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4">
                     @csrf
                     <div class="grid gap-4 sm:grid-cols-2">

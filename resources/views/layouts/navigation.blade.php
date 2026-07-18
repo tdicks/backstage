@@ -69,7 +69,7 @@
                         {{ __('My Sets') }}
                     </x-nav-link>
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
-                        {{ __('User Directory') }}
+                        {{ __("Who's Who") }}
                     </x-nav-link>
                 </div>
             </div>
@@ -158,7 +158,7 @@
                 {{ __('My Sets') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
-                {{ __('User Directory') }}
+                {{ __("Who's Who") }}
             </x-responsive-nav-link>
         </div>
 
