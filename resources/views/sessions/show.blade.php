@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.openEditSession = true; } }" @keydown.escape.window="openEditSession = false; openSet = false">
+        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, shareCopied: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.openEditSession = true; }, async copySessionShareLink() { await window.copyShareLink(@js(route('share.session', $session))); this.shareCopied = true; setTimeout(() => this.shareCopied = false, 1800); } }" @keydown.escape.window="openEditSession = false; openSet = false">
             <div>
                 <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
                     <span>{{ $session->name }}</span>
@@ -18,6 +18,28 @@
             </div>
 
             <div class="ml-auto flex items-center gap-2">
+                <span class="relative inline-flex">
+                    <button
+                        type="button"
+                        @click="copySessionShareLink()"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-100 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        x-bind:title="shareCopied ? 'Share link copied' : 'Copy share link'"
+                        aria-label="Copy share link"
+                    >
+                        <x-heroicon-m-share class="h-5 w-5" aria-hidden="true" />
+                        <span class="sr-only" x-text="shareCopied ? 'Share link copied' : 'Copy share link'">Copy share link</span>
+                    </button>
+                    <div
+                        x-show="shareCopied"
+                        x-transition.opacity.duration.150ms
+                        x-cloak
+                        role="status"
+                        aria-live="polite"
+                        class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
+                    >
+                        Share link copied
+                    </div>
+                </span>
                 @can('update', $session)
                     <x-secondary-button @click="openEditSessionModal()">Edit Session</x-secondary-button>
                     @if ($session->allow_checkins)

@@ -8,6 +8,7 @@ use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetController;
+use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SlotAssignmentController;
 use App\Http\Controllers\SlotController;
 use App\Http\Controllers\SongController;
@@ -22,6 +23,9 @@ Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name
 Route::get('/jam-register/sessions/{jamSession}/users/{user}/status', [JamRegisterController::class, 'status'])->name('jam-register.status');
 Route::post('/jam-register/sessions/{jamSession}/check-in', [JamRegisterController::class, 'signIn'])->name('jam-register.sign-in');
 Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegisterController::class, 'signOut'])->name('jam-register.sign-out');
+
+Route::get('/share/session/{jamSession}', [ShareController::class, 'session'])->name('share.session');
+Route::get('/share/set/{set}', [ShareController::class, 'set'])->name('share.set');
 
 Route::middleware('auth')->group(function () {
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');

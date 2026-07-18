@@ -92,6 +92,7 @@
         reorderFeedback: '',
         addSongBusy: false,
         addSongError: '',
+        shareCopied: false,
         dragSongId: null,
         draggingSongId: null,
         dropTargetSongId: null,
@@ -105,6 +106,11 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        async copySetShareLink() {
+            await window.copyShareLink(@js(route('share.set', $set)));
+            this.shareCopied = true;
+            setTimeout(() => this.shareCopied = false, 1800);
         },
         ensureDropPlaceholder(container, draggedEl) {
             if (!this.dropPlaceholderEl) {
@@ -731,6 +737,28 @@
                     <span class="sr-only">Summary</span>
                 </button>
             @endif
+            <span class="relative inline-flex">
+                <button
+                    type="button"
+                    @click="copySetShareLink()"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    x-bind:title="shareCopied ? 'Share link copied' : 'Copy share link'"
+                    aria-label="Copy share link"
+                >
+                    <x-heroicon-m-share class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only" x-text="shareCopied ? 'Share link copied' : 'Copy share link'">Copy share link</span>
+                </button>
+                <div
+                    x-show="shareCopied"
+                    x-transition.opacity.duration.150ms
+                    x-cloak
+                    role="status"
+                    aria-live="polite"
+                    class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
+                >
+                    Share link copied
+                </div>
+            </span>
             @if ($canManageSet)
                 <button
                     type="button"
