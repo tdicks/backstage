@@ -14,6 +14,7 @@ class UserDirectoryController extends Controller
 
         $users = User::query()
             ->select(['id', 'name', 'bio'])
+            ->where('hide_from_directory', false)
             ->when($query !== '', function ($builder) use ($query): void {
                 $builder->where(function ($nested) use ($query): void {
                     $nested->where('name', 'like', "%{$query}%")

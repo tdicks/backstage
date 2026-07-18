@@ -54,6 +54,20 @@
             <x-input-error class="mt-2" :messages="$errors->get('bio')" />
         </div>
 
+        <div class="space-y-3">
+            <label for="hide_from_directory" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input id="hide_from_directory" type="checkbox" name="hide_from_directory" value="1" @checked(old('hide_from_directory', $user->hide_from_directory)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                <span>Hide me from the who’s who page</span>
+            </label>
+            <x-input-error class="mt-2" :messages="$errors->get('hide_from_directory')" />
+
+            <label for="hide_from_slot_proposals" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input id="hide_from_slot_proposals" type="checkbox" name="hide_from_slot_proposals" value="1" @checked(old('hide_from_slot_proposals', $user->hide_from_slot_proposals)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                <span>Hide me from the slot proposal user list</span>
+            </label>
+            <x-input-error class="mt-2" :messages="$errors->get('hide_from_slot_proposals')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 
