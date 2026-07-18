@@ -17,6 +17,7 @@ class Set extends Model
         'performed',
         'signups_open',
         'song_requests',
+        'feature_set',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Set extends Model
             'performed' => 'boolean',
             'signups_open' => 'boolean',
             'song_requests' => 'boolean',
+            'feature_set' => 'boolean',
         ];
     }
 

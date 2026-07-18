@@ -132,6 +132,7 @@ class SetController extends Controller
 
         if ($isAdmin) {
             $rules['owner_id'] = ['required', 'integer', 'exists:users,id'];
+            $rules['feature_set'] = ['nullable', 'boolean'];
         }
 
         $validated = $request->validate($rules);
@@ -150,6 +151,7 @@ class SetController extends Controller
 
         if ($isAdmin) {
             $updateData['owner_id'] = $validated['owner_id'];
+            $updateData['feature_set'] = (bool) ($validated['feature_set'] ?? false);
         }
 
         $set->update($updateData);
