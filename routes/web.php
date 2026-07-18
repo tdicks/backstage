@@ -48,6 +48,8 @@ Route::middleware('auth')->group(function () {
         ->parameters(['sessions' => 'jamSession']);
     Route::get('/sessions/{jamSession}/sets', [JamSessionController::class, 'sets'])->name('sessions.sets');
     Route::get('/sessions/{jamSession}/check-ins', [JamRegisterController::class, 'attendees'])->name('sessions.check-ins');
+    Route::get('/sessions/{jamSession}/check-ins/users', [JamRegisterController::class, 'availableUsers'])->name('sessions.check-ins.users');
+    Route::post('/sessions/{jamSession}/check-ins/check-in', [JamRegisterController::class, 'manualSignIn'])->name('sessions.check-ins.sign-in');
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');

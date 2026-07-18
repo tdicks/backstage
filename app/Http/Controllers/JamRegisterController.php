@@ -11,145 +11,192 @@ use Illuminate\View\View;
 
 class JamRegisterController extends Controller
 {
-	public function index(): View
-	{
-		return view('jam-register.index', [
-			'sessions' => JamSession::query()
-				->where('is_hidden', false)
-				->where('is_closed', false)
-				->where('allow_checkins', true)
-				->whereDate('date', '>=', today())
-				->orderBy('date')
-				->get(['id', 'name', 'date']),
-		]);
-	}
+    public function index(): View
+    {
+        return view('jam-register.index', [
+            'sessions' => JamSession::query()
+                ->where('is_hidden', false)
+                ->where('is_closed', false)
+                ->where('allow_checkins', true)
+                ->whereDate('date', '>=', today())
+                ->orderBy('date')
+                ->get(['id', 'name', 'date']),
+        ]);
+    }
 
-	public function users(Request $request): JsonResponse
-	{
-		$query = trim((string) $request->query('q', ''));
+    public function users(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->query('q', ''));
 
-		$users = User::query()
-			->when($query !== '', fn ($q) => $q->where('name', 'like', "%{$query}%"))
-			->orderBy('name')
-			->limit(12)
-			->get(['id', 'name']);
+        $users = User::query()
+            ->when($query !== '', fn ($q) => $q->where('name', 'like', "%{$query}%"))
+            ->orderBy('name')
+            ->limit(12)
+            ->get(['id', 'name']);
 
-		return response()->json([
-			'users' => $users,
-		]);
-	}
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
 
-	public function signIn(Request $request, JamSession $jamSession): JsonResponse
-	{
-		$this->abortIfHidden($jamSession);
-		$this->abortIfCheckInsClosed($jamSession);
+    public function signIn(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->abortIfHidden($jamSession);
+        $this->abortIfCheckInsClosed($jamSession);
 
-		$validated = $request->validate([
-			'user_id' => ['required', 'integer', 'exists:users,id'],
-		]);
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
 
-		$signIn = JamSessionSignIn::query()->updateOrCreate(
-			[
-				'jam_session_id' => $jamSession->id,
-				'user_id' => $validated['user_id'],
-			],
-			[
-				'signed_in_at' => now(),
-			]
-		);
+        $signIn = $this->signInUser($jamSession, (int) $validated['user_id']);
 
-		$signIn->load('user:id,name');
+        return response()->json([
+            'message' => $signIn->user->name.' is signed in for '.$jamSession->name.'.',
+            'signed_in' => true,
+            'sign_in' => [
+                'user_id' => $signIn->user_id,
+                'name' => $signIn->user->name,
+                'signed_in_at' => $signIn->signed_in_at?->toIso8601String(),
+            ],
+        ]);
+    }
 
-		return response()->json([
-			'message' => $signIn->user->name.' is signed in for '.$jamSession->name.'.',
-			'signed_in' => true,
-			'sign_in' => [
-				'user_id' => $signIn->user_id,
-				'name' => $signIn->user->name,
-				'signed_in_at' => $signIn->signed_in_at?->toIso8601String(),
-			],
-		]);
-	}
+    public function availableUsers(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
 
-	public function status(JamSession $jamSession, User $user): JsonResponse
-	{
-		$this->abortIfHidden($jamSession);
+        $query = trim((string) $request->query('q', ''));
 
-		$signIn = JamSessionSignIn::query()
-			->where('jam_session_id', $jamSession->id)
-			->where('user_id', $user->id)
-			->first();
+        $users = User::query()
+            ->when($query !== '', fn ($q) => $q->where('name', 'like', "%{$query}%"))
+            ->whereNotIn('id', JamSessionSignIn::query()
+                ->select('user_id')
+                ->where('jam_session_id', $jamSession->id))
+            ->orderBy('name')
+            ->limit(12)
+            ->get(['id', 'name']);
 
-		return response()->json([
-			'signed_in' => (bool) $signIn,
-			'user' => [
-				'id' => $user->id,
-				'name' => $user->name,
-			],
-			'signed_in_at' => $signIn?->signed_in_at?->toIso8601String(),
-		]);
-	}
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
 
-	public function signOut(JamSession $jamSession, User $user): JsonResponse
-	{
-		$this->abortIfHidden($jamSession);
+    public function manualSignIn(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+        $this->abortIfCheckInsClosed($jamSession);
 
-		JamSessionSignIn::query()
-			->where('jam_session_id', $jamSession->id)
-			->where('user_id', $user->id)
-			->delete();
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
 
-		return response()->json([
-			'message' => $user->name.' is signed out from '.$jamSession->name.'.',
-			'signed_in' => false,
-		]);
-	}
+        $signIn = $this->signInUser($jamSession, (int) $validated['user_id']);
 
-	public function attendees(Request $request, JamSession $jamSession): JsonResponse
-	{
-		$this->authorize('update', $jamSession);
+        return response()->json([
+            'message' => $signIn->user->name.' is signed in for '.$jamSession->name.'.',
+            'signed_in' => true,
+            'sign_in' => [
+                'user_id' => $signIn->user_id,
+                'name' => $signIn->user->name,
+                'signed_in_at' => $signIn->signed_in_at?->toIso8601String(),
+            ],
+        ]);
+    }
 
-		$attendees = $jamSession->signIns()
-			->with('user:id,name')
-			->latest('signed_in_at')
-			->get()
-			->map(fn (JamSessionSignIn $signIn) => [
-				'id' => $signIn->user_id,
-				'name' => $signIn->user?->name,
-				'signed_in_at' => $signIn->signed_in_at?->toIso8601String(),
-				'signed_in_at_label' => $signIn->signed_in_at?->format('g:i A'),
-			])
-			->values();
+    public function status(JamSession $jamSession, User $user): JsonResponse
+    {
+        $this->abortIfHidden($jamSession);
 
-		return response()->json([
-			'count' => $attendees->count(),
-			'attendees' => $attendees,
-		]);
-	}
+        $signIn = JamSessionSignIn::query()
+            ->where('jam_session_id', $jamSession->id)
+            ->where('user_id', $user->id)
+            ->first();
 
-	public function signOutAll(Request $request, JamSession $jamSession): JsonResponse
-	{
-		$this->authorize('update', $jamSession);
+        return response()->json([
+            'signed_in' => (bool) $signIn,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+            ],
+            'signed_in_at' => $signIn?->signed_in_at?->toIso8601String(),
+        ]);
+    }
 
-		$count = JamSessionSignIn::query()
-			->where('jam_session_id', $jamSession->id)
-			->delete();
+    public function signOut(JamSession $jamSession, User $user): JsonResponse
+    {
+        $this->abortIfHidden($jamSession);
 
-		return response()->json([
-			'message' => $count > 0
-				? 'Everyone has been signed out for '.$jamSession->name.'.'
-				: 'No attendees were signed in.',
-			'count' => $count,
-		]);
-	}
+        JamSessionSignIn::query()
+            ->where('jam_session_id', $jamSession->id)
+            ->where('user_id', $user->id)
+            ->delete();
 
-	private function abortIfHidden(JamSession $jamSession): void
-	{
-		abort_if($jamSession->is_hidden, 404);
-	}
+        return response()->json([
+            'message' => $user->name.' is signed out from '.$jamSession->name.'.',
+            'signed_in' => false,
+        ]);
+    }
 
-	private function abortIfCheckInsClosed(JamSession $jamSession): void
-	{
-		abort_if($jamSession->is_closed || ! $jamSession->allow_checkins, 403, 'Check-ins are closed for this jam session.');
-	}
+    public function attendees(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        $attendees = $jamSession->signIns()
+            ->with('user:id,name')
+            ->latest('signed_in_at')
+            ->get()
+            ->map(fn (JamSessionSignIn $signIn) => [
+                'id' => $signIn->user_id,
+                'name' => $signIn->user?->name,
+                'signed_in_at' => $signIn->signed_in_at?->toIso8601String(),
+                'signed_in_at_label' => $signIn->signed_in_at?->format('g:i A'),
+            ])
+            ->values();
+
+        return response()->json([
+            'count' => $attendees->count(),
+            'attendees' => $attendees,
+        ]);
+    }
+
+    public function signOutAll(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        $count = JamSessionSignIn::query()
+            ->where('jam_session_id', $jamSession->id)
+            ->delete();
+
+        return response()->json([
+            'message' => $count > 0
+                ? 'Everyone has been signed out for '.$jamSession->name.'.'
+                : 'No attendees were signed in.',
+            'count' => $count,
+        ]);
+    }
+
+    private function abortIfHidden(JamSession $jamSession): void
+    {
+        abort_if($jamSession->is_hidden, 404);
+    }
+
+    private function abortIfCheckInsClosed(JamSession $jamSession): void
+    {
+        abort_if($jamSession->is_closed || ! $jamSession->allow_checkins, 403, 'Check-ins are closed for this jam session.');
+    }
+
+    private function signInUser(JamSession $jamSession, int $userId): JamSessionSignIn
+    {
+        $signIn = JamSessionSignIn::query()->updateOrCreate(
+            [
+                'jam_session_id' => $jamSession->id,
+                'user_id' => $userId,
+            ],
+            [
+                'signed_in_at' => now(),
+            ]
+        );
+
+        return $signIn->load('user:id,name');
+    }
 }

@@ -107,6 +107,42 @@ test('admin can see attendees and sign everyone out', function () {
     $this->assertDatabaseCount('jam_session_sign_ins', 0);
 });
 
+test('admin can search users who are not checked in and manually check one in', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $session = createJamSession();
+    $checkedIn = User::factory()->create(['name' => 'Alice Checked In']);
+    $available = User::factory()->create(['name' => 'Alice Available']);
+    User::factory()->create(['name' => 'Bob Elsewhere']);
+
+    JamSessionSignIn::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $checkedIn->id,
+        'signed_in_at' => now(),
+    ]);
+
+    $lookupResponse = $this->actingAs($admin)
+        ->getJson(route('sessions.check-ins.users', [$session, 'q' => 'Alice']));
+
+    $lookupResponse->assertOk();
+    $lookupResponse->assertJsonCount(1, 'users');
+    $lookupResponse->assertJsonPath('users.0.id', $available->id);
+    $lookupResponse->assertJsonPath('users.0.name', 'Alice Available');
+
+    $signInResponse = $this->actingAs($admin)
+        ->postJson(route('sessions.check-ins.sign-in', $session), [
+            'user_id' => $available->id,
+        ]);
+
+    $signInResponse->assertOk();
+    $signInResponse->assertJsonPath('signed_in', true);
+    $signInResponse->assertJsonPath('sign_in.user_id', $available->id);
+
+    $this->assertDatabaseHas('jam_session_sign_ins', [
+        'jam_session_id' => $session->id,
+        'user_id' => $available->id,
+    ]);
+});
+
 test('non admin cannot access admin check-in endpoints', function () {
     $member = User::factory()->create(['is_admin' => false]);
     $session = createJamSession();
@@ -117,6 +153,16 @@ test('non admin cannot access admin check-in endpoints', function () {
 
     $this->actingAs($member)
         ->postJson(route('sessions.check-ins.sign-out-all', $session))
+        ->assertForbidden();
+
+    $this->actingAs($member)
+        ->getJson(route('sessions.check-ins.users', $session))
+        ->assertForbidden();
+
+    $this->actingAs($member)
+        ->postJson(route('sessions.check-ins.sign-in', $session), [
+            'user_id' => User::factory()->create()->id,
+        ])
         ->assertForbidden();
 });
 
