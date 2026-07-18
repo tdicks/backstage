@@ -5,14 +5,13 @@ use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
-use App\Http\Controllers\MySignupsController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetController;
-use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\SlotAssignmentController;
 use App\Http\Controllers\SlotController;
 use App\Http\Controllers\SongController;
+use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +24,6 @@ Route::post('/jam-register/sessions/{jamSession}/check-in', [JamRegisterControll
 Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegisterController::class, 'signOut'])->name('jam-register.sign-out');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/my-signups', MySignupsController::class)->name('my-signups.index');
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 

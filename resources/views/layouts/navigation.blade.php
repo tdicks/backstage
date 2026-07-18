@@ -1,12 +1,24 @@
-<nav x-data="{ open: false }" class="border-b border-slate-800 bg-slate-950">
-    @php
-        $pendingSlotProposalCount = \App\Models\SlotAssignment::query()
-            ->where('type', \App\Models\SlotAssignment::TYPE_PROPOSAL)
-            ->where('status', \App\Models\SlotAssignment::STATUS_PENDING)
-            ->where('target_user_id', Auth::id())
-            ->count();
-    @endphp
+@php
+    $pendingSlotProposalCount = \App\Models\SlotAssignment::query()
+        ->where('type', \App\Models\SlotAssignment::TYPE_PROPOSAL)
+        ->where('status', \App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT)
+        ->where('target_user_id', Auth::id())
+        ->count();
 
+    $mySetsApprovalCount = $pendingSlotProposalCount + \App\Models\SlotAssignment::query()
+        ->where('status', \App\Models\SlotAssignment::STATUS_PENDING)
+        ->whereHas('slot.song.set', function ($query): void {
+            $query->where('owner_id', Auth::id());
+        })
+        ->count();
+@endphp
+
+<nav
+    x-data="{ open: false, mySetsApprovalCount: {{ $mySetsApprovalCount }} }"
+    @target-consent-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
+    @pending-approval-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
+    class="border-b border-slate-800 bg-slate-950"
+>
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -60,16 +72,14 @@
                             </div>
                         </div>
                     </div>
-                    <x-nav-link :href="route('my-signups.index')" :active="request()->routeIs('my-signups.*')">
-                        <span>{{ __('My Signups') }}</span>
-                        @if ($pendingSlotProposalCount > 0)
-                            <span class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800">
-                                {{ $pendingSlotProposalCount }}
-                            </span>
-                        @endif
-                    </x-nav-link>
                     <x-nav-link :href="route('my-sets.index')" :active="request()->routeIs('my-sets.*')">
-                        {{ __('My Sets') }}
+                        <span>{{ __('My Sets') }}</span>
+                        <span
+                            class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
+                            x-show="mySetsApprovalCount > 0"
+                            x-text="mySetsApprovalCount"
+                            x-cloak
+                        >{{ $mySetsApprovalCount }}</span>
                     </x-nav-link>
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                         {{ __("Who's Who") }}
@@ -165,16 +175,14 @@
                 </x-responsive-nav-link>
             @endforeach
             <div class="mx-4 my-1 border-t border-slate-800"></div>
-            <x-responsive-nav-link :href="route('my-signups.index')" :active="request()->routeIs('my-signups.*')">
-                <span>{{ __('My Signups') }}</span>
-                @if ($pendingSlotProposalCount > 0)
-                    <span class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800">
-                        {{ $pendingSlotProposalCount }}
-                    </span>
-                @endif
-            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('my-sets.index')" :active="request()->routeIs('my-sets.*')">
-                {{ __('My Sets') }}
+                <span>{{ __('My Sets') }}</span>
+                <span
+                    class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
+                    x-show="mySetsApprovalCount > 0"
+                    x-text="mySetsApprovalCount"
+                    x-cloak
+                >{{ $mySetsApprovalCount }}</span>
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                 {{ __("Who's Who") }}

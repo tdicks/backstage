@@ -28,7 +28,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('my-signups.index', absolute: false));
+        return redirect()->intended(route('my-sets.index', absolute: false));
     }
 
     /**

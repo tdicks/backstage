@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SlotAssignment extends Model
 {
@@ -12,6 +12,8 @@ class SlotAssignment extends Model
     public const TYPE_PROPOSAL = 'proposal';
 
     public const STATUS_PENDING = 'pending';
+
+    public const STATUS_AWAITING_TARGET_CONSENT = 'awaiting_target_consent';
 
     public const STATUS_ACCEPTED = 'accepted';
 

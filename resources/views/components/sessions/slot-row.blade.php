@@ -420,7 +420,7 @@
         <div class="mt-2 space-y-2">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>
             <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
-            @foreach ($slotModel->assignments->where('status', 'pending') as $assignment)
+            @foreach ($slotModel->assignments->whereIn('status', [\App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT, \App\Models\SlotAssignment::STATUS_PENDING]) as $assignment)
                 <div
                     class="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
                     x-data="{
@@ -471,6 +471,7 @@
                         @php
                             $requestorName = $assignment->actor->name;
                             $targetName = $assignment->target->name;
+                            $awaitingTargetConsent = $assignment->status === \App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT;
                             if (auth()->user() == $assignment->actor)
                             {
                                 $requestorName = 'you';
@@ -486,29 +487,37 @@
                             {{ ucfirst($requestorName) }} recommended {{ $targetName }} for this slot
                         @endif
                     </p>
+                    @if ($awaitingTargetConsent)
+                        <p class="mt-1 text-amber-800">Awaiting {{ $targetName }}'s consent.</p>
+                    @elseif ($assignment->type === \App\Models\SlotAssignment::TYPE_PROPOSAL)
+                        <p class="mt-1 text-amber-800">{{ ucfirst($targetName) }} accepted the recommendation. Awaiting set organiser approval.</p>
+                    @endif
                     @if ($assignment->message)
                         <p class="mt-1">"{{ $assignment->message }}"</p>
                     @endif
                     <p x-show="error" x-text="error" class="mt-2 text-xs text-red-700"></p>
                     <div class="mt-2 flex gap-2">
                         @php
-                            // Users who proposed someone else should not respond to assignments, but they can cancel the assignment
                             if ($assignment->actor == auth()->user())
                             {
                                 $canRespond = false;
-                                $canCancel = true;
+                                $canCancel = $assignment->type === \App\Models\SlotAssignment::TYPE_REQUEST || $awaitingTargetConsent;
+                            }
+                            elseif ($awaitingTargetConsent)
+                            {
+                                $canRespond = auth()->user()->is_admin || $assignment->target == auth()->user();
+                                $canCancel = false;
                             }
                             else
                             {
-                                // Otherwise, admins can do everything, the target user can respond to the proposal.
-                                $canRespond = auth()->user()->is_admin || $assignment->target == auth()->user() || $set->owner == auth()->user();
+                                $canRespond = auth()->user()->is_admin || $set->owner == auth()->user();
                                 $canCancel = false;
                             }
                         @endphp
                         @if ($canRespond && ! $setLocked)
                             <button
                                 type="button"
-                                @click="respond('accepted', @js($assignment->target->name), @js($assignment->target_user_id === auth()->id()))"
+                                @click="respond('accepted', @js($awaitingTargetConsent ? null : $assignment->target->name), @js(! $awaitingTargetConsent && $assignment->target_user_id === auth()->id()))"
                                 x-bind:disabled="busy"
                                 class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
                                 aria-label="Accept assignment"

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SlotAssignment;
 use App\Models\Slot;
+use App\Models\SlotAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +63,7 @@ class SlotAssignmentController extends Controller
             'actor_user_id' => $actor->id,
             'target_user_id' => $validated['target_user_id'],
             'type' => SlotAssignment::TYPE_PROPOSAL,
-            'status' => SlotAssignment::STATUS_PENDING,
+            'status' => SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
             'message' => $validated['message'] ?? null,
         ]);
 
@@ -78,7 +78,7 @@ class SlotAssignmentController extends Controller
 
     public function respond(Request $request, SlotAssignment $slotAssignment): JsonResponse|RedirectResponse
     {
-        if ($slotAssignment->status !== SlotAssignment::STATUS_PENDING) {
+        if (! in_array($slotAssignment->status, [SlotAssignment::STATUS_AWAITING_TARGET_CONSENT, SlotAssignment::STATUS_PENDING], true)) {
             return back()->with('status', 'This assignment has already been processed.');
         }
 
@@ -89,6 +89,47 @@ class SlotAssignmentController extends Controller
         $user = $request->user();
         $slotAssignment->load('slot.song.set');
 
+        if ($slotAssignment->status === SlotAssignment::STATUS_AWAITING_TARGET_CONSENT) {
+            if ($slotAssignment->type !== SlotAssignment::TYPE_PROPOSAL) {
+                abort(403);
+            }
+
+            $canConsent = $user->is_admin
+                || $slotAssignment->target_user_id === $user->id
+                || ($slotAssignment->actor_user_id === $user->id && $validated['status'] === SlotAssignment::STATUS_REJECTED);
+
+            if (! $canConsent) {
+                abort(403);
+            }
+
+            $slotAssignment->update([
+                'status' => $validated['status'] === SlotAssignment::STATUS_ACCEPTED
+                    ? SlotAssignment::STATUS_PENDING
+                    : SlotAssignment::STATUS_REJECTED,
+                'responded_at' => now(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $validated['status'] === SlotAssignment::STATUS_ACCEPTED
+                        ? 'Recommendation sent to set owner.'
+                        : 'Recommendation response recorded.',
+                    'slot' => [
+                        'id' => $slotAssignment->slot->id,
+                        'name' => $slotAssignment->slot->name,
+                        'label' => Slot::options()[$slotAssignment->slot->name] ?? $slotAssignment->slot->name,
+                        'user_id' => $slotAssignment->slot->user_id,
+                        'user_name' => $slotAssignment->slot->assignedPerformerName(),
+                        'is_open' => $slotAssignment->slot->isOpen(),
+                    ],
+                ]);
+            }
+
+            return back()->with('status', $validated['status'] === SlotAssignment::STATUS_ACCEPTED
+                ? 'Recommendation sent to set owner.'
+                : 'Recommendation response recorded.');
+        }
+
         $canRespond = $user->is_admin;
 
         if ($slotAssignment->type === SlotAssignment::TYPE_REQUEST) {
@@ -97,9 +138,8 @@ class SlotAssignmentController extends Controller
 
         if ($slotAssignment->type === SlotAssignment::TYPE_PROPOSAL) {
             $canRespond = $canRespond
-                || $slotAssignment->target_user_id === $user->id
-                || $slotAssignment->actor_user_id === $user->id
-                || $slotAssignment->slot->song->set->owner_id === $user->id;
+                || $slotAssignment->slot->song->set->owner_id === $user->id
+                || ($slotAssignment->target_user_id === $user->id && $validated['status'] === SlotAssignment::STATUS_REJECTED);
         }
 
         if (! $canRespond) {
