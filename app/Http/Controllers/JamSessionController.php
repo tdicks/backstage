@@ -18,10 +18,6 @@ class JamSessionController extends Controller
         'Feeding the bass players...',
         "Changing some guitar strings...",
         "Confiscating the singer's beer...",
-        'Showing Michael Lewis to the Iron Maiden vinyls...',
-        'Showing Richard Ottaway to the Thin Lizzy vinyls...',
-        'Showing Ethan Bishop to the blackgaze room...',
-        "Setting Tom Potter's time machine to 1982...",
         'Tuning the triangle for optimal resonance...',
         'Setting the fog machine to maximum drama...',
         'Arguing about whether this riff is in drop D...',
@@ -29,8 +25,7 @@ class JamSessionController extends Controller
         'Polishing the leather jackets for stage readiness...',
         'Searching eBay for Jackson Soloists...',
         "Trotting down the Witch's Brew for a pint...",
-        "Searching for Quo's fourth chord...",
-        'Asking Darius for more guitars in the monitors...',
+        "Searching for Status Quo's fourth chord...",
         "Yeah but these go to eleven..."
     ];
 

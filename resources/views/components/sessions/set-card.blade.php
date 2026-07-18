@@ -21,6 +21,10 @@
         $healthRatio > 0 => 'bg-orange-500',
         default => 'bg-rose-600',
     };
+    $setTitleTextClass = $set->feature_set ? 'text-amber-900' : 'text-slate-900';
+    $setMetaTextClass = $set->feature_set ? 'text-amber-800' : 'text-slate-600';
+    $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
+    $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $summarySlotNames = collect(array_keys($slotOptions))
         ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
         ->values();
@@ -84,8 +88,6 @@
         reorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
-        signupsToggleBusy: false,
-        signupsToggleError: '',
         addSongBusy: false,
         addSongError: '',
         dragSongId: null,
@@ -243,39 +245,6 @@
                 this.reorderError = 'Could not save song order. Refresh and try again.';
             } finally {
                 this.reorderBusy = false;
-            }
-        },
-        async toggleSignups(open) {
-            if (this.setLocked) {
-                return;
-            }
-
-            this.signupsToggleBusy = true;
-            this.signupsToggleError = '';
-
-            try {
-                const response = await fetch(open ? '{{ route('sets.open-signups', $set) }}' : '{{ route('sets.close-signups', $set) }}', {
-                    method: 'PATCH',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    },
-                    body: JSON.stringify({}),
-                });
-
-                if (!response.ok) {
-                    throw new Error('Signups toggle failed');
-                }
-
-                this.refreshSessionSets();
-            } catch (e) {
-                this.signupsToggleError = open
-                    ? 'Could not re-open sign ups. Try again.'
-                    : 'Could not close sign ups. Try again.';
-            } finally {
-                this.signupsToggleBusy = false;
             }
         },
         async loadSummary(initial = false) {
@@ -685,7 +654,7 @@
         aria-label="Toggle set details"
     >
         <div>
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <h3 class="flex items-center gap-2 text-lg font-semibold {{ $setTitleTextClass }}">
                 {{ $set->name }}
                 @if ($set->feature_set)
                     <span title="Feature set" class="inline-flex items-center">
@@ -694,9 +663,9 @@
                     </span>
                 @endif
             </h3>
-            <div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+            <div class="mt-1 flex flex-wrap items-center gap-3 text-sm {{ $setMetaTextClass }}">
                 <span class="inline-flex items-center gap-1.5" title="Set owner">
-                    <x-heroicon-m-user class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    <x-heroicon-m-user class="h-4 w-4 {{ $setOwnerIconClass }}" aria-hidden="true" />
                     <span class="sr-only">Set owner</span>
                     <span>{{ $set->owner->name }}</span>
                 </span>
@@ -713,74 +682,53 @@
                     </span>
                 @endif
 
-                <span class="inline-flex items-center" title="Sign ups {{ $set->signups_open ? 'open' : 'closed' }}">
-                    @if ($set->signups_open)
-                        <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
-                        <span class="sr-only">Sign ups open</span>
-                    @else
-                        <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" aria-hidden="true" />
-                        <span class="sr-only">Sign ups closed</span>
-                    @endif
-                </span>
-
-                @if (auth()->user()->is_admin)
-                    <span
-                        class="inline-flex items-center"
-                        title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
-                    >
-                        <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
-                        <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
+                @if (! $set->performed)
+                    <span class="inline-flex items-center" title="Sign ups {{ $set->signups_open ? 'open' : 'closed' }}">
+                        @if ($set->signups_open)
+                            <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                            <span class="sr-only">Sign ups open</span>
+                        @else
+                            <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" aria-hidden="true" />
+                            <span class="sr-only">Sign ups closed</span>
+                        @endif
                     </span>
+
+                    @if (auth()->user()->is_admin)
+                        <span
+                            class="inline-flex items-center"
+                            title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
+                        >
+                            <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
+                            <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
+                        </span>
+                    @endif
                 @endif
             </div>
             @if ($set->description)
-                <p class="mt-2 text-sm text-slate-700">{{ $set->description }}</p>
+                <p class="mt-2 text-sm {{ $setDescriptionTextClass }}">{{ $set->description }}</p>
             @endif
         </div>
 
         <div class="flex items-center gap-2" @click.stop>
-            <button
-                type="button"
-                @click="openSummaryModal()"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                aria-label="Summary"
-                title="Summary"
-            >
-                <x-heroicon-m-queue-list class="h-4 w-4" aria-hidden="true" />
-                <span class="sr-only">Summary</span>
-            </button>
+            @if (! $setLocked)
+                <button
+                    type="button"
+                    @click="openSummaryModal()"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Summary"
+                    title="Summary"
+                >
+                    <x-heroicon-m-queue-list class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Summary</span>
+                </button>
+            @endif
             @if ($canManageSet)
-                @if (! $setLocked && $set->signups_open)
-                    <button
-                        type="button"
-                        @click="toggleSignups(false)"
-                        x-bind:disabled="signupsToggleBusy"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
-                        aria-label="Close Sign Ups"
-                        title="Close Sign Ups"
-                    >
-                        <x-heroicon-m-lock-closed class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Close Sign Ups</span>
-                    </button>
-                @elseif (! $setLocked)
-                    <button
-                        type="button"
-                        @click="toggleSignups(true)"
-                        x-bind:disabled="signupsToggleBusy"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
-                        aria-label="Re-open Sign Ups"
-                        title="Re-open Sign Ups"
-                    >
-                        <x-heroicon-m-lock-open class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Re-open Sign Ups</span>
-                    </button>
-                @endif
                 <button
                     type="button"
                     @click="performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                     aria-label="Edit Set"
-                    title="Edit Set"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit '.$set->owner->name.'\'s set' : 'Edit Set' }}"
                 >
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Set</span>
@@ -789,9 +737,9 @@
                     <button
                         type="button"
                         @click="openAddSongModal()"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                         aria-label="Add Song"
-                        title="Add Song"
+                        title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Add a song to '.$set->owner->name.'\'s set' : 'Add Song' }}"
                     >
                         <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only">Add Song</span>
@@ -1220,7 +1168,6 @@
     @endif
 
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
-        <p x-show="signupsToggleError" x-text="signupsToggleError" class="text-sm text-red-700"></p>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         @if ($isSetOwner)
             <p class="text-xs text-slate-500">Tip: drag songs to reorder them.</p>

@@ -29,19 +29,29 @@ test('set owner can close and reopen signups', function () {
     ]);
 
     $this->actingAs($owner)
-        ->patch(route('sets.close-signups', $set))
+        ->patch(route('sets.update', $set), [
+            'name' => 'Toggle Set',
+            'description' => null,
+            'performed' => 0,
+            'signups_open' => 0,
+        ])
         ->assertRedirect();
 
     expect($set->refresh()->signups_open)->toBeFalse();
 
     $this->actingAs($owner)
-        ->patch(route('sets.open-signups', $set))
+        ->patch(route('sets.update', $set), [
+            'name' => 'Toggle Set',
+            'description' => null,
+            'performed' => 0,
+            'signups_open' => 1,
+        ])
         ->assertRedirect();
 
     expect($set->refresh()->signups_open)->toBeTrue();
 });
 
-test('non owner cannot close signups', function () {
+test('non owner cannot change signups state', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();
 
@@ -61,7 +71,12 @@ test('non owner cannot close signups', function () {
     ]);
 
     $this->actingAs($other)
-        ->patch(route('sets.close-signups', $set))
+        ->patch(route('sets.update', $set), [
+            'name' => 'Auth Set',
+            'description' => null,
+            'performed' => 0,
+            'signups_open' => 0,
+        ])
         ->assertForbidden();
 
     expect($set->refresh()->signups_open)->toBeTrue();

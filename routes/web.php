@@ -50,8 +50,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');
     Route::get('/sets/{set}/summary', [SetController::class, 'summary'])->name('sets.summary');
     Route::patch('/sets/{set}', [SetController::class, 'update'])->name('sets.update');
-    Route::patch('/sets/{set}/close-signups', [SetController::class, 'closeSignups'])->name('sets.close-signups');
-    Route::patch('/sets/{set}/open-signups', [SetController::class, 'openSignups'])->name('sets.open-signups');
     Route::delete('/sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
     Route::post('/sets/{set}/song-requests', [SongRequestController::class, 'store'])->name('song-requests.store');
 

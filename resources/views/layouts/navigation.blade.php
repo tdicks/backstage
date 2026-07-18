@@ -81,9 +81,9 @@
                         <button class="inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium leading-4 text-slate-100 transition ease-in-out duration-150 hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none">
                             <div>
                                 {{ Auth::user()->name }}
-                            @if (Auth::user()->is_admin)
-                                (Admin)
-                            @endif
+                                @if (Auth::user()->is_admin)
+                                    <span class="text-sky-400">(ADMIN)</span>
+                                @endif
                             </div>
 
                             <div class="ms-1">

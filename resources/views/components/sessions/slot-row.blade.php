@@ -261,9 +261,9 @@
                 <button
                     type="button"
                     @click="openEditSlot = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-rose-600 hover:text-rose-700 focus:ring-rose-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                     aria-label="Edit Slot"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit Slot' : 'Edit Slot' }}"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit a slot in '.$set->owner->name.'\'s set' : 'Edit Slot' }}"
                 >
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Slot</span>

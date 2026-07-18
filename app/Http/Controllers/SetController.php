@@ -169,64 +169,6 @@ class SetController extends Controller
         return back()->with('status', 'Set updated.');
     }
 
-    public function closeSignups(Request $request, Set $set): JsonResponse|RedirectResponse
-    {
-        $this->authorize('update', $set);
-
-        if (! $set->signups_open) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Sign ups are already closed.',
-                    'signups_open' => false,
-                ]);
-            }
-
-            return back()->with('status', 'Sign ups are already closed.');
-        }
-
-        $set->update([
-            'signups_open' => false,
-        ]);
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Sign ups closed.',
-                'signups_open' => false,
-            ]);
-        }
-
-        return back()->with('status', 'Sign ups closed.');
-    }
-
-    public function openSignups(Request $request, Set $set): JsonResponse|RedirectResponse
-    {
-        $this->authorize('update', $set);
-
-        if ($set->signups_open) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Sign ups are already open.',
-                    'signups_open' => true,
-                ]);
-            }
-
-            return back()->with('status', 'Sign ups are already open.');
-        }
-
-        $set->update([
-            'signups_open' => true,
-        ]);
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Sign ups re-opened.',
-                'signups_open' => true,
-            ]);
-        }
-
-        return back()->with('status', 'Sign ups re-opened.');
-    }
-
     /**
      * Remove the specified resource from storage.
      */
