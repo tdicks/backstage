@@ -82,7 +82,7 @@
                             <div>
                                 {{ Auth::user()->name }}
                                 @if (Auth::user()->is_admin)
-                                    <span class="text-sky-400">(ADMIN)</span>
+                                    <span class="text-sky-400">(Admin)</span>
                                 @endif
                             </div>
 
@@ -165,7 +165,11 @@
         <!-- Responsive Settings Options -->
         <div class="border-t border-slate-800 pt-4 pb-1">
             <div class="px-4">
-                <div class="font-medium text-base text-slate-100">{{ Auth::user()->name }}</div>
+                <div class="font-medium text-base text-slate-100">{{ Auth::user()->name }}
+                    @if (Auth::user()->is_admin)
+                        <span class="text-sky-400">(Admin)</span>
+                    @endif
+                </div>
                 <div class="font-medium text-sm text-slate-400">{{ Auth::user()->email }}</div>
             </div>
 
