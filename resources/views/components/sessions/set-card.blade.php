@@ -95,6 +95,12 @@
         dropTargetSongId: null,
         dropTargetPosition: 'before',
         dropPlaceholderEl: null,
+        hasOpenDragBlockingModal() {
+            return Array.from(document.querySelectorAll('[data-drag-blocking-modal]')).some((el) => window.getComputedStyle(el).display !== 'none');
+        },
+        canDragSongs() {
+            return this.canReorderSongs && !this.hasOpenDragBlockingModal();
+        },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
@@ -115,7 +121,8 @@
             }
         },
         onSongDragStart(event, songId) {
-            if (!this.canReorderSongs) {
+            if (!this.canDragSongs()) {
+                event.preventDefault();
                 return;
             }
 
@@ -142,7 +149,7 @@
             this.clearDropPlaceholder();
         },
         onSongDragOver(event, targetSongId = null) {
-            if (!this.canReorderSongs || this.reorderBusy) {
+            if (!this.canDragSongs() || this.reorderBusy) {
                 return;
             }
 
@@ -191,7 +198,7 @@
         async onSongDrop(event) {
             event.preventDefault();
 
-            if (!this.canReorderSongs || this.reorderBusy) {
+            if (!this.canDragSongs() || this.reorderBusy) {
                 this.clearDropPlaceholder();
                 return;
             }
@@ -762,7 +769,7 @@
         </div>
     </div>
 
-    <div x-show="openSummary" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
+    <div x-show="openSummary" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
     <div x-show="openSummary" x-cloak class="fixed inset-0 z-50 flex items-start justify-center p-2 sm:items-center sm:p-4">
         <div class="flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
@@ -885,7 +892,7 @@
     </div>
 
     @if ($canManageSet)
-        <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
+        <div x-show="openSetEdit" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
         <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Edit Set</h4>
@@ -971,7 +978,7 @@
             </div>
         </div>
 
-        <div x-show="openSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
+        <div x-show="openSong" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
         <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                 <div class="px-6 pt-6">
@@ -1082,7 +1089,7 @@
             </div>
         </div>
     @else
-        <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
+        <div x-show="openSongRequest" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>

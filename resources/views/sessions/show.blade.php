@@ -31,7 +31,7 @@
 
             @can('update', $session)
                 <template x-teleport="body">
-                    <div x-show="openEditSession" x-cloak>
+                    <div x-show="openEditSession" x-cloak data-drag-blocking-modal>
                         <div class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
                         <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
                             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
@@ -113,6 +113,9 @@
                                             >
                                             <span>Allow user check-ins for this session</span>
                                         </label>
+                                        <p x-show="initialEditSessionAllowCheckins && !editSessionAllowCheckins" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                            This action will check out all attendees from this session.
+                                        </p>
                                     </div>
                                 </form>
                                 </div>
@@ -135,7 +138,7 @@
 
             @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
                 <template x-teleport="body">
-                    <div x-show="openSet" x-cloak>
+                    <div x-show="openSet" x-cloak data-drag-blocking-modal>
                         <div class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
                         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">

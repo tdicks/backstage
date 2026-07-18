@@ -33,6 +33,9 @@
         assignedUserName: @js($slotModel->assignedPerformerName()),
         slotLabel: @js($slotOptions[$slotModel->name] ?? $slotModel->name),
         slotIsOpen: @js($slotModel->isOpen()),
+        initialEditAssignedUserId: @js((string) ($slotModel->user_id ?? '')),
+        editAssignedUserId: @js((string) ($slotModel->user_id ?? '')),
+        currentUserId: @js((string) auth()->id()),
         assignedToCurrentUser: @js($slotModel->user_id === auth()->id()),
         hasPendingOwnRequest: @js($slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === auth()->id())),
         busyAction: false,
@@ -40,6 +43,13 @@
         actionFeedback: '',
         proposeTargetUserId: @js($proposalUsers->first()?->id),
         proposeMessage: '',
+        shouldShowAssigneeWarning() {
+            const selectedUserId = String(this.editAssignedUserId ?? '');
+            const initialUserId = String(this.initialEditAssignedUserId ?? '');
+            const currentUserId = String(this.currentUserId ?? '');
+
+            return selectedUserId !== initialUserId && selectedUserId !== '' && selectedUserId !== currentUserId;
+        },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
@@ -270,7 +280,7 @@
                 @if (! $setLocked)
                 <button
                     type="button"
-                    @click="openEditSlot = true"
+                    @click="editAssignedUserId = initialEditAssignedUserId; openEditSlot = true"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                     aria-label="Edit Slot"
                     title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit a slot in '.$set->owner->name.'\'s set' : 'Edit Slot' }}"
@@ -341,7 +351,7 @@
         </div>
 
         @if (! $setLocked)
-        <div x-show="openPropose" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
+        <div x-show="openPropose" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h6 class="text-base font-semibold text-slate-900">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
@@ -372,7 +382,7 @@
         @endif
 
         @if ($canManageSet && ! $setLocked)
-            <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
+            <div x-show="openEditSlot" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                     <h6 class="text-base font-semibold text-slate-900">Edit Slot</h6>
@@ -389,12 +399,15 @@
                         </div>
                         <div>
                             <x-input-label :value="'Assigned User (optional)'" />
-                            <select name="user_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                            <select name="user_id" x-model="editAssignedUserId" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
                                 <option value="">Open</option>
                                 @foreach ($users as $user)
                                     <option value="{{ $user->id }}" @selected($slotModel->user_id === $user->id)>{{ $user->name }}</option>
                                 @endforeach
                             </select>
+                            <p x-show="shouldShowAssigneeWarning()" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                Make sure you let the assignee know they've been added.
+                            </p>
                         </div>
                         <div>
                             <x-input-label :value="'Manual Performer Name (optional)'" />

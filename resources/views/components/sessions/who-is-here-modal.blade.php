@@ -97,7 +97,7 @@
 	x-init="$watch('open', value => { if (!value) stopPolling(); })"
 	@open-who-is-here.window="openModal()"
 >
-	<div x-show="open" x-cloak class="fixed inset-0 z-[90] bg-black/40" @click="closeModal"></div>
+	<div x-show="open" x-cloak data-drag-blocking-modal class="fixed inset-0 z-[90] bg-black/40" @click="closeModal"></div>
 	<div x-show="open" x-cloak class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 pt-20 sm:items-center sm:pt-4" @keydown.escape.window="closeModal">
 		<div class="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl">
 			<div class="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">

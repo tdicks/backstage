@@ -32,6 +32,12 @@
         dragSlotId: null,
         draggingSlotId: null,
         dropTargetSlotId: null,
+        hasOpenDragBlockingModal() {
+            return Array.from(document.querySelectorAll('[data-drag-blocking-modal]')).some((el) => window.getComputedStyle(el).display !== 'none');
+        },
+        canDragSlots() {
+            return this.canReorderSlots && !this.hasOpenDragBlockingModal();
+        },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
@@ -39,7 +45,8 @@
             this.$refs.slotDropPlaceholder?.classList.add('hidden');
         },
         onSlotDragStart(event, slotId) {
-            if (!this.canReorderSlots) {
+            if (!this.canDragSlots()) {
+                event.preventDefault();
                 return;
             }
 
@@ -64,7 +71,7 @@
             this.clearSlotDropPlaceholder();
         },
         onSlotDragOver(event, targetSlotId = null) {
-            if (!this.canReorderSlots || this.busyAction) {
+            if (!this.canDragSlots() || this.busyAction) {
                 return;
             }
 
@@ -113,7 +120,7 @@
         async onSlotDrop(event) {
             event.preventDefault();
 
-            if (!this.canReorderSlots || this.busyAction) {
+            if (!this.canDragSlots() || this.busyAction) {
                 this.clearSlotDropPlaceholder();
                 return;
             }
@@ -246,7 +253,7 @@
     </div>
 
     @if ($canManageSet && ! $setLocked)
-        <div x-show="openEditSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
+        <div x-show="openEditSong" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h5 class="text-lg font-semibold text-slate-900">Edit Song</h5>
@@ -282,7 +289,7 @@
             </div>
         </div>
 
-        <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
+        <div x-show="openAddSlot" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
         <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                 <h5 class="text-lg font-semibold text-slate-900">Add Slot</h5>

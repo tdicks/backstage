@@ -16,7 +16,7 @@ class JamSessionController extends Controller
         'Inserting the Spinal Tap video cassette...',
         'Dusting off the Marshall stack...',
         'Feeding the bass players...',
-        "Changing some guitar strings...",
+        'Changing some guitar strings...',
         "Confiscating the singer's beer...",
         'Tuning the triangle for optimal resonance...',
         'Setting the fog machine to maximum drama...',
@@ -26,7 +26,7 @@ class JamSessionController extends Controller
         'Searching eBay for Jackson Soloists...',
         "Trotting down the Witch's Brew for a pint...",
         "Searching for Status Quo's fourth chord...",
-        "Yeah but these go to eleven..."
+        'Yeah but these go to eleven...',
     ];
 
     public function index(): View
@@ -164,6 +164,8 @@ class JamSessionController extends Controller
             ? false
             : (bool) ($validated['allow_checkins'] ?? $jamSession->allow_checkins);
 
+        $wasAllowingCheckins = $jamSession->allow_checkins;
+
         $jamSession->update([
             ...$validated,
             'is_closed' => $isClosed,
@@ -171,6 +173,10 @@ class JamSessionController extends Controller
             'is_archived' => (bool) ($validated['is_archived'] ?? $jamSession->is_archived),
             'allow_checkins' => $allowCheckins,
         ]);
+
+        if ($wasAllowingCheckins && ! $jamSession->allow_checkins) {
+            $jamSession->signIns()->delete();
+        }
 
         return back()->with('status', 'Jam session updated.');
     }
