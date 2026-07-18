@@ -14,6 +14,7 @@ class Slot extends Model
         'rhythm_guitar',
         'bass',
         'drums',
+        'keys',
         'other',
     ];
 

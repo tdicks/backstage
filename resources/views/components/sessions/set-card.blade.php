@@ -1170,7 +1170,7 @@
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         @if ($isSetOwner && ! $setLocked)
-            <p class="text-xs text-slate-500">Tip: drag songs to reorder them.</p>
+            <p class="text-xs text-slate-500">Tip: drag songs and slots to reorder them.</p>
         @endif
 
         <div class="space-y-4" x-ref="songsContainer" @dragover="onSongDragOver($event)" @drop="onSongDrop($event)">

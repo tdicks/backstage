@@ -31,7 +31,9 @@
                             <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-700">Admin</span>
                         @endif
                     </div>
-                    <p class="mt-2 text-sm text-slate-700">{{ $user->bio ?: 'No bio yet.' }}</p>
+                    @if ($user->bio)
+                        <p class="mt-2 text-sm text-slate-700">{{ $user->bio }}</p>
+                    @endif
                 </article>
             @empty
                 <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/95 p-8 text-center text-slate-500">

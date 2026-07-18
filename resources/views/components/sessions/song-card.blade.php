@@ -28,8 +28,144 @@
         songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}',
         busyAction: false,
         actionError: '',
+        canReorderSlots: @js($canManageSet && ! $setLocked),
+        dragSlotId: null,
+        draggingSlotId: null,
+        dropTargetSlotId: null,
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        clearSlotDropPlaceholder() {
+            this.$refs.slotDropPlaceholder?.classList.add('hidden');
+        },
+        onSlotDragStart(event, slotId) {
+            if (!this.canReorderSlots) {
+                return;
+            }
+
+            this.dragSlotId = slotId;
+            this.draggingSlotId = slotId;
+            this.dropTargetSlotId = null;
+
+            const slotsContainer = this.$refs.slotsContainer;
+            const draggedEl = slotsContainer ? slotsContainer.querySelector(`[data-slot-id='${slotId}']`) : null;
+
+            if (draggedEl && event.dataTransfer) {
+                event.dataTransfer.setDragImage(draggedEl, 24, 16);
+            }
+
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(slotId));
+        },
+        onSlotDragEnd() {
+            this.dragSlotId = null;
+            this.draggingSlotId = null;
+            this.dropTargetSlotId = null;
+            this.clearSlotDropPlaceholder();
+        },
+        onSlotDragOver(event, targetSlotId = null) {
+            if (!this.canReorderSlots || this.busyAction) {
+                return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            if (this.dragSlotId === null || targetSlotId === null || this.dragSlotId === targetSlotId) {
+                return;
+            }
+
+            const slotsContainer = this.$refs.slotsContainer;
+            const draggedEl = slotsContainer.querySelector(`[data-slot-id='${this.dragSlotId}']`);
+            const targetEl = slotsContainer.querySelector(`[data-slot-id='${targetSlotId}']`);
+
+            if (!draggedEl || !targetEl) {
+                return;
+            }
+
+            const targetRect = targetEl.getBoundingClientRect();
+            const placeAfter = event.clientY > (targetRect.top + targetRect.height / 2);
+            const insertionReference = placeAfter ? targetEl.nextElementSibling : targetEl;
+
+            const slotElements = Array.from(slotsContainer.querySelectorAll('[data-slot-id]'));
+            const currentIndex = slotElements.indexOf(draggedEl);
+            const referenceIndex = insertionReference ? slotElements.indexOf(insertionReference) : slotElements.length;
+            const prospectiveIndex = insertionReference
+                ? (referenceIndex > currentIndex ? referenceIndex - 1 : referenceIndex)
+                : slotElements.length - 1;
+
+            if (prospectiveIndex === currentIndex) {
+                this.clearSlotDropPlaceholder();
+                this.dropTargetSlotId = null;
+                return;
+            }
+
+            const placeholderEl = this.$refs.slotDropPlaceholder;
+            placeholderEl.classList.remove('hidden');
+            placeholderEl.querySelector('[data-slot-drop-label]').style.minHeight = `${draggedEl.offsetHeight}px`;
+
+            if (insertionReference !== placeholderEl) {
+                slotsContainer.insertBefore(placeholderEl, insertionReference);
+            }
+
+            this.dropTargetSlotId = targetSlotId;
+        },
+        async onSlotDrop(event) {
+            event.preventDefault();
+
+            if (!this.canReorderSlots || this.busyAction) {
+                this.clearSlotDropPlaceholder();
+                return;
+            }
+
+            if (this.dragSlotId === null) {
+                this.clearSlotDropPlaceholder();
+                return;
+            }
+
+            const slotsContainer = this.$refs.slotsContainer;
+            const draggedEl = slotsContainer.querySelector(`[data-slot-id='${this.dragSlotId}']`);
+
+            if (draggedEl && this.$refs.slotDropPlaceholder?.parentNode === slotsContainer) {
+                slotsContainer.insertBefore(draggedEl, this.$refs.slotDropPlaceholder);
+            }
+
+            this.clearSlotDropPlaceholder();
+
+            this.dragSlotId = null;
+            this.draggingSlotId = null;
+            this.dropTargetSlotId = null;
+            await this.persistSlotOrder();
+        },
+        async persistSlotOrder() {
+            this.busyAction = true;
+            this.actionError = '';
+
+            const slotIds = Array.from(this.$refs.slotsContainer.querySelectorAll('[data-slot-id]'))
+                .map((el) => Number(el.dataset.slotId));
+
+            try {
+                const response = await fetch('{{ route('slots.reorder', $song) }}', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: JSON.stringify({ slot_ids: slotIds }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Reorder failed');
+                }
+
+                this.refreshSessionSets();
+            } catch (e) {
+                this.actionError = 'Could not save slot order. Refresh and try again.';
+            } finally {
+                this.busyAction = false;
+            }
         },
         async submitAddSlot(event) {
             this.busyAction = true;
@@ -178,7 +314,12 @@
                     <th class="px-3 py-2">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="slotsContainer" @dragover="onSlotDragOver($event)" @drop="onSlotDrop($event)">
+                <tr x-ref="slotDropPlaceholder" class="hidden">
+                    <td colspan="3" class="px-3 py-3">
+                        <div data-slot-drop-label class="rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/70 p-4 text-sm font-medium text-sky-700 shadow-sm">Drop slot here</div>
+                    </td>
+                </tr>
                 @forelse ($song->slots as $slot)
                     <x-sessions.slot-row
                         :slot-model="$slot"
@@ -187,6 +328,7 @@
                         :slot-options="$slotOptions"
                         :is-set-owner="$isSetOwner"
                         :can-manage-set="$canManageSet"
+                        :can-reorder-slots="$canManageSet && ! $setLocked"
                     />
                 @empty
                     <tr>

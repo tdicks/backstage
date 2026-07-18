@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/song-requests/{songRequest}/respond', [SongRequestController::class, 'respond'])->name('song-requests.respond');
 
     Route::post('/songs/{song}/slots', [SlotController::class, 'store'])->name('slots.store');
+    Route::patch('/songs/{song}/slots/reorder', [SlotController::class, 'reorder'])->name('slots.reorder');
     Route::post('/slots/{slot}/take', [SlotController::class, 'take'])->name('slots.take');
     Route::post('/slots/{slot}/release', [SlotController::class, 'release'])->name('slots.release');
     Route::patch('/slots/{slot}', [SlotController::class, 'update'])->name('slots.update');

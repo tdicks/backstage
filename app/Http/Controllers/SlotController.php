@@ -7,6 +7,7 @@ use App\Models\Slot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SlotController extends Controller
 {
@@ -66,6 +67,54 @@ class SlotController extends Controller
         }
 
         return back()->with('status', 'Slot updated.');
+    }
+
+    public function reorder(Request $request, Song $song): JsonResponse|RedirectResponse
+    {
+        $this->authorize('update', $song);
+
+        if ($song->set->performed) {
+            abort(403, 'Cannot reorder slots in a performed set.');
+        }
+
+        $validated = $request->validate([
+            'slot_ids' => ['required', 'array', 'min:1'],
+            'slot_ids.*' => ['integer'],
+        ]);
+
+        $orderedSlotIds = array_values(array_map('intval', $validated['slot_ids']));
+        $uniqueOrderedSlotIds = array_values(array_unique($orderedSlotIds));
+
+        if (count($orderedSlotIds) !== count($uniqueOrderedSlotIds)) {
+            abort(422, 'Slot order contains duplicates.');
+        }
+
+        $songSlotIds = $song->slots()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        sort($uniqueOrderedSlotIds);
+        $sortedSongSlotIds = $songSlotIds;
+        sort($sortedSongSlotIds);
+
+        if ($uniqueOrderedSlotIds !== $sortedSongSlotIds) {
+            abort(422, 'Invalid slot list for this song.');
+        }
+
+        DB::transaction(function () use ($orderedSlotIds, $song): void {
+            foreach (array_values($orderedSlotIds) as $index => $slotId) {
+                Slot::query()
+                    ->where('song_id', $song->id)
+                    ->where('id', $slotId)
+                    ->update(['position' => $index + 1]);
+            }
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Slot order updated.',
+            ]);
+        }
+
+        return back()->with('status', 'Slot order updated.');
     }
 
     public function take(Request $request, Slot $slot): JsonResponse|RedirectResponse

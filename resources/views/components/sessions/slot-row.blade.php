@@ -5,6 +5,7 @@
     'slotOptions',
     'isSetOwner' => false,
     'canManageSet' => false,
+    'canReorderSlots' => false,
 ])
 
 @php
@@ -17,6 +18,15 @@
 
 <tr
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
+    data-slot-id="{{ $slotModel->id }}"
+    draggable="{{ $canReorderSlots ? 'true' : 'false' }}"
+    @dragstart="onSlotDragStart($event, {{ $slotModel->id }})"
+    @dragover="onSlotDragOver($event, {{ $slotModel->id }})"
+    @drop="onSlotDrop($event)"
+    @dragend="onSlotDragEnd()"
+    x-bind:class="{
+        'opacity-70': draggingSlotId === {{ $slotModel->id }}
+    }"
     x-data="{
         openPropose: false,
         openEditSlot: false,
