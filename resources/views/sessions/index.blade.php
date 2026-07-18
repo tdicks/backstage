@@ -56,19 +56,19 @@
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div class="grid gap-4">
                 @forelse ($sessions as $session)
-                    <a href="{{ route('sessions.show', $session) }}" class="block rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                    <a href="{{ route('sessions.show', $session) }}" class="block rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm transition hover:shadow-md">
                         <div class="flex items-start justify-between gap-4">
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-900">{{ $session->name }}</h3>
-                                <p class="text-sm text-gray-500">{{ $session->date->format('D, M j, Y') }}</p>
+                                <h3 class="text-lg font-semibold text-slate-900">{{ $session->name }}</h3>
+                                <p class="text-sm text-slate-500">{{ $session->date->format('D, M j, Y') }}</p>
                             </div>
-                            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                                 {{ $session->sets_count }} sets
                             </span>
                         </div>
                     </a>
                 @empty
-                    <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+                    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/95 p-8 text-center text-slate-500">
                         No jam sessions yet.
                     </div>
                 @endforelse

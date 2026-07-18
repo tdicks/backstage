@@ -80,6 +80,23 @@ class UserAdministrationController extends Controller
         ]);
     }
 
+    public function toggleRole(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+
+        if ($request->user()->id === $user->id) {
+            return back()->withErrors([
+                'role' => 'You cannot change your own role.',
+            ]);
+        }
+
+        $user->forceFill([
+            'is_admin' => ! $user->is_admin,
+        ])->save();
+
+        return back()->with('status', 'User role updated.');
+    }
+
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user()?->is_admin, 403);

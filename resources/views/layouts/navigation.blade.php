@@ -97,16 +97,6 @@
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
-                        @if (Auth::user()->is_admin)
-                            <div class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
-                            <x-dropdown-link :href="route('admin.users.index')">
-                                {{ __('Users') }}
-                            </x-dropdown-link>
-                            <x-dropdown-link :href="route('band-templates.index')">
-                                {{ __('Band Templates') }}
-                            </x-dropdown-link>
-                        @endif
-
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -117,6 +107,18 @@
                                 {{ __('Log Out') }}
                             </x-dropdown-link>
                         </form>
+
+                        @if (Auth::user()->is_admin)
+                            <div class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
+                            <x-dropdown-link :href="route('admin.users.index')">
+                                {{ __('Users') }}
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('band-templates.index')">
+                                {{ __('Band Templates') }}
+                            </x-dropdown-link>
+                        @endif
+
+
 
 
                     </x-slot>
@@ -172,16 +174,6 @@
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 
-                @if (Auth::user()->is_admin)
-                    <div class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
-                    <x-responsive-nav-link :href="route('admin.users.index')">
-                        {{ __('Users') }}
-                    </x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('band-templates.index')">
-                        {{ __('Band Templates') }}
-                    </x-responsive-nav-link>
-                @endif
-
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -192,6 +184,18 @@
                         {{ __('Log Out') }}
                     </x-responsive-nav-link>
                 </form>
+
+                @if (Auth::user()->is_admin)
+                    <div class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
+                    <x-responsive-nav-link :href="route('admin.users.index')">
+                        {{ __('Users') }}
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('band-templates.index')">
+                        {{ __('Band Templates') }}
+                    </x-responsive-nav-link>
+                @endif
+
+
             </div>
         </div>
     </div>

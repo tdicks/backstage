@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JamSession;
 use App\Models\JamSessionSignIn;
 use App\Models\Set;
+use App\Models\SongRequest;
 use App\Models\Slot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -107,6 +108,7 @@ class SetController extends Controller
             'owner_id' => $request->user()->id,
             'position' => $nextPosition,
             'performed' => false,
+            'song_requests' => true,
         ]);
 
         return back()->with('status', 'Set created.');
@@ -123,6 +125,8 @@ class SetController extends Controller
             'description' => ['nullable', 'string'],
             'position' => ['nullable', 'integer', 'min:0'],
             'performed' => ['nullable', 'boolean'],
+            'signups_open' => ['nullable', 'boolean'],
+            'song_requests' => ['nullable', 'boolean'],
             'jam_session_id' => ['nullable', 'integer', 'exists:jam_sessions,id'],
         ];
 
@@ -132,11 +136,15 @@ class SetController extends Controller
 
         $validated = $request->validate($rules);
 
+        $wasAcceptingSongRequests = (bool) $set->song_requests;
+
         $updateData = [
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'position' => $validated['position'] ?? $set->position,
             'performed' => (bool) ($validated['performed'] ?? false),
+            'signups_open' => (bool) ($validated['signups_open'] ?? false),
+            'song_requests' => (bool) ($validated['song_requests'] ?? false),
             'jam_session_id' => $validated['jam_session_id'] ?? $set->jam_session_id,
         ];
 
@@ -145,6 +153,16 @@ class SetController extends Controller
         }
 
         $set->update($updateData);
+
+        if ($wasAcceptingSongRequests && ! $updateData['song_requests']) {
+            $set->songRequests()
+                ->where('status', SongRequest::STATUS_PENDING)
+                ->update([
+                    'status' => SongRequest::STATUS_REJECTED,
+                    'responded_by_user_id' => $request->user()->id,
+                    'responded_at' => now(),
+                ]);
+        }
 
         return back()->with('status', 'Set updated.');
     }

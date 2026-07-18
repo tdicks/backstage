@@ -16,6 +16,7 @@ class Set extends Model
         'position',
         'performed',
         'signups_open',
+        'song_requests',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class Set extends Model
             'position' => 'integer',
             'performed' => 'boolean',
             'signups_open' => 'boolean',
+            'song_requests' => 'boolean',
         ];
     }
 

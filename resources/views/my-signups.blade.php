@@ -7,22 +7,22 @@
 
     <div class="py-12">
         <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-            <div class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                 <p class="text-slate-700">
                     These are the sets where you have a confirmed slot assignment.
                 </p>
             </div>
 
-            <section class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
+            <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold text-slate-900">Slot proposals for you</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Slot proposals for you</h3>
                     <span class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
                         {{ $slotProposals->count() }} pending
                     </span>
                 </div>
 
                 @if ($slotProposals->isEmpty())
-                    <p class="mt-3 text-sm text-slate-500">No pending slot proposals right now.</p>
+                    <p class="mt-3 text-sm text-gray-500">No pending slot proposals right now.</p>
                 @else
                     <div class="mt-4 space-y-3">
                         @foreach ($slotProposals as $proposal)
@@ -31,7 +31,7 @@
                                 $session = $set->session;
                             @endphp
                             <article
-                                class="rounded-md border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-slate-50 p-4"
+                                class="rounded-md border border-indigo-100 bg-indigo-50/50 p-4"
                                 x-data="{
                                     hidden: false,
                                     busy: false,
@@ -72,17 +72,17 @@
                             >
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <p class="font-semibold text-slate-900">
+                                        <p class="font-semibold text-gray-900">
                                             {{ $proposal->slot->song->artist }} - {{ $proposal->slot->song->title }}
                                         </p>
-                                        <p class="text-sm text-slate-700">
+                                        <p class="text-sm text-gray-700">
                                             {{ $session->name }} · {{ $session->date->format('D, M j, Y') }} · {{ $set->name }}
                                         </p>
-                                        <p class="mt-1 text-sm text-slate-700">
+                                        <p class="mt-1 text-sm text-gray-700">
                                             Slot: {{ ucfirst(str_replace('_', ' ', $proposal->slot->name)) }} · Proposed by {{ $proposal->actor->name }}
                                         </p>
                                         @if ($proposal->message)
-                                            <p class="mt-2 text-sm text-slate-600">{{ $proposal->message }}</p>
+                                            <p class="mt-2 text-sm text-gray-600">{{ $proposal->message }}</p>
                                         @endif
                                         <p x-show="error" x-text="error" class="mt-2 text-sm text-red-700"></p>
                                     </div>
@@ -103,11 +103,11 @@
                     $set = $group['set'];
                     $isPerformed = $set->performed;
                     $cardClasses = $isPerformed
-                        ? 'border-gray-200 bg-gray-100 text-gray-500'
-                        : 'border-gray-200 bg-white text-gray-900';
+                        ? 'border-slate-200 bg-slate-100/95 text-slate-500'
+                        : 'border-slate-200 bg-slate-50/95 text-slate-900';
                 @endphp
 
-                <section class="rounded-lg border p-6 shadow-sm {{ $cardClasses }}">
+                <section class="rounded-xl border p-6 shadow-sm {{ $cardClasses }}">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -137,8 +137,8 @@
                                 $song = $songGroup['song'];
                             @endphp
 
-                            <article class="rounded-md border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-                                <h4 class="font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h4>
+                            <article class="rounded-md border border-gray-200 bg-white/60 p-4">
+                                <h4 class="font-semibold text-gray-900">{{ $song->artist }} - {{ $song->title }}</h4>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($songGroup['slots'] as $slot)
                                         <div class="inline-flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-medium text-white">
@@ -152,7 +152,7 @@
                     </div>
                 </section>
             @empty
-                <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50/95 p-8 text-center text-slate-500">
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
                     You have not signed up for any slots yet.
                 </div>
             @endforelse

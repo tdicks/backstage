@@ -9,6 +9,8 @@
 @php
     $canManageSet = auth()->user()->is_admin || $set->owner_id === auth()->id();
     $isSetOwner = $set->owner_id === auth()->id();
+    $setLocked = $set->performed;
+    $sessionLocked = (bool) ($set->session?->is_closed ?? false);
     $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
     $filledSlots = $set->songs->sum(fn ($song) => $song->slots->whereNotNull('user_id')->count());
     $healthRatio = $totalSlots > 0 ? $filledSlots / $totalSlots : 0;
@@ -44,6 +46,21 @@
         titleLookupTimer: null,
         artistLookupToken: 0,
         titleLookupToken: 0,
+        requestArtistQuery: '',
+        requestTitleQuery: '',
+        requestSelectedArtistName: '',
+        requestArtistSuggestions: [],
+        requestTitleSuggestions: [],
+        requestArtistLookupBusy: false,
+        requestTitleLookupBusy: false,
+        requestArtistLookupError: '',
+        requestTitleLookupError: '',
+        showRequestArtistSuggestions: false,
+        showRequestTitleSuggestions: false,
+        requestArtistLookupTimer: null,
+        requestTitleLookupTimer: null,
+        requestArtistLookupToken: 0,
+        requestTitleLookupToken: 0,
         artistLookupUrl: @js(route('lookups.deezer.artists')),
         titleLookupUrl: @js(route('lookups.deezer.tracks')),
         openSetEdit: false,
@@ -55,8 +72,15 @@
         summaryLastUpdated: '',
         summaryPollId: null,
         setCollapsed: false,
+        songRequestsCollapsed: false,
         setKey: 'backstage:u{{ auth()->id() }}:set:{{ $set->id }}',
-        canReorderSongs: @js($isSetOwner),
+        songRequestsKey: 'backstage:u{{ auth()->id() }}:set:{{ $set->id }}:song-requests',
+        canReorderSongs: @js($isSetOwner && ! $setLocked),
+        setLocked: @js($setLocked),
+        initialSetPerformed: @js($setLocked),
+        performedDraft: @js($setLocked),
+        initialSongRequestsEnabled: @js((bool) $set->song_requests),
+        songRequestsDraft: @js((bool) $set->song_requests),
         reorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
@@ -66,8 +90,27 @@
         addSongError: '',
         dragSongId: null,
         draggingSongId: null,
+        dropTargetSongId: null,
+        dropTargetPosition: 'before',
+        dropPlaceholderEl: null,
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        ensureDropPlaceholder(container, draggedEl) {
+            if (!this.dropPlaceholderEl) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/70 p-4 text-sm font-medium text-sky-700 shadow-sm';
+                placeholder.textContent = 'Drop song here';
+                this.dropPlaceholderEl = placeholder;
+            }
+
+            this.dropPlaceholderEl.style.minHeight = `${draggedEl.offsetHeight}px`;
+            return this.dropPlaceholderEl;
+        },
+        clearDropPlaceholder() {
+            if (this.dropPlaceholderEl?.parentNode) {
+                this.dropPlaceholderEl.parentNode.removeChild(this.dropPlaceholderEl);
+            }
         },
         onSongDragStart(event, songId) {
             if (!this.canReorderSongs) {
@@ -76,6 +119,8 @@
 
             this.dragSongId = songId;
             this.draggingSongId = songId;
+            this.dropTargetSongId = null;
+            this.dropTargetPosition = 'before';
             const songsContainer = this.$refs.songsContainer;
             const draggedEl = songsContainer ? songsContainer.querySelector(`[data-song-id='${songId}']`) : null;
 
@@ -90,23 +135,19 @@
         onSongDragEnd() {
             this.dragSongId = null;
             this.draggingSongId = null;
+            this.dropTargetSongId = null;
+            this.dropTargetPosition = 'before';
+            this.clearDropPlaceholder();
         },
-        onSongDragOver(event) {
+        onSongDragOver(event, targetSongId = null) {
             if (!this.canReorderSongs || this.reorderBusy) {
                 return;
             }
 
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
-        },
-        async onSongDrop(targetSongId) {
-            if (!this.canReorderSongs || this.reorderBusy || this.dragSongId === null) {
-                return;
-            }
 
-            if (this.dragSongId === targetSongId) {
-                this.dragSongId = null;
-                this.draggingSongId = null;
+            if (this.dragSongId === null || targetSongId === null || this.dragSongId === targetSongId) {
                 return;
             }
 
@@ -115,16 +156,62 @@
             const targetEl = songsContainer.querySelector(`[data-song-id='${targetSongId}']`);
 
             if (!draggedEl || !targetEl) {
-                this.dragSongId = null;
-                this.draggingSongId = null;
                 return;
             }
 
-            const draggedBeforeTarget = !!(draggedEl.compareDocumentPosition(targetEl) & Node.DOCUMENT_POSITION_FOLLOWING);
-            songsContainer.insertBefore(draggedEl, draggedBeforeTarget ? targetEl.nextSibling : targetEl);
+            const targetRect = targetEl.getBoundingClientRect();
+            const placeAfter = event.clientY > (targetRect.top + targetRect.height / 2);
+            const insertionReference = placeAfter ? targetEl.nextElementSibling : targetEl;
+
+            const songElements = Array.from(songsContainer.querySelectorAll('[data-song-id]'));
+            const currentIndex = songElements.indexOf(draggedEl);
+            const referenceIndex = insertionReference ? songElements.indexOf(insertionReference) : songElements.length;
+            const prospectiveIndex = insertionReference
+                ? (referenceIndex > currentIndex ? referenceIndex - 1 : referenceIndex)
+                : songElements.length - 1;
+
+            if (prospectiveIndex === currentIndex) {
+                this.clearDropPlaceholder();
+                this.dropTargetSongId = null;
+                this.dropTargetPosition = 'before';
+                return;
+            }
+
+            const placeholderEl = this.ensureDropPlaceholder(songsContainer, draggedEl);
+
+            if (insertionReference !== placeholderEl) {
+                songsContainer.insertBefore(placeholderEl, insertionReference);
+            }
+
+            this.dropTargetSongId = targetSongId;
+            this.dropTargetPosition = placeAfter ? 'after' : 'before';
+        },
+        async onSongDrop(event) {
+            event.preventDefault();
+
+            if (!this.canReorderSongs || this.reorderBusy) {
+                this.clearDropPlaceholder();
+                return;
+            }
+
+            if (this.dragSongId === null) {
+                this.clearDropPlaceholder();
+                return;
+            }
+
+            const songsContainer = this.$refs.songsContainer;
+            const draggedEl = songsContainer.querySelector(`[data-song-id='${this.dragSongId}']`);
+
+            if (draggedEl && this.dropPlaceholderEl?.parentNode === songsContainer) {
+                songsContainer.insertBefore(draggedEl, this.dropPlaceholderEl);
+            }
+
+            this.clearDropPlaceholder();
 
             this.dragSongId = null;
             this.draggingSongId = null;
+            this.dropTargetSongId = null;
+            this.dropTargetPosition = 'before';
             await this.persistSongOrder();
         },
         async persistSongOrder() {
@@ -159,6 +246,10 @@
             }
         },
         async toggleSignups(open) {
+            if (this.setLocked) {
+                return;
+            }
+
             this.signupsToggleBusy = true;
             this.signupsToggleError = '';
 
@@ -247,9 +338,17 @@
             }
         },
         openAddSongModal() {
+            if (this.setLocked) {
+                return;
+            }
+
             this.openSong = true;
             this.addSongError = '';
             this.resetSongAutocomplete();
+        },
+        openSongRequestModal() {
+            this.openSongRequest = true;
+            this.resetSongRequestAutocomplete();
         },
         async submitAddSong(event) {
             this.addSongBusy = true;
@@ -424,10 +523,154 @@
             this.songTitleQuery = title;
             this.titleSuggestions = [];
             this.showTitleSuggestions = false;
+        },
+        resetSongRequestAutocomplete() {
+            this.requestArtistQuery = '';
+            this.requestTitleQuery = '';
+            this.requestSelectedArtistName = '';
+            this.requestArtistSuggestions = [];
+            this.requestTitleSuggestions = [];
+            this.requestArtistLookupBusy = false;
+            this.requestTitleLookupBusy = false;
+            this.requestArtistLookupError = '';
+            this.requestTitleLookupError = '';
+            this.showRequestArtistSuggestions = false;
+            this.showRequestTitleSuggestions = false;
+            if (this.requestArtistLookupTimer) {
+                clearTimeout(this.requestArtistLookupTimer);
+                this.requestArtistLookupTimer = null;
+            }
+            if (this.requestTitleLookupTimer) {
+                clearTimeout(this.requestTitleLookupTimer);
+                this.requestTitleLookupTimer = null;
+            }
+        },
+        queueRequestArtistLookup() {
+            this.requestArtistLookupError = '';
+            this.showRequestTitleSuggestions = false;
+            this.requestTitleSuggestions = [];
+
+            if (this.requestArtistLookupTimer) {
+                clearTimeout(this.requestArtistLookupTimer);
+            }
+
+            const query = this.requestArtistQuery.trim();
+            if (query.length < 2) {
+                this.requestArtistSuggestions = [];
+                this.showRequestArtistSuggestions = false;
+                this.requestSelectedArtistName = '';
+                return;
+            }
+
+            this.requestArtistLookupTimer = setTimeout(() => this.fetchRequestArtistSuggestions(query), 250);
+        },
+        async fetchRequestArtistSuggestions(query) {
+            const token = ++this.requestArtistLookupToken;
+            this.requestArtistLookupBusy = true;
+
+            try {
+                const response = await fetch(`${this.artistLookupUrl}?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error('Artist lookup failed');
+                }
+
+                const payload = await response.json();
+                if (token !== this.requestArtistLookupToken) {
+                    return;
+                }
+
+                this.requestArtistSuggestions = payload.artists || [];
+                this.showRequestArtistSuggestions = this.requestArtistSuggestions.length > 0;
+            } catch (e) {
+                if (token !== this.requestArtistLookupToken) {
+                    return;
+                }
+
+                this.requestArtistLookupError = 'Could not fetch artist suggestions right now.';
+                this.requestArtistSuggestions = [];
+                this.showRequestArtistSuggestions = false;
+            } finally {
+                if (token === this.requestArtistLookupToken) {
+                    this.requestArtistLookupBusy = false;
+                }
+            }
+        },
+        selectRequestArtistSuggestion(artistName) {
+            this.requestArtistQuery = artistName;
+            this.requestSelectedArtistName = artistName;
+            this.requestArtistSuggestions = [];
+            this.showRequestArtistSuggestions = false;
+            this.requestTitleQuery = '';
+            this.requestTitleSuggestions = [];
+            this.showRequestTitleSuggestions = false;
+            this.requestTitleLookupError = '';
+        },
+        queueRequestTitleLookup() {
+            this.requestTitleLookupError = '';
+
+            if (this.requestTitleLookupTimer) {
+                clearTimeout(this.requestTitleLookupTimer);
+            }
+
+            const query = this.requestTitleQuery.trim();
+            const artist = (this.requestSelectedArtistName || this.requestArtistQuery).trim();
+            if (query.length < 2 || artist.length < 2) {
+                this.requestTitleSuggestions = [];
+                this.showRequestTitleSuggestions = false;
+                return;
+            }
+
+            this.requestTitleLookupTimer = setTimeout(() => this.fetchRequestTitleSuggestions(artist, query), 250);
+        },
+        async fetchRequestTitleSuggestions(artist, query) {
+            const token = ++this.requestTitleLookupToken;
+            this.requestTitleLookupBusy = true;
+
+            try {
+                const response = await fetch(`${this.titleLookupUrl}?artist=${encodeURIComponent(artist)}&q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error('Title lookup failed');
+                }
+
+                const payload = await response.json();
+                if (token !== this.requestTitleLookupToken) {
+                    return;
+                }
+
+                this.requestTitleSuggestions = payload.titles || [];
+                this.showRequestTitleSuggestions = this.requestTitleSuggestions.length > 0;
+            } catch (e) {
+                if (token !== this.requestTitleLookupToken) {
+                    return;
+                }
+
+                this.requestTitleLookupError = 'Could not fetch song suggestions right now.';
+                this.requestTitleSuggestions = [];
+                this.showRequestTitleSuggestions = false;
+            } finally {
+                if (token === this.requestTitleLookupToken) {
+                    this.requestTitleLookupBusy = false;
+                }
+            }
+        },
+        selectRequestTitleSuggestion(title) {
+            this.requestTitleQuery = title;
+            this.requestTitleSuggestions = [];
+            this.showRequestTitleSuggestions = false;
         }
     }"
-    x-init="setCollapsed = localStorage.getItem(setKey) === '1'"
-    x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0')"
+    x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'"
+    x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
     @keydown.escape.window="closeSummaryModal(); openSetEdit = false; openSong = false; openSongRequest = false"
 >
     <div
@@ -499,7 +742,7 @@
                 <span class="sr-only">Summary</span>
             </button>
             @if ($canManageSet)
-                @if ($set->signups_open)
+                @if (! $setLocked && $set->signups_open)
                     <button
                         type="button"
                         @click="toggleSignups(false)"
@@ -511,7 +754,7 @@
                         <x-heroicon-m-lock-closed class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only">Close Sign Ups</span>
                     </button>
-                @else
+                @elseif (! $setLocked)
                     <button
                         type="button"
                         @click="toggleSignups(true)"
@@ -526,7 +769,7 @@
                 @endif
                 <button
                     type="button"
-                    @click="openSetEdit = true"
+                    @click="performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     aria-label="Edit Set"
                     title="Edit Set"
@@ -534,19 +777,30 @@
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Set</span>
                 </button>
-                <button
-                    type="button"
-                    @click="openAddSongModal()"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    aria-label="Add Song"
-                    title="Add Song"
-                >
-                    <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Add Song</span>
-                </button>
+                @if (! $setLocked)
+                    <button
+                        type="button"
+                        @click="openAddSongModal()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        aria-label="Add Song"
+                        title="Add Song"
+                    >
+                        <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Add Song</span>
+                    </button>
+                @endif
             @else
-                @if ($set->signups_open)
-                    <x-secondary-button @click="openSongRequest = true">Request Song</x-secondary-button>
+                @if ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
+                    <button
+                        type="button"
+                        @click="openSongRequestModal()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        aria-label="Request Song"
+                        title="Request Song"
+                    >
+                        <x-heroicon-m-hand-raised class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Request Song</span>
+                    </button>
                 @endif
             @endif
         </div>
@@ -668,7 +922,7 @@
 
             <div class="shrink-0 border-t border-slate-200 bg-white/95 px-4 py-2 text-xs text-slate-500 backdrop-blur sm:px-6">
                 <span x-show="summaryLastUpdated" x-cloak>
-                    ReLast updated <span x-text="summaryLastUpdated"></span>
+                    Table refreshes automatically, last updated <span x-text="summaryLastUpdated"></span>
                 </span>
             </div>
         </div>
@@ -711,9 +965,33 @@
                         </div>
                     @endif
                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                        <input type="checkbox" name="performed" value="1" @checked($set->performed) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
-                        Mark as performed
+                        <input type="checkbox" name="performed" value="1" x-model="performedDraft" @checked($set->performed) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                        Mark as performed.
                     </label>
+                    <p
+                        x-show="!initialSetPerformed && performedDraft"
+                        x-cloak
+                        class="-mt-1 text-xs text-amber-700"
+                    >
+                        Marking this set as performed will lock the set's song list and slots.
+                    </p>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                        <input type="hidden" name="signups_open" value="0">
+                        <input type="checkbox" name="signups_open" value="1" @checked($set->signups_open) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                        Sign ups open.
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                        <input type="hidden" name="song_requests" value="0">
+                        <input type="checkbox" name="song_requests" value="1" x-model="songRequestsDraft" @checked($set->song_requests) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                        Accept song requests.
+                    </label>
+                    <p
+                        x-show="initialSongRequestsEnabled && !songRequestsDraft"
+                        x-cloak
+                        class="-mt-1 text-xs text-amber-700"
+                    >
+                        Turning off song requests will reject any pending song requests for this set.
+                    </p>
                 </form>
                 <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
                     <form method="POST" action="{{ route('sets.destroy', $set) }}">
@@ -836,20 +1114,80 @@
             </div>
         </div>
     @else
-        <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false"></div>
+        <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
         <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
                 <h4 class="text-lg font-semibold">Request a Song for {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4">
                     @csrf
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
+                        <div class="relative">
                             <x-input-label for="request_artist_{{ $set->id }}" value="Artist" />
-                            <x-text-input id="request_artist_{{ $set->id }}" name="artist" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input
+                                id="request_artist_{{ $set->id }}"
+                                name="artist"
+                                x-model="requestArtistQuery"
+                                @input="queueRequestArtistLookup()"
+                                @focus="showRequestArtistSuggestions = requestArtistSuggestions.length > 0"
+                                @keydown.escape="showRequestArtistSuggestions = false"
+                                class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
+                                autocomplete="off"
+                                required
+                            />
+                            <p class="mt-1 text-xs text-slate-500">Start typing an artist to fetch Deezer suggestions.</p>
+                            <div x-show="requestArtistLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up artists...</div>
+                            <div x-show="requestArtistLookupError" x-cloak x-text="requestArtistLookupError" class="mt-1 text-xs text-rose-600"></div>
+                            <ul
+                                x-show="showRequestArtistSuggestions"
+                                x-cloak
+                                class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                                @click.outside="showRequestArtistSuggestions = false"
+                            >
+                                <template x-for="artist in requestArtistSuggestions" :key="`request-artist-${artist}`">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            @click="selectRequestArtistSuggestion(artist)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                                            x-text="artist"
+                                        ></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
-                        <div>
+                        <div class="relative">
                             <x-input-label for="request_title_{{ $set->id }}" value="Title" />
-                            <x-text-input id="request_title_{{ $set->id }}" name="title" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
+                            <x-text-input
+                                id="request_title_{{ $set->id }}"
+                                name="title"
+                                x-model="requestTitleQuery"
+                                @input="queueRequestTitleLookup()"
+                                @focus="showRequestTitleSuggestions = requestTitleSuggestions.length > 0"
+                                @keydown.escape="showRequestTitleSuggestions = false"
+                                class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
+                                autocomplete="off"
+                                required
+                            />
+                            <p class="mt-1 text-xs text-slate-500">Song suggestions are scoped to the selected artist.</p>
+                            <div x-show="requestTitleLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up songs...</div>
+                            <div x-show="requestTitleLookupError" x-cloak x-text="requestTitleLookupError" class="mt-1 text-xs text-rose-600"></div>
+                            <ul
+                                x-show="showRequestTitleSuggestions"
+                                x-cloak
+                                class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                                @click.outside="showRequestTitleSuggestions = false"
+                            >
+                                <template x-for="title in requestTitleSuggestions" :key="`request-title-${title}`">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            @click="selectRequestTitleSuggestion(title)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                                            x-text="title"
+                                        ></button>
+                                    </li>
+                                </template>
+                            </ul>
                         </div>
                     </div>
                     <div>
@@ -857,7 +1195,7 @@
                         <textarea id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-modal-secondary-button type="button" @click="openSongRequest = false">Cancel</x-modal-secondary-button>
+                        <x-modal-secondary-button type="button" @click="openSongRequest = false; resetSongRequestAutocomplete()">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button>Send Request</x-modal-primary-button>
                     </div>
                 </form>
@@ -868,60 +1206,11 @@
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
         <p x-show="signupsToggleError" x-text="signupsToggleError" class="text-sm text-red-700"></p>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
-        <p x-show="reorderFeedback" x-text="reorderFeedback" class="text-sm text-emerald-700"></p>
         @if ($isSetOwner)
             <p class="text-xs text-slate-500">Tip: drag songs to reorder them.</p>
         @endif
 
-        @if ($canManageSet && $set->songRequests->where('status', 'pending')->isNotEmpty())
-            <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4">
-                <h4 class="text-sm font-semibold text-amber-900">Song requests</h4>
-                <div class="mt-3 space-y-3">
-                    @foreach ($set->songRequests->where('status', 'pending') as $songRequest)
-                        <div class="rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50/70 to-white p-4 shadow-sm">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <p class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</p>
-                                    <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester->name }}</p>
-                                    @if ($songRequest->bandTemplate)
-                                        <p class="text-sm text-slate-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
-                                    @endif
-                                    @if ($songRequest->notes)
-                                        <p class="mt-1 text-sm text-slate-700">{{ $songRequest->notes }}</p>
-                                    @endif
-                                </div>
-
-                                <div class="flex flex-col gap-2 sm:min-w-64">
-                                    <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}" class="space-y-2">
-                                        @csrf
-                                        @method('PATCH')
-                                        <div>
-                                            <label class="block text-xs font-medium uppercase tracking-wide text-slate-500" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
-                                            <select id="band_template_id_{{ $songRequest->id }}" name="band_template_id" class="mt-1 w-full rounded-md border-gray-300 text-sm">
-                                                <option value="">None</option>
-                                                @foreach ($templates as $template)
-                                                    <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <input type="hidden" name="status" value="accepted">
-                                        <x-primary-button class="w-full justify-center">Approve</x-primary-button>
-                                    </form>
-                                    <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="hidden" name="status" value="rejected">
-                                        <x-secondary-button class="w-full justify-center">Reject</x-secondary-button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
-        <div class="space-y-4" x-ref="songsContainer" @dragover="onSongDragOver($event)">
+        <div class="space-y-4" x-ref="songsContainer" @dragover="onSongDragOver($event)" @drop="onSongDrop($event)">
             @forelse ($set->songs as $song)
                 <x-sessions.song-card
                     :song="$song"
@@ -935,5 +1224,83 @@
                 <p class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>
             @endforelse
         </div>
+
+        @if ($set->song_requests && $set->songRequests->where('status', 'pending')->isNotEmpty())
+            <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4">
+                <div
+                    class="flex cursor-pointer items-center justify-between gap-2"
+                    role="button"
+                    tabindex="0"
+                    @click="songRequestsCollapsed = !songRequestsCollapsed"
+                    @keydown.enter.prevent="songRequestsCollapsed = !songRequestsCollapsed"
+                    @keydown.space.prevent="songRequestsCollapsed = !songRequestsCollapsed"
+                    x-bind:aria-expanded="(!songRequestsCollapsed).toString()"
+                    x-bind:title="songRequestsCollapsed ? 'Click to show song requests' : 'Click to hide song requests'"
+                >
+                    <h4 class="text-sm font-semibold text-amber-900">Song requests</h4>
+                    <x-heroicon-m-chevron-down class="h-4 w-4 text-amber-700 transition" x-bind:class="songRequestsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
+                </div>
+                <div class="mt-3 space-y-3" x-show="!songRequestsCollapsed" x-transition>
+                    @foreach ($set->songRequests->where('status', 'pending') as $songRequest)
+                        <div class="rounded-lg border border-amber-200 bg-white/90 p-4 shadow-sm">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</p>
+                                    <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester->name }}</p>
+                                    @if ($songRequest->bandTemplate)
+                                        <p class="text-sm text-slate-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
+                                    @endif
+                                    @if ($songRequest->notes)
+                                        <p class="mt-1 text-sm text-slate-700">{{ $songRequest->notes }}</p>
+                                    @endif
+                                </div>
+
+                                <div class="w-full sm:w-auto">
+                                    @if ($canManageSet && ! $setLocked)
+                                        <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                                        <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}" class="flex items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="sr-only" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
+                                            <select id="band_template_id_{{ $songRequest->id }}" name="band_template_id" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                                                <option value="">Template: None</option>
+                                                @foreach ($templates as $template)
+                                                    <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <input type="hidden" name="status" value="accepted">
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                                aria-label="Approve song request"
+                                                title="Approve"
+                                            >
+                                                <x-heroicon-m-check class="h-4 w-4" aria-hidden="true" />
+                                                <span class="sr-only">Approve</span>
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="status" value="rejected">
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                                                aria-label="Reject song request"
+                                                title="Reject"
+                                            >
+                                                <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                                                <span class="sr-only">Reject</span>
+                                            </button>
+                                        </form>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 </section>

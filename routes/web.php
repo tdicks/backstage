@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserAdministrationController::class, 'index'])->name('users.index');
         Route::patch('/users/{user}', [UserAdministrationController::class, 'update'])->name('users.update');
+        Route::patch('/users/{user}/role', [UserAdministrationController::class, 'toggleRole'])->name('users.toggle-role');
         Route::post('/users/{user}/password-reset', [UserAdministrationController::class, 'sendPasswordResetLink'])->name('users.password-reset');
     });
 

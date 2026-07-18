@@ -7,13 +7,20 @@
     'canManageSet' => false,
 ])
 
+@php
+    $setLocked = $set->performed;
+@endphp
+
 <article
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
-    draggable="{{ $isSetOwner ? 'true' : 'false' }}"
+    draggable="{{ $isSetOwner && ! $setLocked ? 'true' : 'false' }}"
     @dragstart="onSongDragStart($event, {{ $song->id }})"
-    @dragover="onSongDragOver($event)"
-    @drop="onSongDrop({{ $song->id }})"
+    @dragover="onSongDragOver($event, {{ $song->id }})"
+    @drop="onSongDrop($event)"
+    x-bind:class="{
+        'opacity-70': draggingSongId === {{ $song->id }}
+    }"
     x-data="{
         openEditSong: false,
         openAddSlot: false,
@@ -78,8 +85,9 @@
             @if ($canManageSet)
                 <button
                     type="button"
-                    @click="openEditSong = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    @click="if (!{{ $setLocked ? 'true' : 'false' }}) openEditSong = true"
+                    @disabled($setLocked)
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Edit song"
                     title="Edit song"
                 >
@@ -88,8 +96,9 @@
                 </button>
                 <button
                     type="button"
-                    @click="openAddSlot = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    @click="if (!{{ $setLocked ? 'true' : 'false' }}) openAddSlot = true"
+                    @disabled($setLocked)
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Add slot"
                     title="Add slot"
                 >
@@ -100,7 +109,7 @@
         </div>
     </div>
 
-    @if ($canManageSet)
+    @if ($canManageSet && ! $setLocked)
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">

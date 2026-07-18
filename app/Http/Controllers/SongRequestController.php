@@ -14,6 +14,10 @@ class SongRequestController extends Controller
 {
     public function store(Request $request, Set $set): RedirectResponse
     {
+        if (! $set->song_requests) {
+            return back()->with('status', 'This set is not accepting song requests.');
+        }
+
         if ($set->owner_id === $request->user()->id) {
             return back()->with('status', 'You can already add songs to your own set.');
         }

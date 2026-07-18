@@ -7,6 +7,10 @@
     'canManageSet' => false,
 ])
 
+@php
+    $setLocked = $set->performed;
+@endphp
+
 <tr
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     x-data="{
@@ -26,6 +30,10 @@
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
         async requestSlot() {
+            if (this.setLocked) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -56,6 +64,10 @@
             }
         },
         async takeSlot() {
+            if (this.setLocked) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -84,6 +96,10 @@
             }
         },
         async submitProposal() {
+            if (this.setLocked) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -118,6 +134,10 @@
             }
         },
         async releaseSlot() {
+            if (this.setLocked) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -146,6 +166,10 @@
             }
         },
         async submitEditSlot(event) {
+            if (this.setLocked) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -174,6 +198,10 @@
             }
         },
         async deleteSlot(event) {
+            if (this.setLocked) {
+                return;
+            }
+
             const confirmed = window.confirm('Delete this slot?');
             if (!confirmed) {
                 return;
@@ -205,6 +233,7 @@
                 this.busyAction = false;
             }
         },
+        setLocked: @js($setLocked),
     }"
     @keydown.escape.window="openPropose = false; openEditSlot = false"
 >
@@ -212,13 +241,14 @@
     <td class="px-3 py-3">
         <span
             class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm"
-            x-bind:class="slotIsOpen ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800'"
+            x-bind:class="assignedToCurrentUser ? 'border-sky-200 bg-sky-50/90 text-sky-800' : (slotIsOpen ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800')"
             x-text="assignedUserName"
         >{{ $slotModel->assignedPerformerName() }}</span>
     </td>
     <td class="px-3 py-3">
         <div class="flex flex-wrap gap-2">
             @if ($canManageSet)
+                @if (! $setLocked)
                 <button
                     type="button"
                     @click="openEditSlot = true"
@@ -229,9 +259,10 @@
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Slot</span>
                 </button>
+                @endif
             @endif
 
-            @if ($slotModel->user_id === auth()->id())
+            @if ($slotModel->user_id === auth()->id() && ! $setLocked)
                 <button
                     type="button"
                     @click="releaseSlot()"
@@ -246,7 +277,7 @@
                 </button>
             @endif
 
-            @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())
+            @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id() && ! $setLocked)
                 <button
                     type="button"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -259,7 +290,7 @@
                     <x-heroicon-m-arrow-down-on-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Take Slot</span>
                 </button>
-            @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
+            @elseif ($set->signups_open && $slotModel->user_id !== auth()->id() && ! $setLocked)
                 <button
                     type="button"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -274,7 +305,7 @@
                 </button>
             @endif
 
-            @if ($set->signups_open && $slotModel->isOpen())
+            @if ($set->signups_open && $slotModel->isOpen() && ! $setLocked)
                 <button
                     type="button"
                     @click="openPropose = true"
@@ -290,6 +321,7 @@
             @endif
         </div>
 
+        @if (! $setLocked)
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
         <div x-show="openPropose" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
@@ -316,8 +348,9 @@
                 </form>
             </div>
         </div>
+        @endif
 
-        @if ($canManageSet)
+        @if ($canManageSet && ! $setLocked)
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
@@ -451,7 +484,7 @@
                                 $canCancel = false;
                             }
                         @endphp
-                        @if ($canRespond)
+                        @if ($canRespond && ! $setLocked)
                             <button
                                 type="button"
                                 @click="respond('accepted', @js($assignment->target->name), @js($assignment->target_user_id === auth()->id()))"
@@ -475,7 +508,7 @@
                                 <span>Reject</span>
                             </button>
                         @endif
-                        @if ($canCancel)
+                        @if ($canCancel && ! $setLocked)
                             <button
                                 type="button"
                                 @click="respond('rejected')"

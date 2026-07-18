@@ -7,14 +7,14 @@
 
     <div class="py-12">
         <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <p class="text-gray-700">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
+                <p class="text-slate-700">
                     These are the sets you currently own and any pending slot approvals for them.
                 </p>
             </div>
 
             <section
-                class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+                class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm"
                 x-data="{ pendingCount: {{ $pendingSlotApprovals->count() }} }"
                 @pending-approval-processed.window="pendingCount = Math.max(0, pendingCount - 1)"
             >
@@ -118,11 +118,11 @@
                 @php
                     $isPerformed = $set->performed;
                     $cardClasses = $isPerformed
-                        ? 'border-gray-200 bg-gray-100 text-gray-500'
-                        : 'border-gray-200 bg-white text-gray-900';
+                        ? 'border-slate-200 bg-slate-100/95 text-slate-500'
+                        : 'border-slate-200 bg-slate-50/95 text-slate-900';
                 @endphp
 
-                <section class="rounded-lg border p-6 shadow-sm {{ $cardClasses }}">
+                <section class="rounded-xl border p-6 shadow-sm {{ $cardClasses }}">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -155,7 +155,7 @@
                                 @endif
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach ($song->slots as $slot)
-                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slot->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800' }}">
+                                        <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slot->user_id === auth()->id() ? 'border-sky-200 bg-sky-50/90 text-sky-800' : ($slot->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800') }}">
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
                                             <span>-</span>
                                             <span>{{ $slot->assignedPerformerName() }}</span>
