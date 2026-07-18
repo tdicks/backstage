@@ -40,8 +40,8 @@
                                         </label>
                                     </div>
                                     <div class="flex justify-end gap-3">
-                                        <x-secondary-button type="button" @click="openCreate = false">Cancel</x-secondary-button>
-                                        <x-primary-button>Create</x-primary-button>
+                                        <x-modal-secondary-button type="button" @click="openCreate = false">Cancel</x-modal-secondary-button>
+                                        <x-modal-primary-button>Create</x-modal-primary-button>
                                     </div>
                                 </form>
                             </div>

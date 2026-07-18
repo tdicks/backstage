@@ -560,7 +560,7 @@
                     <h4 class="text-lg font-semibold text-slate-900">Set Summary: {{ $set->name }}</h4>
                     <p class="mt-1 text-sm text-slate-600">Set owner: {{ $set->owner->name }}</p>
                 </div>
-                <x-secondary-button type="button" @click="closeSummaryModal()">Close</x-secondary-button>
+                <x-modal-secondary-button type="button" @click="closeSummaryModal()">Close</x-modal-secondary-button>
             </div>
 
             <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
@@ -664,11 +664,12 @@
                 </div>
             </div>
 
+            </div>
+
             <div class="shrink-0 border-t border-slate-200 bg-white/95 px-4 py-2 text-xs text-slate-500 backdrop-blur sm:px-6">
                 <span x-show="summaryLastUpdated" x-cloak>
-                    Last updated <span x-text="summaryLastUpdated"></span>
+                    ReLast updated <span x-text="summaryLastUpdated"></span>
                 </span>
-            </div>
             </div>
         </div>
     </div>
@@ -678,7 +679,7 @@
         <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Edit Set</h4>
-                <form method="POST" action="{{ route('sets.update', $set) }}" class="mt-4 space-y-4">
+                <form id="edit_set_form_{{ $set->id }}" method="POST" action="{{ route('sets.update', $set) }}" class="mt-4 space-y-4">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -713,18 +714,18 @@
                         <input type="checkbox" name="performed" value="1" @checked($set->performed) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
                         Mark as performed
                     </label>
-                    <div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                        <form method="POST" action="{{ route('sets.destroy', $set) }}">
-                            @csrf
-                            @method('DELETE')
-                            <x-danger-button type="submit">Delete Set</x-danger-button>
-                        </form>
-                        <div class="flex justify-end gap-2">
-                            <x-secondary-button type="button" @click="openSetEdit = false">Cancel</x-secondary-button>
-                            <x-primary-button>Save</x-primary-button>
-                        </div>
-                    </div>
                 </form>
+                <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                    <form method="POST" action="{{ route('sets.destroy', $set) }}">
+                        @csrf
+                        @method('DELETE')
+                        <x-danger-button type="submit">Delete Set</x-danger-button>
+                    </form>
+                    <div class="flex justify-end gap-2">
+                        <x-modal-secondary-button type="button" @click="openSetEdit = false">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button type="submit" form="edit_set_form_{{ $set->id }}">Save</x-modal-primary-button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -828,8 +829,8 @@
                         </div>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()">Cancel</x-secondary-button>
-                        <x-primary-button x-bind:disabled="addSongBusy">Add Song</x-primary-button>
+                        <x-modal-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button x-bind:disabled="addSongBusy">Add Song</x-modal-primary-button>
                     </div>
                 </form>
             </div>
@@ -856,8 +857,8 @@
                         <textarea id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                     </div>
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button type="button" @click="openSongRequest = false">Cancel</x-secondary-button>
-                        <x-primary-button>Send Request</x-primary-button>
+                        <x-modal-secondary-button type="button" @click="openSongRequest = false">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button>Send Request</x-modal-primary-button>
                     </div>
                 </form>
             </div>

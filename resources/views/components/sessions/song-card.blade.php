@@ -130,8 +130,8 @@
                         <x-danger-button type="submit">Delete Song</x-danger-button>
                     </form>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openEditSong = false">Cancel</x-secondary-button>
-                        <x-primary-button type="submit" form="edit_song_form_{{ $song->id }}">Save</x-primary-button>
+                        <x-modal-secondary-button type="button" @click="openEditSong = false">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button type="submit" form="edit_song_form_{{ $song->id }}">Save</x-modal-primary-button>
                     </div>
                 </div>
             </div>
@@ -152,8 +152,8 @@
                         </select>
                     </div>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openAddSlot = false">Cancel</x-secondary-button>
-                        <x-primary-button x-bind:disabled="busyAction">Add Slot</x-primary-button>
+                        <x-modal-secondary-button type="button" @click="openAddSlot = false">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button x-bind:disabled="busyAction">Add Slot</x-modal-primary-button>
                     </div>
                 </form>
             </div>

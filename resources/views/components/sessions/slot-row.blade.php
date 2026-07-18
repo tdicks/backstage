@@ -310,8 +310,8 @@
                         <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-md border-gray-300"></textarea>
                     </div>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openPropose = false">Cancel</x-secondary-button>
-                        <x-primary-button x-bind:disabled="busyAction">Send Proposal</x-primary-button>
+                        <x-modal-secondary-button type="button" @click="openPropose = false">Cancel</x-modal-secondary-button>
+                        <x-modal-primary-button x-bind:disabled="busyAction">Send Proposal</x-modal-primary-button>
                     </div>
                 </form>
             </div>
@@ -355,8 +355,8 @@
                             <x-danger-button type="submit" x-bind:disabled="busyAction">Delete Slot</x-danger-button>
                         </form>
                         <div class="flex justify-end gap-2">
-                            <x-secondary-button type="button" @click="openEditSlot = false">Cancel</x-secondary-button>
-                            <x-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">Save</x-primary-button>
+                            <x-modal-secondary-button type="button" @click="openEditSlot = false">Cancel</x-modal-secondary-button>
+                            <x-modal-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">Save</x-modal-primary-button>
                         </div>
                     </div>
                 </div>

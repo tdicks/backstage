@@ -75,8 +75,8 @@
                                         </label>
                                     </div>
                                     <div class="flex justify-end gap-3 pt-1">
-                                        <x-secondary-button type="button" @click="openEditSession = false">Cancel</x-secondary-button>
-                                        <x-primary-button>Save</x-primary-button>
+                                        <x-modal-secondary-button type="button" @click="openEditSession = false">Cancel</x-modal-secondary-button>
+                                        <x-modal-primary-button>Save</x-modal-primary-button>
                                     </div>
                                 </form>
                                 <form method="POST" action="{{ route('sessions.destroy', $session) }}" class="mt-4">
@@ -108,8 +108,8 @@
                                         <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-md border-gray-300"></textarea>
                                     </div>
                                     <div class="flex justify-end gap-3">
-                                        <x-secondary-button type="button" @click="openSet = false">Cancel</x-secondary-button>
-                                        <x-primary-button>Create Set</x-primary-button>
+                                        <x-modal-secondary-button type="button" @click="openSet = false">Cancel</x-modal-secondary-button>
+                                        <x-modal-primary-button>Create Set</x-modal-primary-button>
                                     </div>
                                 </form>
                             </div>

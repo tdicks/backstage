@@ -27,8 +27,8 @@
                                 </div>
                             </div>
                             <div class="flex justify-end gap-2">
-                                <x-secondary-button type="button" @click="openCreate = false">Cancel</x-secondary-button>
-                                <x-primary-button>Create</x-primary-button>
+                                <x-modal-secondary-button type="button" @click="openCreate = false">Cancel</x-modal-secondary-button>
+                                <x-modal-primary-button>Create</x-modal-primary-button>
                             </div>
                         </form>
                     </div>
@@ -78,8 +78,8 @@
                                         </div>
                                     </div>
                                     <div class="flex justify-end gap-2">
-                                        <x-secondary-button type="button" @click="openEdit = false">Cancel</x-secondary-button>
-                                        <x-primary-button>Save</x-primary-button>
+                                        <x-modal-secondary-button type="button" @click="openEdit = false">Cancel</x-modal-secondary-button>
+                                        <x-modal-primary-button>Save</x-modal-primary-button>
                                     </div>
                                 </form>
                                 <form method="POST" action="{{ route('band-templates.destroy', $template) }}" class="mt-4">

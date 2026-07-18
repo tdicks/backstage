@@ -105,7 +105,7 @@
 					<h3 class="text-lg font-semibold text-slate-900">Who's Here</h3>
 					<p class="mt-1 text-sm text-slate-600">{{ $session->name }} ({{ $session->date->format('D, M j, Y') }})</p>
 				</div>
-				<x-secondary-button type="button" @click="closeModal">Close</x-secondary-button>
+				<x-modal-secondary-button type="button" @click="closeModal">Close</x-modal-secondary-button>
 			</div>
 
 			<div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
