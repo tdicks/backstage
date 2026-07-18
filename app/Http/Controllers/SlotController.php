@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Song;
 use App\Models\Slot;
+use App\Models\SlotAssignment;
+use App\Models\Song;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,12 +53,28 @@ class SlotController extends Controller
             $manualPerformerName = '';
         }
 
-        $slot->update([
-            'name' => $validated['name'],
-            'user_id' => $validated['user_id'] ?? null,
-            'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
-            'position' => $validated['position'] ?? $slot->position,
-        ]);
+        DB::transaction(function () use ($slot, $validated, $manualPerformerName): void {
+            $slot->update([
+                'name' => $validated['name'],
+                'user_id' => $validated['user_id'] ?? null,
+                'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
+                'position' => $validated['position'] ?? $slot->position,
+            ]);
+
+            if (! empty($validated['user_id'])) {
+                SlotAssignment::query()
+                    ->where('slot_id', $slot->id)
+                    ->where('target_user_id', $validated['user_id'])
+                    ->whereIn('status', [
+                        SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
+                        SlotAssignment::STATUS_PENDING,
+                    ])
+                    ->update([
+                        'status' => SlotAssignment::STATUS_ACCEPTED,
+                        'responded_at' => now(),
+                    ]);
+            }
+        });
 
         if ($request->expectsJson()) {
             return response()->json([

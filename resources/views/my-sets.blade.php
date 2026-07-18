@@ -433,21 +433,30 @@
                                         <div class="flex flex-wrap items-start justify-between gap-4">
                                             <div>
                                                 <div class="flex flex-wrap items-center gap-2">
-                                                    <h4 class="text-lg font-semibold">{{ $set->name }}</h4>
+                                                    <h4 class="text-lg font-semibold">
+                                                        <a href="{{ route('sessions.show', $set->session) }}#set-{{ $set->id }}" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">
+                                                            {{ $set->name }}
+                                                        </a>
+                                                    </h4>
                                                     @if ($isOwned)
                                                         <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">Owner</span>
                                                     @endif
                                                     @if ($isPerformed)
                                                         <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">Performed</span>
-                                                    @else
-                                                        <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Upcoming</span>
                                                     @endif
                                                 </div>
-                                                <p class="mt-1 text-sm {{ $isPerformed ? 'text-slate-500' : 'text-slate-600' }}">
-                                                    {{ $set->session->name }} · {{ $set->session->date->format('D, M j, Y') }}
+                                                <p class="mt-1 flex flex-wrap items-center gap-1.5 text-sm {{ $isPerformed ? 'text-slate-500' : 'text-slate-600' }}">
+                                                    <span class="inline-flex items-center gap-1.5" title="Set organiser">
+                                                        <x-heroicon-m-user class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                                        <span class="sr-only">Set organiser</span>
+                                                        <span>{{ $set->owner->name }}</span>
+                                                    </span>
+                                                    <span>·</span>
+                                                    <span>{{ $set->session->name }}</span>
+                                                    <span>·</span>
+                                                    <span>{{ $set->session->date->format('D, M j, Y') }}</span>
                                                 </p>
                                             </div>
-                                            <a href="{{ route('sessions.show', $set->session) }}" class="text-sm font-medium text-slate-700 underline">Open session</a>
                                         </div>
 
                                         <div class="mt-4 grid gap-3 lg:grid-cols-2">
@@ -456,7 +465,11 @@
                                                     $song = $songGroup['song'];
                                                 @endphp
                                                 <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                                    <h5 class="font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h5>
+                                                    <h5 class="font-semibold text-slate-900">
+                                                        <a href="{{ route('sessions.show', $set->session) }}#song-{{ $song->id }}" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">
+                                                            {{ $song->artist }} - {{ $song->title }}
+                                                        </a>
+                                                    </h5>
                                                     @if ($song->notes)
                                                         <p class="mt-1 text-sm text-slate-600">{{ $song->notes }}</p>
                                                     @endif
@@ -466,7 +479,7 @@
                                                                 $slotLabel = $slotOptions[$slot->name] ?? str($slot->name)->replace('_', ' ')->title();
                                                                 $isMine = $slot->user_id === auth()->id();
                                                             @endphp
-                                                            <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $isMine ? 'border-sky-200 bg-sky-50 text-sky-800' : ($slot->isOpen() ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800') }}">
+                                                            <a href="{{ route('sessions.show', $set->session) }}#slot-{{ $slot->id }}" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $isMine ? 'border-sky-200 bg-sky-50 text-sky-800' : ($slot->isOpen() ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800') }}">
                                                                 <span>{{ $slotLabel }}</span>
                                                                 @if ($isOwned)
                                                                     <span>-</span>
@@ -474,7 +487,7 @@
                                                                 @elseif ($isMine)
                                                                     <span class="uppercase tracking-wide opacity-70">you</span>
                                                                 @endif
-                                                            </span>
+                                                            </a>
                                                         @endforeach
                                                     </div>
                                                 </div>

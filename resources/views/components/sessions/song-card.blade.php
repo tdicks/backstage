@@ -12,6 +12,8 @@
 @endphp
 
 <article
+    id="song-{{ $song->id }}"
+    data-session-song-card
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
     draggable="{{ $isSetOwner && ! $setLocked ? 'true' : 'false' }}"

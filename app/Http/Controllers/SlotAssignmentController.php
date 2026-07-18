@@ -102,18 +102,32 @@ class SlotAssignmentController extends Controller
                 abort(403);
             }
 
+            $ownerRecommended = $slotAssignment->actor_user_id === $slotAssignment->slot->song->set->owner_id;
+            $targetAccepted = $validated['status'] === SlotAssignment::STATUS_ACCEPTED;
+
             $slotAssignment->update([
-                'status' => $validated['status'] === SlotAssignment::STATUS_ACCEPTED
-                    ? SlotAssignment::STATUS_PENDING
+                'status' => $targetAccepted
+                    ? ($ownerRecommended ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
                     : SlotAssignment::STATUS_REJECTED,
                 'responded_at' => now(),
             ]);
 
+            if ($targetAccepted && $ownerRecommended) {
+                $slotAssignment->slot->update([
+                    'user_id' => $slotAssignment->target_user_id,
+                    'manual_performer_name' => null,
+                ]);
+            }
+
             if ($request->expectsJson()) {
+                $slotAssignment->slot->load('user');
+
                 return response()->json([
-                    'message' => $validated['status'] === SlotAssignment::STATUS_ACCEPTED
-                        ? 'Recommendation sent to set owner.'
-                        : 'Recommendation response recorded.',
+                    'message' => match (true) {
+                        $targetAccepted && $ownerRecommended => 'Recommendation accepted and slot assigned.',
+                        $targetAccepted => 'Recommendation sent to set owner.',
+                        default => 'Recommendation response recorded.',
+                    },
                     'slot' => [
                         'id' => $slotAssignment->slot->id,
                         'name' => $slotAssignment->slot->name,
@@ -125,9 +139,11 @@ class SlotAssignmentController extends Controller
                 ]);
             }
 
-            return back()->with('status', $validated['status'] === SlotAssignment::STATUS_ACCEPTED
-                ? 'Recommendation sent to set owner.'
-                : 'Recommendation response recorded.');
+            return back()->with('status', match (true) {
+                $targetAccepted && $ownerRecommended => 'Recommendation accepted and slot assigned.',
+                $targetAccepted => 'Recommendation sent to set owner.',
+                default => 'Recommendation response recorded.',
+            });
         }
 
         $canRespond = $user->is_admin;

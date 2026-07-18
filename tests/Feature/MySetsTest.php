@@ -226,6 +226,129 @@ test('proposal assignment requires target consent before set owner approval', fu
     expect($slot->refresh()->user_id)->toBe($target->id);
 });
 
+test('owner recommendation is assigned when target accepts', function () {
+    $owner = User::factory()->create();
+    $target = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Owner Recommendation Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Owner Recommendation Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Owner Consent Band',
+        'title' => 'One Step Approval',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'lead_guitar',
+        'position' => 1,
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $target->id,
+            'message' => 'Can you take this one?',
+        ])
+        ->assertRedirect();
+
+    $assignment = SlotAssignment::query()->firstOrFail();
+
+    expect($assignment->status)->toBe(SlotAssignment::STATUS_AWAITING_TARGET_CONSENT);
+
+    $this->actingAs($target)
+        ->patch(route('slot-assignments.respond', $assignment), [
+            'status' => SlotAssignment::STATUS_ACCEPTED,
+        ])
+        ->assertRedirect();
+
+    expect($assignment->refresh()->status)->toBe(SlotAssignment::STATUS_ACCEPTED);
+    expect($slot->refresh()->user_id)->toBe($target->id);
+});
+
+test('editing a slot assignee accepts matching pending assignments', function () {
+    $owner = User::factory()->create();
+    $target = User::factory()->create();
+    $otherTarget = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Edit Slot Approval Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Edit Slot Approval Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Approval Band',
+        'title' => 'Direct Assignment',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+        'user_id' => null,
+    ]);
+
+    $matchingAssignment = SlotAssignment::create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $target->id,
+        'target_user_id' => $target->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $otherAssignment = SlotAssignment::create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $otherTarget->id,
+        'target_user_id' => $otherTarget->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->patch(route('slots.update', $slot), [
+            'name' => $slot->name,
+            'user_id' => $target->id,
+            'manual_performer_name' => null,
+            'position' => $slot->position,
+        ])
+        ->assertRedirect();
+
+    expect($slot->refresh()->user_id)->toBe($target->id);
+    expect($matchingAssignment->refresh()->status)->toBe(SlotAssignment::STATUS_ACCEPTED);
+    expect($matchingAssignment->responded_at)->not->toBeNull();
+    expect($otherAssignment->refresh()->status)->toBe(SlotAssignment::STATUS_PENDING);
+});
+
 test('target can reject proposal assignment before organiser approval', function () {
     $owner = User::factory()->create();
     $actor = User::factory()->create();
@@ -548,7 +671,7 @@ test('my sets combines owned sets signed up songs and pending assignments', func
         'user_id' => null,
     ]);
 
-    Slot::create([
+    $signedSlot = Slot::create([
         'song_id' => $signedSong->id,
         'name' => 'drums',
         'position' => 1,
@@ -687,6 +810,9 @@ test('my sets combines owned sets signed up songs and pending assignments', func
         ->assertSee('Signed Practice Set')
         ->assertSee('Signed Band - Signed Song')
         ->assertSee('Drums')
+        ->assertSee(route('sessions.show', $signedSet->session).'#set-'.$signedSet->id, false)
+        ->assertSee(route('sessions.show', $signedSet->session).'#song-'.$signedSong->id, false)
+        ->assertSee(route('sessions.show', $signedSet->session).'#slot-'.$signedSlot->id, false)
         ->assertSee('Pending Practice Set')
         ->assertSee('Pending Band - Pending Song')
         ->assertSee('I can cover bass.')

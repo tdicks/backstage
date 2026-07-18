@@ -31,6 +31,8 @@
 @endphp
 
 <section
+    id="set-{{ $set->id }}"
+    data-session-set-card
     class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-data="{
         openSong: false,

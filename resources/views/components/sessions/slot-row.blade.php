@@ -17,6 +17,7 @@
 @endphp
 
 <tr
+    id="slot-{{ $slotModel->id }}"
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     data-slot-id="{{ $slotModel->id }}"
     draggable="{{ $canReorderSlots ? 'true' : 'false' }}"
