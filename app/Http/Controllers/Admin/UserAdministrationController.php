@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -52,18 +53,42 @@ class UserAdministrationController extends Controller
         $this->authorizeAdmin($request);
 
         $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'bio' => ['nullable', 'string', 'max:2000'],
+            'hide_from_directory' => ['nullable', 'boolean'],
+            'hide_from_slot_proposals' => ['nullable', 'boolean'],
+            'is_admin' => ['nullable', 'boolean'],
         ]);
 
-        $user->forceFill([
-            'email' => $validated['email'],
-            'email_verified_at' => null,
-        ])->save();
+        if ($request->user()->id === $user->id && array_key_exists('is_admin', $validated) && ! (bool) $validated['is_admin']) {
+            return back()->withErrors([
+                'role' => 'You cannot remove your own admin role.',
+            ]);
+        }
 
-        return back()->with('status', 'User email updated.');
+        $payload = [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'bio' => $validated['bio'] ?? null,
+            'hide_from_directory' => (bool) ($validated['hide_from_directory'] ?? false),
+            'hide_from_slot_proposals' => (bool) ($validated['hide_from_slot_proposals'] ?? false),
+        ];
+
+        if ($request->user()->id !== $user->id) {
+            $payload['is_admin'] = (bool) ($validated['is_admin'] ?? false);
+        }
+
+        if ($user->email !== $validated['email']) {
+            $payload['email_verified_at'] = null;
+        }
+
+        $user->forceFill($payload)->save();
+
+        return back()->with('status', 'User details updated.');
     }
 
-    public function sendPasswordResetLink(Request $request, User $user): RedirectResponse
+    public function sendPasswordResetLink(Request $request, User $user): RedirectResponse|JsonResponse
     {
         $this->authorizeAdmin($request);
 
@@ -72,7 +97,19 @@ class UserAdministrationController extends Controller
         ]);
 
         if ($status === Password::RESET_LINK_SENT) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => __($status),
+                ]);
+            }
+
             return back()->with('status', __($status));
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => __($status),
+            ], 422);
         }
 
         return back()->withErrors([

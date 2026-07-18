@@ -972,10 +972,13 @@
         </div>
 
         <div x-show="openSong" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
-        <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
-                <h4 class="text-lg font-semibold text-slate-900">Add Song to {{ $set->name }}</h4>
-                <form method="POST" action="{{ route('songs.store', $set) }}" class="mt-4 space-y-4" @submit.prevent="submitAddSong($event)">
+        <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
+            <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
+                <div class="px-6 pt-6">
+                    <h4 class="text-lg font-semibold text-slate-900">Add Song to {{ $set->name }}</h4>
+                </div>
+                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                <form method="POST" action="{{ route('songs.store', $set) }}" class="space-y-4" @submit.prevent="submitAddSong($event)">
                     @csrf
                     <p x-show="addSongError" x-text="addSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -1075,6 +1078,7 @@
                         <x-modal-primary-button x-bind:disabled="addSongBusy">Add Song</x-modal-primary-button>
                     </div>
                 </form>
+                </div>
             </div>
         </div>
     @else

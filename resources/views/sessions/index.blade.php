@@ -8,7 +8,7 @@
                 @if (! ($isArchiveView ?? false))
                 <x-primary-button @click="openCreate = true">New Session</x-primary-button>
                 <template x-teleport="body">
-                    <div x-show="openCreate" x-cloak>
+                    <div x-show="openCreate" x-cloak @keydown.escape.window="openCreate = false">
                         <div class="fixed inset-0 z-40 bg-black/40" @click="openCreate = false"></div>
                         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
