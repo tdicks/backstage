@@ -21,7 +21,7 @@ class Slot extends Model
         'song_id',
         'name',
         'user_id',
-        'guest_name',
+        'manual_performer_name',
         'position',
     ];
 
@@ -56,6 +56,11 @@ class Slot extends Model
 
     public function isOpen(): bool
     {
-        return $this->user_id === null && blank($this->guest_name);
+        return $this->user_id === null && blank($this->manual_performer_name);
+    }
+
+    public function assignedPerformerName(): string
+    {
+        return $this->user?->name ?? $this->manual_performer_name ?? 'Open';
     }
 }

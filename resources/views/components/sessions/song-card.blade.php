@@ -130,7 +130,7 @@
                         <x-danger-button type="submit">Delete Song</x-danger-button>
                     </form>
                     <div class="flex justify-end gap-2">
-                        <x-secondary-button type="button" @click="openEditSong = false" class="border-slate-300 bg-white text-slate-700 opacity-90 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:opacity-100 focus:opacity-100">Cancel</x-secondary-button>
+                        <x-secondary-button type="button" @click="openEditSong = false">Cancel</x-secondary-button>
                         <x-primary-button type="submit" form="edit_song_form_{{ $song->id }}">Save</x-primary-button>
                     </div>
                 </div>

@@ -20,7 +20,7 @@
                     <x-secondary-button @click="$dispatch('open-who-is-here')">Who's Here</x-secondary-button>
                 @endcan
                 @if (auth()->user()->is_admin || ! $session->is_closed)
-                    <x-secondary-button @click="openSet = true">Create Set</x-secondary-button>
+                    <x-primary-button @click="openSet = true">Create Set</x-primary-button>
                 @endif
             </div>
 

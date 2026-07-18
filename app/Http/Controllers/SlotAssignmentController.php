@@ -109,6 +109,7 @@ class SlotAssignmentController extends Controller
         if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
             $slotAssignment->slot->update([
                 'user_id' => $slotAssignment->target_user_id,
+                'manual_performer_name' => null,
             ]);
         }
 
@@ -122,7 +123,7 @@ class SlotAssignmentController extends Controller
                     'name' => $slotAssignment->slot->name,
                     'label' => Slot::options()[$slotAssignment->slot->name] ?? $slotAssignment->slot->name,
                     'user_id' => $slotAssignment->slot->user_id,
-                    'user_name' => $slotAssignment->slot->user?->name ?? 'Open',
+                    'user_name' => $slotAssignment->slot->assignedPerformerName(),
                     'is_open' => $slotAssignment->slot->isOpen(),
                 ],
             ]);

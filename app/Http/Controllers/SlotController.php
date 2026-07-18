@@ -42,12 +42,19 @@ class SlotController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::NAMES)],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'manual_performer_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $manualPerformerName = trim((string) ($validated['manual_performer_name'] ?? ''));
+        if (! empty($validated['user_id'])) {
+            $manualPerformerName = '';
+        }
 
         $slot->update([
             'name' => $validated['name'],
             'user_id' => $validated['user_id'] ?? null,
+            'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
             'position' => $validated['position'] ?? $slot->position,
         ]);
 
@@ -75,6 +82,7 @@ class SlotController extends Controller
 
         $slot->update([
             'user_id' => $request->user()->id,
+            'manual_performer_name' => null,
         ]);
 
         if ($request->expectsJson()) {
@@ -95,6 +103,7 @@ class SlotController extends Controller
 
         $slot->update([
             'user_id' => null,
+            'manual_performer_name' => null,
         ]);
 
         if ($request->expectsJson()) {
@@ -134,7 +143,7 @@ class SlotController extends Controller
             'name' => $slot->name,
             'label' => Slot::options()[$slot->name] ?? $slot->name,
             'user_id' => $slot->user_id,
-            'user_name' => $slot->user?->name ?? 'Open',
+            'user_name' => $slot->assignedPerformerName(),
             'is_open' => $slot->isOpen(),
         ];
     }

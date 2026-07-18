@@ -54,6 +54,15 @@ class SetController extends Controller
                     continue;
                 }
 
+                if (! blank($slot->manual_performer_name)) {
+                    $slotMap[$slotName] = [
+                        'state' => 'user',
+                        'display' => $slot->manual_performer_name,
+                        'checked_in' => false,
+                    ];
+                    continue;
+                }
+
                 $slotMap[$slotName] = [
                     'state' => 'open',
                     'display' => 'Open',

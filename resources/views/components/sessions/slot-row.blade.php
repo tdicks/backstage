@@ -12,7 +12,7 @@
     x-data="{
         openPropose: false,
         openEditSlot: false,
-        assignedUserName: @js($slotModel->user?->name ?? 'Open'),
+        assignedUserName: @js($slotModel->assignedPerformerName()),
         slotLabel: @js($slotOptions[$slotModel->name] ?? $slotModel->name),
         slotIsOpen: @js($slotModel->isOpen()),
         assignedToCurrentUser: @js($slotModel->user_id === auth()->id()),
@@ -214,7 +214,7 @@
             class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm"
             x-bind:class="slotIsOpen ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800'"
             x-text="assignedUserName"
-        >{{ $slotModel->user?->name ?? 'Open' }}</span>
+        >{{ $slotModel->assignedPerformerName() }}</span>
     </td>
     <td class="px-3 py-3">
         <div class="flex flex-wrap gap-2">
@@ -320,14 +320,14 @@
         @if ($canManageSet)
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+                <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
                     <h6 class="text-base font-semibold text-slate-900">Edit Slot</h6>
-                    <form method="POST" action="{{ route('slots.update', $slotModel) }}" class="mt-4 space-y-4" @submit.prevent="submitEditSlot($event)">
+                    <form id="edit_slot_form_{{ $slotModel->id }}" method="POST" action="{{ route('slots.update', $slotModel) }}" class="mt-4 space-y-4" @submit.prevent="submitEditSlot($event)">
                         @csrf
                         @method('PATCH')
                         <div>
                             <x-input-label :value="'Slot Name'" />
-                            <select name="name" class="mt-1 w-full rounded-md border-gray-300">
+                            <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
                                 @foreach ($slotOptions as $slotValue => $slotLabel)
                                     <option value="{{ $slotValue }}" @selected($slotModel->name === $slotValue)>{{ $slotLabel }}</option>
                                 @endforeach
@@ -335,23 +335,30 @@
                         </div>
                         <div>
                             <x-input-label :value="'Assigned User (optional)'" />
-                            <select name="user_id" class="mt-1 w-full rounded-md border-gray-300">
+                            <select name="user_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
                                 <option value="">Open</option>
                                 @foreach ($users as $user)
                                     <option value="{{ $user->id }}" @selected($slotModel->user_id === $user->id)>{{ $user->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="flex justify-end gap-2">
-                            <x-secondary-button type="button" @click="openEditSlot = false">Cancel</x-secondary-button>
-                            <x-primary-button x-bind:disabled="busyAction">Save</x-primary-button>
+                        <div>
+                            <x-input-label :value="'Manual Performer Name (optional)'" />
+                            <x-text-input name="manual_performer_name" :value="$slotModel->manual_performer_name" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" />
+                            <p class="mt-1 text-xs text-slate-500">Use this when the performer does not have an account. If an assigned user is selected, this value is ignored.</p>
                         </div>
                     </form>
-                    <form method="POST" action="{{ route('slots.destroy', $slotModel) }}" class="mt-4" @submit.prevent="deleteSlot($event)">
-                        @csrf
-                        @method('DELETE')
-                        <x-danger-button type="submit" x-bind:disabled="busyAction">Delete Slot</x-danger-button>
-                    </form>
+                    <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                        <form method="POST" action="{{ route('slots.destroy', $slotModel) }}" @submit.prevent="deleteSlot($event)">
+                            @csrf
+                            @method('DELETE')
+                            <x-danger-button type="submit" x-bind:disabled="busyAction">Delete Slot</x-danger-button>
+                        </form>
+                        <div class="flex justify-end gap-2">
+                            <x-secondary-button type="button" @click="openEditSlot = false">Cancel</x-secondary-button>
+                            <x-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">Save</x-primary-button>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif

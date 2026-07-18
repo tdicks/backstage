@@ -158,7 +158,7 @@
                                         <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm {{ $slot->isOpen() ? 'border-amber-200 bg-amber-50/80 text-amber-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800' }}">
                                             <span>{{ ucfirst(str_replace('_', ' ', $slot->name)) }}</span>
                                             <span>-</span>
-                                            <span>{{ $slot->user?->name ?? 'Open' }}</span>
+                                            <span>{{ $slot->assignedPerformerName() }}</span>
                                         </div>
                                     @endforeach
                                 </div>
