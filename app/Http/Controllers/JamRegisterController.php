@@ -16,6 +16,8 @@ class JamRegisterController extends Controller
 		return view('jam-register.index', [
 			'sessions' => JamSession::query()
 				->where('is_hidden', false)
+				->where('is_closed', false)
+				->where('allow_checkins', true)
 				->whereDate('date', '>=', today())
 				->orderBy('date')
 				->get(['id', 'name', 'date']),
@@ -40,6 +42,7 @@ class JamRegisterController extends Controller
 	public function signIn(Request $request, JamSession $jamSession): JsonResponse
 	{
 		$this->abortIfHidden($jamSession);
+		$this->abortIfCheckInsClosed($jamSession);
 
 		$validated = $request->validate([
 			'user_id' => ['required', 'integer', 'exists:users,id'],
@@ -143,5 +146,10 @@ class JamRegisterController extends Controller
 	private function abortIfHidden(JamSession $jamSession): void
 	{
 		abort_if($jamSession->is_hidden, 404);
+	}
+
+	private function abortIfCheckInsClosed(JamSession $jamSession): void
+	{
+		abort_if($jamSession->is_closed || ! $jamSession->allow_checkins, 403, 'Check-ins are closed for this jam session.');
 	}
 }

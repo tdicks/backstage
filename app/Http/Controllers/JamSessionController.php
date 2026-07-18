@@ -33,12 +33,31 @@ class JamSessionController extends Controller
     {
         $sessions = JamSession::query()
             ->visibleTo(request()->user())
+            ->where('is_archived', false)
             ->withCount('sets')
             ->latest('date')
             ->get();
 
         return view('sessions.index', [
             'sessions' => $sessions,
+            'isArchiveView' => false,
+            'pageTitle' => 'Jam Sessions',
+        ]);
+    }
+
+    public function archive(): View
+    {
+        $sessions = JamSession::query()
+            ->visibleTo(request()->user())
+            ->where('is_archived', true)
+            ->withCount('sets')
+            ->latest('date')
+            ->get();
+
+        return view('sessions.index', [
+            'sessions' => $sessions,
+            'isArchiveView' => true,
+            'pageTitle' => 'Session Archive',
         ]);
     }
 
@@ -53,12 +72,23 @@ class JamSessionController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
+            'is_closed' => ['nullable', 'boolean'],
             'is_hidden' => ['nullable', 'boolean'],
+            'is_archived' => ['nullable', 'boolean'],
+            'allow_checkins' => ['nullable', 'boolean'],
         ]);
+
+        $isClosed = (bool) ($validated['is_closed'] ?? false);
+        $allowCheckins = $isClosed
+            ? false
+            : (bool) ($validated['allow_checkins'] ?? true);
 
         JamSession::create([
             ...$validated,
+            'is_closed' => $isClosed,
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
+            'is_archived' => (bool) ($validated['is_archived'] ?? false),
+            'allow_checkins' => $allowCheckins,
         ]);
 
         return to_route('sessions.index')->with('status', 'Jam session created.');
@@ -119,12 +149,21 @@ class JamSessionController extends Controller
             'description' => ['nullable', 'string'],
             'is_closed' => ['nullable', 'boolean'],
             'is_hidden' => ['nullable', 'boolean'],
+            'is_archived' => ['nullable', 'boolean'],
+            'allow_checkins' => ['nullable', 'boolean'],
         ]);
+
+        $isClosed = (bool) ($validated['is_closed'] ?? $jamSession->is_closed);
+        $allowCheckins = $isClosed
+            ? false
+            : (bool) ($validated['allow_checkins'] ?? $jamSession->allow_checkins);
 
         $jamSession->update([
             ...$validated,
-            'is_closed' => (bool) ($validated['is_closed'] ?? false),
+            'is_closed' => $isClosed,
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
+            'is_archived' => (bool) ($validated['is_archived'] ?? $jamSession->is_archived),
+            'allow_checkins' => $allowCheckins,
         ]);
 
         return back()->with('status', 'Jam session updated.');

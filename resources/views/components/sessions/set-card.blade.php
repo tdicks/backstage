@@ -728,7 +728,7 @@
                     @click="performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                     aria-label="Edit Set"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit '.$set->owner->name.'\'s set' : 'Edit Set' }}"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit '.$set->owner->name.'\'s set' : 'Edit Set' }}"
                 >
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Set</span>
@@ -739,7 +739,7 @@
                         @click="openAddSongModal()"
                         class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
                         aria-label="Add Song"
-                        title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Add a song to '.$set->owner->name.'\'s set' : 'Add Song' }}"
+                        title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Add a song to '.$set->owner->name.'\'s set' : 'Add Song' }}"
                     >
                         <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only">Add Song</span>
@@ -1169,7 +1169,7 @@
 
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
-        @if ($isSetOwner)
+        @if ($isSetOwner && ! $setLocked)
             <p class="text-xs text-slate-500">Tip: drag songs to reorder them.</p>
         @endif
 

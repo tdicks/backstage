@@ -89,7 +89,7 @@
                     @disabled($setLocked)
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }} disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Edit song"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Edit a song in '.$set->owner->name.'\'s set' : 'Edit song' }}"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit a song in '.$set->owner->name.'\'s set' : 'Edit song' }}"
                 >
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Edit Song</span>
@@ -100,7 +100,7 @@
                     @disabled($setLocked)
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }} disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Add slot"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '(ADMIN) Add a slot to '.$set->owner->name.'\'s set' : 'Add slot' }}"
+                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Add a slot to '.$set->owner->name.'\'s set' : 'Add slot' }}"
                 >
                     <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Add Slot</span>

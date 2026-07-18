@@ -155,3 +155,48 @@ test('non-owner cannot reorder songs in set', function () {
     expect($songOne->refresh()->position)->toBe(1);
     expect($songTwo->refresh()->position)->toBe(2);
 });
+
+test('performed sets cannot be reordered', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Performed Reorder Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Performed Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => true,
+        'signups_open' => false,
+    ]);
+
+    $songOne = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Artist One',
+        'title' => 'Song One',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $songTwo = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Artist Two',
+        'title' => 'Song Two',
+        'notes' => null,
+        'position' => 2,
+    ]);
+
+    $this->actingAs($owner)
+        ->patch(route('songs.reorder', $set), [
+            'song_ids' => [$songTwo->id, $songOne->id],
+        ])
+        ->assertForbidden();
+
+    expect($songOne->refresh()->position)->toBe(1);
+    expect($songTwo->refresh()->position)->toBe(2);
+});

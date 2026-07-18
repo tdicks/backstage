@@ -13,6 +13,8 @@ function createJamSession(array $overrides = []): JamSession
 		'name' => 'Friday Jam',
 		'date' => now()->toDateString(),
 		'description' => null,
+		'is_closed' => false,
+		'allow_checkins' => true,
 	], $overrides));
 }
 
@@ -116,4 +118,35 @@ test('non admin cannot access admin check-in endpoints', function () {
 	$this->actingAs($member)
 		->postJson(route('sessions.check-ins.sign-out-all', $session))
 		->assertForbidden();
+});
+
+test('closed jam sessions cannot be checked into', function () {
+	$session = createJamSession([
+		'is_closed' => true,
+		'allow_checkins' => true,
+	]);
+	$user = User::factory()->create();
+
+	$this->postJson(route('jam-register.sign-in', $session), [
+		'user_id' => $user->id,
+	])->assertForbidden();
+
+	$this->assertDatabaseMissing('jam_session_sign_ins', [
+		'jam_session_id' => $session->id,
+		'user_id' => $user->id,
+	]);
+});
+
+test('closing a jam session automatically disables check-ins', function () {
+	$session = createJamSession([
+		'is_closed' => false,
+		'allow_checkins' => true,
+	]);
+
+	$session->update([
+		'is_closed' => true,
+		'allow_checkins' => true,
+	]);
+
+	expect($session->refresh()->allow_checkins)->toBeFalse();
 });

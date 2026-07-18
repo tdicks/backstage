@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('/sessions/archive', [JamSessionController::class, 'archive'])->name('sessions.archive');
     Route::resource('sessions', JamSessionController::class)
         ->except(['create', 'edit'])
         ->parameters(['sessions' => 'jamSession']);

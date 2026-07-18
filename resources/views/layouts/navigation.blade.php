@@ -13,7 +13,7 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('my-signups.index') }}">
+                    <a href="{{ route('sessions.index') }}">
                         <x-application-logo class="block h-9 w-auto fill-current text-slate-100" />
                     </a>
                 </div>
@@ -46,6 +46,8 @@
                                     {{ __('All Jam Sessions') }}
                                 </x-dropdown-link>
 
+                                <div class="my-1 border-t border-slate-800"></div>
+
                                 @forelse ($navJamSessions as $navSession)
                                     <x-dropdown-link :href="route('sessions.show', $navSession)">
                                         <span class="block truncate">{{ $navSession->name }}</span>
@@ -54,6 +56,7 @@
                                 @empty
                                     <span class="block px-4 py-2 text-sm text-gray-500">No jam sessions yet.</span>
                                 @endforelse
+
                             </div>
                         </div>
                     </div>
@@ -82,7 +85,12 @@
                             <div>
                                 {{ Auth::user()->name }}
                                 @if (Auth::user()->is_admin)
-                                    <span class="text-sky-400">(Admin)</span>
+                                    <span class="ms-1 inline-flex items-center align-middle" title="Admin">
+                                        <svg class="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="sr-only">Admin</span>
+                                    </span>
                                 @endif
                             </div>
 
@@ -109,13 +117,22 @@
                         </form>
 
                         @if (Auth::user()->is_admin)
-                            <div class="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
-                            <x-dropdown-link :href="route('admin.users.index')">
-                                {{ __('Users') }}
-                            </x-dropdown-link>
-                            <x-dropdown-link :href="route('band-templates.index')">
-                                {{ __('Band Templates') }}
-                            </x-dropdown-link>
+                            <div class="mx-2 my-2 rounded-md border border-sky-500/40 bg-sky-500/5 py-1">
+                                <div class="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <span class="inline-flex items-center gap-1">
+                                        <svg class="h-3.5 w-3.5 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Admin</span>
+                                    </span>
+                                </div>
+                                <x-dropdown-link :href="route('admin.users.index')">
+                                    {{ __('Users') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('band-templates.index')">
+                                    {{ __('Band Templates') }}
+                                </x-dropdown-link>
+                            </div>
                         @endif
 
 
@@ -167,7 +184,12 @@
             <div class="px-4">
                 <div class="font-medium text-base text-slate-100">{{ Auth::user()->name }}
                     @if (Auth::user()->is_admin)
-                        <span class="text-sky-400">(Admin)</span>
+                        <span class="ms-1 inline-flex items-center align-middle" title="Admin">
+                            <svg class="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="sr-only">Admin</span>
+                        </span>
                     @endif
                 </div>
                 <div class="font-medium text-sm text-slate-400">{{ Auth::user()->email }}</div>
@@ -190,13 +212,22 @@
                 </form>
 
                 @if (Auth::user()->is_admin)
-                    <div class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</div>
-                    <x-responsive-nav-link :href="route('admin.users.index')">
-                        {{ __('Users') }}
-                    </x-responsive-nav-link>
-                    <x-responsive-nav-link :href="route('band-templates.index')">
-                        {{ __('Band Templates') }}
-                    </x-responsive-nav-link>
+                    <div class="mx-2 my-2 rounded-md border border-sky-500/40 bg-sky-500/5 py-1">
+                        <div class="px-2 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <span class="inline-flex items-center gap-1">
+                                <svg class="h-3.5 w-3.5 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Admin</span>
+                            </span>
+                        </div>
+                        <x-responsive-nav-link :href="route('admin.users.index')">
+                            {{ __('Users') }}
+                        </x-responsive-nav-link>
+                        <x-responsive-nav-link :href="route('band-templates.index')">
+                            {{ __('Band Templates') }}
+                        </x-responsive-nav-link>
+                    </div>
                 @endif
 
 

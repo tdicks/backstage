@@ -22,10 +22,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('layouts.navigation', function ($view): void {
+            $user = request()->user();
+
             $view->with('navJamSessions', JamSession::query()
                 ->visibleTo(request()->user())
+                ->where('is_archived', false)
                 ->orderByDesc('date')
                 ->get(['id', 'name', 'date']));
+
+            $view->with('hasArchivedJamSessions', JamSession::query()
+                ->visibleTo($user)
+                ->where('is_archived', true)
+                ->exists());
         });
     }
 }

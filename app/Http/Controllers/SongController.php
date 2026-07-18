@@ -96,6 +96,10 @@ class SongController extends Controller
     {
         $this->authorize('update', $set);
 
+        if ($set->performed) {
+            abort(403, 'Cannot reorder songs in a performed set.');
+        }
+
         $validated = $request->validate([
             'song_ids' => ['required', 'array', 'min:1'],
             'song_ids.*' => ['integer'],
