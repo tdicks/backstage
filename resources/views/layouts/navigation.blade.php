@@ -158,11 +158,13 @@
             <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')">
                 {{ __('All Jam Sessions') }}
             </x-responsive-nav-link>
+            <div class="mx-4 my-1 border-t border-slate-800"></div>
             @foreach ($navJamSessions as $navSession)
                 <x-responsive-nav-link :href="route('sessions.show', $navSession)" :active="request()->routeIs('sessions.show') && request()->route('jamSession')?->id === $navSession->id">
                     {{ $navSession->name }}
                 </x-responsive-nav-link>
             @endforeach
+            <div class="mx-4 my-1 border-t border-slate-800"></div>
             <x-responsive-nav-link :href="route('my-signups.index')" :active="request()->routeIs('my-signups.*')">
                 <span>{{ __('My Signups') }}</span>
                 @if ($pendingSlotProposalCount > 0)
