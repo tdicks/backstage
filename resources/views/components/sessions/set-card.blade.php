@@ -27,7 +27,7 @@
 @endphp
 
 <section
-    class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm"
+    class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/60' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-data="{
         openSong: false,
         openSongRequest: false,
@@ -685,7 +685,15 @@
         aria-label="Toggle set details"
     >
         <div>
-            <h3 class="text-lg font-semibold text-slate-900">{{ $set->name }}</h3>
+            <h3 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                {{ $set->name }}
+                @if ($set->feature_set)
+                    <span title="Feature set" class="inline-flex items-center">
+                        <x-heroicon-m-star class="h-4 w-4 text-amber-500" aria-hidden="true" />
+                        <span class="sr-only">Feature set</span>
+                    </span>
+                @endif
+            </h3>
             <div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-600">
                 <span class="inline-flex items-center gap-1.5" title="Set owner">
                     <x-heroicon-m-user class="h-4 w-4 text-slate-500" aria-hidden="true" />
@@ -992,6 +1000,14 @@
                     >
                         Turning off song requests will reject any pending song requests for this set.
                     </p>
+                    @if (auth()->user()->is_admin)
+                        <input type="hidden" name="feature_set" value="0">
+                        <label class="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                            <input type="checkbox" name="feature_set" value="1" @checked($set->feature_set) class="rounded border-amber-400 text-amber-500 shadow-sm focus:ring-amber-400">
+                            <x-heroicon-m-star class="h-4 w-4 text-amber-500" aria-hidden="true" />
+                            Feature set (pinned to top of session).
+                        </label>
+                    @endif
                 </form>
                 <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
                     <form method="POST" action="{{ route('sets.destroy', $set) }}">
