@@ -33,10 +33,13 @@
                 <template x-teleport="body">
                     <div x-show="openEditSession" x-cloak>
                         <div class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
-                        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
+                        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-20 sm:items-center sm:pt-4">
+                            <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
+                                <div class="px-6 pt-6">
                                 <h3 class="text-lg font-semibold text-slate-900">Edit Jam Session</h3>
-                                <form id="edit_session_form_{{ $session->id }}" method="POST" action="{{ route('sessions.update', $session) }}" class="mt-5 space-y-4">
+                                </div>
+                                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                                <form id="edit_session_form_{{ $session->id }}" method="POST" action="{{ route('sessions.update', $session) }}" class="space-y-4">
                                     @csrf
                                     @method('PATCH')
                                     <div>
@@ -112,7 +115,8 @@
                                         </label>
                                     </div>
                                 </form>
-                                <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                                </div>
+                                <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
                                     <form method="POST" action="{{ route('sessions.destroy', $session) }}" onsubmit="return confirm('Delete this jam session? This cannot be undone.');">
                                         @csrf
                                         @method('DELETE')
