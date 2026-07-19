@@ -30,7 +30,9 @@ test('user directory shows slot coverage for users', function () {
     $this->actingAs($viewer)
         ->get(route('directory.index'))
         ->assertOk()
-        ->assertSee('Jazz Player');
+        ->assertSee('Jazz Player')
+        ->assertSee('Vocals')
+        ->assertSee('Bass');
 });
 
 test('user directory excludes users who hide themselves', function () {
