@@ -10,7 +10,7 @@
 @php
     $setLocked = $set->performed;
     $currentUser = auth()->user();
-    $isAdmin = (bool) $currentUser?->is_admin;
+    $isAdmin = $currentUser?->is_admin;
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
     $songActionButtonClass = $isAdminManagingOtherSet
         ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'

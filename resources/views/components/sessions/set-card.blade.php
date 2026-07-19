@@ -8,7 +8,7 @@
 
 @php
     $currentUser = auth()->user();
-    $isAdmin = (bool) $currentUser?->is_admin;
+    $isAdmin = $currentUser?->is_admin;
     $canManageSet = $isAdmin || $set->owner_id === auth()->id();
     $isSetOwner = $set->owner_id === auth()->id();
     $setLocked = $set->performed;
