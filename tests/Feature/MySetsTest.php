@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\BandTemplate;
 use App\Models\JamSession;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
+use App\Models\SongRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -78,6 +80,15 @@ test('my sets page shows combined pending work for owner and signup sets', funct
         'status' => SlotAssignment::STATUS_PENDING,
     ]);
 
+    SongRequest::create([
+        'set_id' => $ownedSet->id,
+        'requester_user_id' => $other->id,
+        'artist' => 'Requested Artist',
+        'title' => 'Requested Song',
+        'notes' => 'Please add this one.',
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
     SlotAssignment::create([
         'slot_id' => $otherSlot->id,
         'actor_user_id' => $owner->id,
@@ -93,6 +104,8 @@ test('my sets page shows combined pending work for owner and signup sets', funct
         ->assertSee('Approvals')
         ->assertSee('Owned Set')
         ->assertSee('Band A - Track A')
+        ->assertSee('Requested Artist - Requested Song')
+        ->assertSee('Song request')
         ->assertSee('Pending for you')
         ->assertSee('Other Set')
         ->assertSee('Band B - Track B');
@@ -174,6 +187,15 @@ test('my sets count endpoint returns pending approval count', function () {
         'status' => SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
     ]);
 
+    SongRequest::create([
+        'set_id' => $ownedSet->id,
+        'requester_user_id' => $other->id,
+        'artist' => 'Count Request Artist',
+        'title' => 'Count Request Song',
+        'notes' => null,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
     $this->getJson(route('my-sets.count'))
         ->assertRedirect(route('login'));
 
@@ -181,7 +203,7 @@ test('my sets count endpoint returns pending approval count', function () {
         ->getJson(route('my-sets.count'))
         ->assertOk()
         ->assertJson([
-            'count' => 2,
+            'count' => 3,
         ]);
 });
 
@@ -239,6 +261,46 @@ test('my sets approval card warns when approval will move a player from a confli
         ->get(route('my-sets.index'))
         ->assertOk()
         ->assertSee('Approving this will move Conflicted Player from Keys to Drums on this song.');
+});
+
+test('song request approval card includes band template selector', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Template Selector Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Template Selector Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Selector Artist',
+        'title' => 'Selector Song',
+        'notes' => null,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $template = BandTemplate::create(['name' => 'Template Five Piece']);
+    $template->slots()->create(['name' => 'vocals']);
+
+    $this->actingAs($owner)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertSee('Band template (optional)')
+        ->assertSee('name="band_template_id"', false)
+        ->assertSee('Template Five Piece');
 });
 
 test('set owner can accept proposal assignment for their set', function () {

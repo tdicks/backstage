@@ -129,6 +129,7 @@
                     x-cloak
                     x-transition.origin.top.right
                     @click.outside="openActionMenu = false"
+                    data-session-action-menu
                     class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                 >
                     @if ($canManageSet)
@@ -212,7 +213,7 @@
                     </div>
                 </form>
                 <div class="mt-4 flex items-center justify-between gap-3">
-                    <form method="POST" action="{{ route('songs.destroy', $song) }}">
+                    <form method="POST" action="{{ route('songs.destroy', $song) }}" onsubmit="return confirm('Delete this song from the set? This cannot be undone.');">
                         @csrf
                         @method('DELETE')
                         <x-danger-button type="submit">Delete Song</x-danger-button>

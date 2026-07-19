@@ -272,6 +272,12 @@ test('session activity endpoint batches approval count and open song slot update
         ->toContain('hasOpenSongCard()')
         ->toContain('refreshOpenSongCards()')
         ->toContain('patchOpenSongSlots')
+        ->toContain('canBackgroundRefreshSets()')
+        ->toContain('hasOpenSessionActionMenu()')
+        ->toContain('data-session-action-menu')
+        ->toContain("source: 'provider', background: true")
+        ->toContain('externalApprovalTransitions')
+        ->toContain('data-song-request-id')
         ->toContain('[data-session-set-card][data-set-open="true"] [data-session-song-card][data-song-open="true"]');
 
     expect($store)

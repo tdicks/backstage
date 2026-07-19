@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\SongRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +23,14 @@ class MySetsController extends Controller
             ->where('target_user_id', $user->id)
             ->count();
 
-        return $pendingSlotProposalCount + SlotAssignment::query()
+        $pendingSongRequestCount = SongRequest::query()
+            ->where('status', SongRequest::STATUS_PENDING)
+            ->whereHas('set', function ($query) use ($user): void {
+                $query->where('owner_id', $user->id);
+            })
+            ->count();
+
+        return $pendingSlotProposalCount + $pendingSongRequestCount + SlotAssignment::query()
             ->where('status', SlotAssignment::STATUS_PENDING)
             ->whereHas('slot.song.set', function ($query) use ($user): void {
                 $query->where('owner_id', $user->id);
@@ -135,11 +144,26 @@ class MySetsController extends Controller
             })
             ->values();
 
+        $pendingSongRequests = SongRequest::query()
+            ->where('status', SongRequest::STATUS_PENDING)
+            ->whereHas('set', function ($query) use ($user): void {
+                $query->where('owner_id', $user->id);
+            })
+            ->with(['requester', 'set.session'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $bandTemplates = BandTemplate::query()
+            ->orderBy('name')
+            ->get();
+
         return view('my-sets', [
             'practiceSets' => $practiceSets,
             'pendingForUser' => $pendingForUser,
             'targetConsentApprovals' => $targetConsentApprovals,
             'pendingApprovals' => $pendingApprovals,
+            'pendingSongRequests' => $pendingSongRequests,
+            'bandTemplates' => $bandTemplates,
             'slotOptions' => Slot::options(),
         ]);
     }

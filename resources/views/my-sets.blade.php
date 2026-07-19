@@ -77,16 +77,21 @@
             </template>
 
             <div x-ref="content" data-my-sets-content class="space-y-6" x-bind:class="refreshing ? 'cursor-wait' : ''">
+            @php
+                $approvalsTotal = $targetConsentApprovals->count()
+                    + $pendingApprovals->sum(fn ($group) => $group['assignments']->count())
+                    + $pendingSongRequests->count();
+            @endphp
             <section class="grid gap-4 md:grid-cols-3">
                 <div
                     class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
-                    x-data="{ approvalCount: {{ $targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count()) }} }"
+                    x-data="{ approvalCount: {{ $approvalsTotal }} }"
                     @target-consent-processed.window="approvalCount = Math.max(0, approvalCount - 1)"
                     @pending-approval-processed.window="approvalCount = Math.max(0, approvalCount - 1)"
                 >
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Approvals</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-900" x-text="approvalCount">{{ $targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count()) }}</p>
-                    <p class="mt-1 text-sm text-slate-600">requests for your sets, and recommendations for you</p>
+                    <p class="mt-2 text-2xl font-semibold text-slate-900" x-text="approvalCount">{{ $approvalsTotal }}</p>
+                    <p class="mt-1 text-sm text-slate-600">slot requests and song requests for your sets, plus recommendations for you</p>
                 </div>
                 <div
                     class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
@@ -105,7 +110,7 @@
             </section>
 
             <div
-                x-data="{ pendingCount: {{ $targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count()) }}, approvalsCollapsed: false, approvalsKey: 'my-sets-approvals-collapsed' }"
+                x-data="{ pendingCount: {{ $approvalsTotal }}, approvalsCollapsed: false, approvalsKey: 'my-sets-approvals-collapsed' }"
                 x-init="approvalsCollapsed = localStorage.getItem(approvalsKey) === '1'"
                 x-effect="localStorage.setItem(approvalsKey, approvalsCollapsed ? '1' : '0')"
                 @target-consent-processed.window="pendingCount = Math.max(0, pendingCount - 1)"
@@ -138,14 +143,14 @@
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800" x-text="`${pendingCount} pending`">
-                                {{ $targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count()) }} pending
+                                {{ $approvalsTotal }} pending
                             </span>
                             <x-heroicon-m-chevron-down class="h-4 w-4 text-amber-700 transition" x-bind:class="approvalsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
                         </div>
                     </div>
 
                     <div class="mt-4" x-show="!approvalsCollapsed" x-transition>
-                    @if ($targetConsentApprovals->isEmpty() && $pendingApprovals->isEmpty())
+                    @if ($targetConsentApprovals->isEmpty() && $pendingApprovals->isEmpty() && $pendingSongRequests->isEmpty())
                         <p class="text-sm text-slate-500">No approvals need your attention right now.</p>
                     @else
                     <div class="space-y-3" x-show="pendingCount > 0">
@@ -394,6 +399,114 @@
                                             </div>
                                         </div>
                                     @endforeach
+                                </div>
+                            </article>
+                        @endforeach
+
+                        @foreach ($pendingSongRequests as $songRequest)
+                            <article
+                                class="rounded-lg border border-amber-200 bg-amber-50/70 p-4"
+                                x-data="{
+                                    hidden: false,
+                                    busy: false,
+                                    error: '',
+                                    bandTemplateId: '',
+                                    async respond(status) {
+                                        this.busy = true;
+                                        this.error = '';
+
+                                        const payload = {
+                                            _method: 'PATCH',
+                                            status,
+                                        };
+
+                                        if (status === 'accepted' && this.bandTemplateId !== '') {
+                                            payload.band_template_id = Number(this.bandTemplateId);
+                                        }
+
+                                        try {
+                                            const response = await fetch('{{ route('song-requests.respond', $songRequest) }}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Accept': 'application/json',
+                                                    'X-Requested-With': 'XMLHttpRequest',
+                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                },
+                                                body: JSON.stringify(payload),
+                                            });
+
+                                            if (!response.ok) {
+                                                throw new Error('Could not update song request. Try again.');
+                                            }
+
+                                            this.hidden = true;
+                                            window.dispatchEvent(new CustomEvent('pending-approval-processed'));
+                                        } catch (e) {
+                                            this.error = e.message || 'Could not update song request. Try again.';
+                                        } finally {
+                                            this.busy = false;
+                                        }
+                                    },
+                                }"
+                                x-show="!hidden"
+                                x-transition
+                            >
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h4 class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</h4>
+                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Song request</span>
+                                        </div>
+                                        <p class="text-sm text-slate-700">
+                                            {{ $songRequest->set->session->name }} · {{ $songRequest->set->session->date->format('D, M j, Y') }} · {{ $songRequest->set->name }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-slate-700">Requested by {{ $songRequest->requester->name }}.</p>
+                                        @if ($songRequest->notes)
+                                            <p class="mt-1 text-sm text-slate-600">{{ $songRequest->notes }}</p>
+                                        @endif
+                                        <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
+                                    </div>
+                                    <div class="flex flex-col gap-2 sm:items-end">
+                                        <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                            <span>Band template (optional)</span>
+                                            <select
+                                                name="band_template_id"
+                                                x-model="bandTemplateId"
+                                                x-bind:disabled="busy"
+                                                class="block w-full min-w-48 rounded-md border-amber-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-300 sm:w-52"
+                                            >
+                                                <option value="">No template</option>
+                                                @foreach ($bandTemplates as $bandTemplate)
+                                                    <option value="{{ $bandTemplate->id }}">{{ $bandTemplate->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </label>
+                                        <div class="flex gap-2">
+                                            <button
+                                                type="button"
+                                                @click="respond('accepted')"
+                                                x-bind:disabled="busy"
+                                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
+                                                aria-label="Approve song request"
+                                                title="Approve this song request"
+                                            >
+                                                <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
+                                                <span>Approve</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="respond('rejected')"
+                                                x-bind:disabled="busy"
+                                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
+                                                aria-label="Reject song request"
+                                                title="Reject this song request"
+                                            >
+                                                <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
+                                                <span>Reject</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </article>
                         @endforeach

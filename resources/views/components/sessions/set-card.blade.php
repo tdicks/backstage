@@ -40,9 +40,12 @@
 <section
     id="set-{{ $set->id }}"
     data-session-set-card
+    data-set-id="{{ $set->id }}"
     class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-bind:data-set-open="(!setCollapsed).toString()"
     x-data="sessionSetCard(@js([
+        'setId' => $set->id,
+        'initialSongRequestsPendingCount' => $set->songRequests->where('status', 'pending')->count(),
         'artistLookupUrl' => route('lookups.deezer.artists'),
         'titleLookupUrl' => route('lookups.deezer.tracks'),
         'setKey' => 'backstage:u'.auth()->id().':set:'.$set->id,
@@ -57,12 +60,14 @@
         'setDirectUrl' => route('sessions.show', $set->session).'#set-'.$set->id,
         'songsReorderUrl' => route('songs.reorder', $set),
         'songStoreUrl' => route('songs.store', $set),
+        'songRequestStoreUrl' => route('song-requests.store', $set),
         'setSummaryUrl' => route('sets.summary', $set),
         'csrfToken' => csrf_token(),
     ]))"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'"
     x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
     x-on:mobile-song-move.window="if ($event.detail.setId === {{ $set->id }}) moveSong($event.detail.songId, $event.detail.direction)"
+    x-on:session-song-request-processed.window="onSongRequestProcessed($event.detail)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
@@ -159,6 +164,7 @@
                     x-cloak
                     x-transition.origin.top.right
                     @click.outside="openActionMenu = false"
+                    data-session-action-menu
                     class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                 >
                     @if ($canManageSet && ! $setLocked)
@@ -603,8 +609,9 @@
         <div x-show="openSongRequest" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>
-                <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4">
+                <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4" @submit.prevent="submitSongRequest($event)">
                     @csrf
+                    <p x-show="requestSongError" x-text="requestSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="relative">
                             <x-input-label for="request_artist_{{ $set->id }}" value="Artist" />
@@ -681,7 +688,7 @@
                     </div>
                     <div class="flex justify-end gap-3">
                         <x-modal-secondary-button type="button" @click="openSongRequest = false; resetSongRequestAutocomplete()">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button>Send Request</x-modal-primary-button>
+                        <x-modal-primary-button x-bind:disabled="requestSongBusy">Send Request</x-modal-primary-button>
                     </div>
                 </form>
             </div>
@@ -713,7 +720,7 @@
         </div>
 
         @if ($set->song_requests && $set->songRequests->where('status', 'pending')->isNotEmpty())
-            <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4">
+            <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4" x-show="songRequestsPendingCount > 0" x-transition>
                 <div
                     class="flex cursor-pointer items-center justify-between gap-2"
                     role="button"
@@ -729,35 +736,46 @@
                 </div>
                 <div class="mt-3 space-y-3" x-show="!songRequestsCollapsed" x-transition>
                     @foreach ($set->songRequests->where('status', 'pending') as $songRequest)
-                        <div class="rounded-lg border border-amber-200 bg-white/90 p-4 shadow-sm">
+                        <div
+                            class="rounded-lg border border-amber-200 bg-white/90 p-4 shadow-sm"
+                            data-song-request-id="{{ $songRequest->id }}"
+                            x-data="sessionSongRequestRow(@js([
+                                'respondUrl' => route('song-requests.respond', $songRequest),
+                                'setId' => $set->id,
+                                'initialBandTemplateId' => $songRequest->band_template_id,
+                                'decrementApprovalsCounter' => $isSetOwner,
+                                'csrfToken' => csrf_token(),
+                            ]))"
+                            x-show="!hidden"
+                            x-transition
+                        >
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
                                     <p class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</p>
-                                    <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester->name }}</p>
+                                    <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester_user_id === auth()->id() ? 'you' : $songRequest->requester->name }}</p>
                                     @if ($songRequest->bandTemplate)
                                         <p class="text-sm text-slate-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
                                     @endif
                                     @if ($songRequest->notes)
                                         <p class="mt-1 text-sm text-slate-700">{{ $songRequest->notes }}</p>
                                     @endif
+                                    <p x-show="error" x-text="error" class="mt-1 text-sm text-rose-700" x-cloak></p>
                                 </div>
 
                                 <div class="w-full sm:w-auto">
                                     @if ($canManageSet && ! $setLocked)
                                         <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                                        <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}" class="flex items-center gap-2">
-                                            @csrf
-                                            @method('PATCH')
                                             <label class="sr-only" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
-                                            <select id="band_template_id_{{ $songRequest->id }}" name="band_template_id" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                                            <select id="band_template_id_{{ $songRequest->id }}" x-model="bandTemplateId" x-bind:disabled="busy" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60">
                                                 <option value="">Template: None</option>
                                                 @foreach ($templates as $template)
                                                     <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
                                                 @endforeach
                                             </select>
-                                            <input type="hidden" name="status" value="accepted">
                                             <button
-                                                type="submit"
+                                                type="button"
+                                                @click="respond('accepted')"
+                                                x-bind:disabled="busy"
                                                 class="inline-flex h-8 w-8 items-center justify-center rounded-md text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                                 aria-label="Approve song request"
                                                 title="Approve"
@@ -765,13 +783,10 @@
                                                 <x-heroicon-m-check class="h-4 w-4" aria-hidden="true" />
                                                 <span class="sr-only">Approve</span>
                                             </button>
-                                        </form>
-                                        <form method="POST" action="{{ route('song-requests.respond', $songRequest) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="status" value="rejected">
                                             <button
-                                                type="submit"
+                                                type="button"
+                                                @click="respond('rejected')"
+                                                x-bind:disabled="busy"
                                                 class="inline-flex h-8 w-8 items-center justify-center rounded-md text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
                                                 aria-label="Reject song request"
                                                 title="Reject"
@@ -779,7 +794,22 @@
                                                 <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
                                                 <span class="sr-only">Reject</span>
                                             </button>
-                                        </form>
+                                        </div>
+                                    @endif
+
+                                    @if ($songRequest->requester_user_id === auth()->id())
+                                        <div class="mt-2 flex justify-end">
+                                            <button
+                                                type="button"
+                                                @click="removeOwnSongRequest()"
+                                                x-bind:disabled="busy"
+                                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
+                                                aria-label="Remove your song request"
+                                                title="Remove your song request"
+                                            >
+                                                <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
+                                                <span>Remove</span>
+                                            </button>
                                         </div>
                                     @endif
                                 </div>

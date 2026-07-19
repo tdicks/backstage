@@ -29,6 +29,7 @@
             x-transition.origin.top.right
             @click.outside="openActionMenu = false"
             x-bind:style="actionMenuStyle"
+            data-session-action-menu
             class="absolute z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
         >
             @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())

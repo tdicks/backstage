@@ -6,19 +6,32 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Song;
 use App\Models\SongRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SongRequestController extends Controller
 {
-    public function store(Request $request, Set $set): RedirectResponse
+    public function store(Request $request, Set $set): JsonResponse|RedirectResponse
     {
         if (! $set->song_requests) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This set is not accepting song requests.',
+                ], 422);
+            }
+
             return back()->with('status', 'This set is not accepting song requests.');
         }
 
         if ($set->owner_id === $request->user()->id) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'You can already add songs to your own set.',
+                ], 422);
+            }
+
             return back()->with('status', 'You can already add songs to your own set.');
         }
 
@@ -28,7 +41,7 @@ class SongRequestController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $set->songRequests()->create([
+        $songRequest = $set->songRequests()->create([
             'requester_user_id' => $request->user()->id,
             'artist' => $validated['artist'],
             'title' => $validated['title'],
@@ -36,12 +49,27 @@ class SongRequestController extends Controller
             'status' => SongRequest::STATUS_PENDING,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Song request submitted to the set owner.',
+                'song_request' => [
+                    'id' => $songRequest->id,
+                ],
+            ], 201);
+        }
+
         return back()->with('status', 'Song request submitted to the set owner.');
     }
 
-    public function respond(Request $request, SongRequest $songRequest): RedirectResponse
+    public function respond(Request $request, SongRequest $songRequest): JsonResponse|RedirectResponse
     {
         if ($songRequest->status !== SongRequest::STATUS_PENDING) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This song request has already been processed.',
+                ], 422);
+            }
+
             return back()->with('status', 'This song request has already been processed.');
         }
 
@@ -53,7 +81,11 @@ class SongRequestController extends Controller
         $user = $request->user();
         $songRequest->load('set');
 
-        if (! $user->is_admin && $songRequest->set->owner_id !== $user->id) {
+        $isSetManager = $user->is_admin || $songRequest->set->owner_id === $user->id;
+        $isRequesterRejectingOwn = $songRequest->requester_user_id === $user->id
+            && $validated['status'] === SongRequest::STATUS_REJECTED;
+
+        if (! $isSetManager && ! $isRequesterRejectingOwn) {
             abort(403);
         }
 
@@ -96,6 +128,12 @@ class SongRequestController extends Controller
 
             $songRequest->update($updateData);
         });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Song request updated.',
+            ]);
+        }
 
         return back()->with('status', 'Song request updated.');
     }

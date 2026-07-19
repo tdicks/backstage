@@ -2,6 +2,7 @@ export function registerSessionCards(Alpine) {
     Alpine.data('sessionSetCard', sessionSetCard);
     Alpine.data('sessionSongCard', sessionSongCard);
     Alpine.data('sessionSlotRow', sessionSlotRow);
+    Alpine.data('sessionSongRequestRow', sessionSongRequestRow);
 }
 
 function baseDragState() {
@@ -44,8 +45,11 @@ export function sessionSetCard(config) {
         requestTitleLookupTimer: null,
         requestArtistLookupToken: 0,
         requestTitleLookupToken: 0,
+        requestSongBusy: false,
+        requestSongError: '',
         artistLookupUrl: config.artistLookupUrl,
         titleLookupUrl: config.titleLookupUrl,
+        songRequestStoreUrl: config.songRequestStoreUrl,
         openSetEdit: false,
         openSummary: false,
         summaryData: null,
@@ -56,6 +60,8 @@ export function sessionSetCard(config) {
         summaryPollId: null,
         setCollapsed: false,
         songRequestsCollapsed: false,
+        setId: config.setId,
+        songRequestsPendingCount: config.initialSongRequestsPendingCount,
         setKey: config.setKey,
         songRequestsKey: config.songRequestsKey,
         canReorderSongs: config.canReorderSongs,
@@ -86,6 +92,17 @@ export function sessionSetCard(config) {
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        onSongRequestProcessed(payload = {}) {
+            if (Number(payload.setId) !== Number(this.setId)) {
+                return;
+            }
+
+            this.songRequestsPendingCount = Math.max(0, this.songRequestsPendingCount - 1);
+
+            if (payload.refreshSet) {
+                this.refreshSessionSets();
+            }
         },
         async moveSong(songId, direction) {
             if (!this.canDragSongs() || this.reorderBusy) {
@@ -366,7 +383,47 @@ export function sessionSetCard(config) {
         openSongRequestModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.openSongRequest = true;
+            this.requestSongError = '';
             this.resetSongRequestAutocomplete();
+        },
+        async submitSongRequest(event) {
+            this.requestSongBusy = true;
+            this.requestSongError = '';
+
+            try {
+                const response = await fetch(this.songRequestStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body: new FormData(event.target),
+                });
+
+                if (!response.ok) {
+                    let message = 'Could not submit song request. Try again.';
+
+                    try {
+                        const payload = await response.json();
+                        const validationErrors = Object.values(payload.errors || {}).flat();
+                        message = validationErrors[0] || payload.message || message;
+                    } catch (e) {
+                        message = 'Could not submit song request. Try again.';
+                    }
+
+                    throw new Error(message);
+                }
+
+                this.openSongRequest = false;
+                this.resetSongRequestAutocomplete();
+                event.target.reset();
+                this.refreshSessionSets();
+            } catch (e) {
+                this.requestSongError = e.message || 'Could not submit song request. Try again.';
+            } finally {
+                this.requestSongBusy = false;
+            }
         },
         async submitAddSong(event) {
             this.addSongBusy = true;
@@ -964,6 +1021,64 @@ export function sessionSongCard(config) {
             } finally {
                 this.busyAction = false;
             }
+        },
+    };
+}
+
+export function sessionSongRequestRow(config) {
+    return {
+        hidden: false,
+        busy: false,
+        error: '',
+        bandTemplateId: config.initialBandTemplateId ? String(config.initialBandTemplateId) : '',
+        async respond(status) {
+            this.busy = true;
+            this.error = '';
+
+            const payload = {
+                _method: 'PATCH',
+                status,
+            };
+
+            if (status === 'accepted' && this.bandTemplateId !== '') {
+                payload.band_template_id = Number(this.bandTemplateId);
+            }
+
+            try {
+                const response = await fetch(config.respondUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not update this song request. Try again.');
+                }
+
+                this.hidden = true;
+                window.dispatchEvent(new CustomEvent('session-song-request-processed', {
+                    detail: {
+                        setId: config.setId,
+                        refreshSet: status === 'accepted',
+                    },
+                }));
+
+                if (config.decrementApprovalsCounter) {
+                    window.dispatchEvent(new CustomEvent('pending-approval-processed'));
+                }
+            } catch (e) {
+                this.error = e.message || 'Could not update this song request. Try again.';
+            } finally {
+                this.busy = false;
+            }
+        },
+        async removeOwnSongRequest() {
+            await this.respond('rejected');
         },
     };
 }
