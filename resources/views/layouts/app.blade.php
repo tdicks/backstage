@@ -47,9 +47,20 @@
             @endif
 
             <!-- Page Content -->
-            <main>
+            <main class="pb-8">
                 {{ $slot }}
             </main>
+
+            <footer class="border-t border-slate-800/70 px-4 py-6 text-xs text-slate-500 sm:px-6 lg:px-8">
+                <div class="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p>&copy; {{ date('Y') }} TJD Tech</p>
+                    <nav class="flex flex-wrap gap-x-4 gap-y-2" aria-label="Footer">
+                        <a href="{{ route('about') }}" class="transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">About</a>
+                        <a href="{{ route('help') }}" class="transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">Help</a>
+                        <a href="{{ route('privacy') }}" class="transition hover:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">Privacy Policy</a>
+                    </nav>
+                </div>
+            </footer>
         </div>
     </body>
 </html>

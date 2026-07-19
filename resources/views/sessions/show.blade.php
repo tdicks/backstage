@@ -197,6 +197,10 @@
             x-data="lazySessionSets('{{ route('sessions.sets', $session) }}')"
             @refresh-session-sets.window="refresh()"
         >
+            @if ($session->sets_count > 0)
+                <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 shadow-sm" x-cloak></p>
+            @endif
+
             @if ($session->description)
                 <div class="session-markdown rounded-lg bg-slate-50 p-6 shadow-sm">
                     {!! Illuminate\Support\Str::markdown($session->description) !!}
@@ -204,7 +208,7 @@
             @endif
 
             @if ($session->sets_count > 0)
-                <div class="space-y-4" x-show="!loaded" x-cloak>
+                <div class="space-y-4" x-show="!loaded && !error" x-cloak>
                     <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                         <div class="flex items-center gap-3">
                             <div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-amber-400"></div>
@@ -226,14 +230,7 @@
                         </div>
                     @endfor
                 </div>
-                <div x-show="refreshing && loaded" x-cloak class="rounded-lg border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm text-slate-600 shadow-sm">
-                    <span class="inline-flex items-center gap-2">
-                        <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-amber-400"></span>
-                        Updating session content...
-                    </span>
-                </div>
-                <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" x-cloak></p>
-                <div x-ref="setsContainer" x-show="loaded" x-cloak></div>
+                <div x-ref="setsContainer" x-show="loaded" x-cloak x-bind:class="refreshing ? 'cursor-wait' : ''"></div>
             @else
                 <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
                     No sets for this jam session yet.

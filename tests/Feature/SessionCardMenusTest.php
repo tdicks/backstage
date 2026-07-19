@@ -39,12 +39,11 @@ test('set and song cards render dropdown menu controls', function () {
     ]);
 
     $this->actingAs($owner)
-        ->get(route('sessions.show', $session))
+        ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertSee('aria-label="Set actions"', false)
         ->assertSee('aria-label="Song actions"', false)
         ->assertSee('Summary')
-        ->assertSee('Copy share link')
         ->assertSee('Edit Set')
         ->assertSee('Add Song')
         ->assertSee('Edit Song')
@@ -87,14 +86,14 @@ test('admin sees shield suffix on managed set and song menu items', function () 
     ]);
 
     $this->actingAs($admin)
-        ->get(route('sessions.show', $session))
+        ->get(route('sessions.sets', $session))
         ->assertOk()
-        ->assertSee('text-sky-600 hover:text-sky-700 focus:ring-sky-400', false)
         ->assertSee('text-sky-700 hover:bg-sky-50 focus:bg-sky-50', false)
-        ->assertSee('Edit Set 🛡️')
-        ->assertSee('Add Song 🛡️')
-        ->assertSee('Edit Song 🛡️')
-        ->assertSee('Add Slot 🛡️')
+        ->assertSee('Edit Set')
+        ->assertSee('Add Song')
+        ->assertSee('Edit Song')
+        ->assertSee('Add Slot')
+        ->assertSee('🛡️')
         ->assertSee('sr-only"> Admin action</span>', false);
 });
 
@@ -129,7 +128,7 @@ test('admin does not see shield suffix on their own set menu items', function ()
     ]);
 
     $this->actingAs($admin)
-        ->get(route('sessions.show', $session))
+        ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertDontSee('Edit Set 🛡️')
         ->assertDontSee('Add Song 🛡️')

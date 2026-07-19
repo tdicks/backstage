@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -105,6 +106,10 @@ class SlotAssignmentController extends Controller
             $ownerRecommended = $slotAssignment->actor_user_id === $slotAssignment->slot->song->set->owner_id;
             $targetAccepted = $validated['status'] === SlotAssignment::STATUS_ACCEPTED;
 
+            if ($targetAccepted && $ownerRecommended) {
+                SlotCompatibility::ensureUserCanPerformSlot($slotAssignment->target_user_id, $slotAssignment->slot);
+            }
+
             $slotAssignment->update([
                 'status' => $targetAccepted
                     ? ($ownerRecommended ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
@@ -160,6 +165,10 @@ class SlotAssignmentController extends Controller
 
         if (! $canRespond) {
             abort(403);
+        }
+
+        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
+            SlotCompatibility::ensureUserCanPerformSlot($slotAssignment->target_user_id, $slotAssignment->slot);
         }
 
         $slotAssignment->update([

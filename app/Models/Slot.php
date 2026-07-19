@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Slot extends Model
 {
@@ -35,9 +36,27 @@ class Slot extends Model
 
     public static function options(): array
     {
+        if (Schema::hasTable('slot_types')) {
+            $slotTypes = SlotType::query()
+                ->where('active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name', 'key')
+                ->all();
+
+            if ($slotTypes !== []) {
+                return $slotTypes;
+            }
+        }
+
         return collect(self::NAMES)
             ->mapWithKeys(fn (string $value) => [$value => str($value)->replace('_', ' ')->title()->toString()])
             ->all();
+    }
+
+    public static function keys(): array
+    {
+        return array_keys(self::options());
     }
 
     public function song(): BelongsTo

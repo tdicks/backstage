@@ -48,6 +48,9 @@
         busyAction: false,
         actionError: '',
         actionFeedback: '',
+        toast: { visible: false, type: 'error', message: '' },
+        toastStyle: '',
+        toastTimer: null,
         proposalUserOptions: @js($proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values()),
         proposeTargetUserId: '',
         proposeTargetUserQuery: '',
@@ -87,6 +90,39 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        showToast(type, message) {
+            const anchorRect = (this.$refs.toastAnchor || this.$refs.actionMenuButton || this.$el).getBoundingClientRect();
+            const viewportPadding = 12;
+            const toastWidth = Math.min(384, window.innerWidth - (viewportPadding * 2));
+            const left = Math.max(
+                viewportPadding,
+                Math.min(window.innerWidth - toastWidth - viewportPadding, anchorRect.right - toastWidth)
+            );
+            const top = Math.max(viewportPadding, anchorRect.top - 4);
+
+            this.toastStyle = `left: ${left}px; top: ${top}px; width: ${toastWidth}px;`;
+            this.toast = { visible: true, type, message };
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
+        },
+        async failedResponseMessage(response, fallback) {
+            let message = fallback;
+
+            try {
+                const payload = await response.json();
+                const validationErrors = Object.values(payload.errors || {}).flat();
+                message = validationErrors[0] || payload.message || fallback;
+            } catch (e) {
+                message = fallback;
+            }
+
+            if (response.status === 422) {
+                this.showToast('error', message);
+                return null;
+            }
+
+            return message;
         },
         closeSessionModals() {
             this.openPropose = false;
@@ -180,12 +216,17 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Request failed');
+                    const message = await this.failedResponseMessage(response, 'Could not take slot. Try again.');
+                    if (message === null) {
+                        return;
+                    }
+
+                    throw new Error(message);
                 }
 
                 this.refreshSessionSets();
             } catch (e) {
-                this.actionError = 'Could not take slot. Try again.';
+                this.actionError = e.message || 'Could not take slot. Try again.';
             } finally {
                 this.busyAction = false;
             }
@@ -286,13 +327,18 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Request failed');
+                    const message = await this.failedResponseMessage(response, 'Could not save slot. Try again.');
+                    if (message === null) {
+                        return;
+                    }
+
+                    throw new Error(message);
                 }
 
                 this.openEditSlot = false;
                 this.refreshSessionSets();
             } catch (e) {
-                this.actionError = 'Could not save slot. Try again.';
+                this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {
                 this.busyAction = false;
             }
@@ -337,6 +383,7 @@
     }"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
+    x-on:slot-conflict-toast.window="if ($event.detail.slotId === {{ $slotModel->id }}) showToast('error', $event.detail.message)"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
@@ -347,8 +394,8 @@
             x-text="assignedUserName"
         >{{ $slotModel->assignedPerformerName() }}</span>
     </td>
-    <td class="px-3 py-3">
-        <div class="flex flex-wrap gap-2">
+    <td x-ref="toastAnchor" class="px-3 py-3 text-right">
+        <div class="flex flex-wrap justify-end gap-2">
             @if (! $setLocked && ($canManageSet || $set->signups_open || $slotModel->user_id === auth()->id()))
                 <div class="relative">
                     <button
@@ -440,6 +487,26 @@
                     </div>
                 </div>
             @endif
+
+            <template x-teleport="body">
+                <div
+                    x-show="toast.visible"
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]"
+                    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave="transition ease-in duration-100"
+                    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]"
+                    x-bind:style="toastStyle"
+                    class="fixed z-[160] rounded-lg border px-4 py-3 text-left text-sm shadow-xl"
+                    x-bind:class="toast.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
+                    role="status"
+                >
+                    <p class="font-semibold" x-text="toast.type === 'error' ? 'Slot conflict' : 'Slot updated'"></p>
+                    <p class="mt-1" x-text="toast.message"></p>
+                </div>
+            </template>
         </div>
 
         @if (! $setLocked)
@@ -594,7 +661,28 @@
                                 });
 
                                 if (!response.ok) {
-                                    throw new Error('Request failed');
+                                    let message = 'Could not update assignment. Try again.';
+
+                                    try {
+                                        const payload = await response.json();
+                                        const validationErrors = Object.values(payload.errors || {}).flat();
+                                        message = validationErrors[0] || payload.message || message;
+                                    } catch (e) {
+                                        message = 'Could not update assignment. Try again.';
+                                    }
+
+                                    if (response.status === 422) {
+                                        window.dispatchEvent(new CustomEvent('slot-conflict-toast', {
+                                            detail: {
+                                                slotId: {{ $slotModel->id }},
+                                                message,
+                                            },
+                                        }));
+
+                                        return;
+                                    }
+
+                                    throw new Error(message);
                                 }
 
                                 if (status === 'accepted' && targetName) {
@@ -605,7 +693,7 @@
 
                                 this.hidden = true;
                             } catch (e) {
-                                this.error = 'Could not update assignment. Try again.';
+                                this.error = e.message || 'Could not update assignment. Try again.';
                             } finally {
                                 this.busy = false;
                             }

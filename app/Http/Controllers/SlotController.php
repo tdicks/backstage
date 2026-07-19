@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
+use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SlotController extends Controller
 {
@@ -17,9 +19,14 @@ class SlotController extends Controller
         $this->authorize('update', $song);
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'in:'.implode(',', Slot::NAMES)],
+            'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        if (! empty($validated['user_id'])) {
+            $song->load('set');
+            SlotCompatibility::ensureUserCanPerformSlotInSet((int) $validated['user_id'], $song->set, $validated['name']);
+        }
 
         $nextPosition = ((int) $song->slots()->max('position')) + 1;
 
@@ -42,11 +49,15 @@ class SlotController extends Controller
         $this->authorize('update', $slot);
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'in:'.implode(',', Slot::NAMES)],
+            'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'manual_performer_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        if (! empty($validated['user_id'])) {
+            SlotCompatibility::ensureUserCanPerformSlot((int) $validated['user_id'], $slot, $validated['name']);
+        }
 
         $manualPerformerName = trim((string) ($validated['manual_performer_name'] ?? ''));
         if (! empty($validated['user_id'])) {
@@ -144,6 +155,22 @@ class SlotController extends Controller
 
         if ($slot->song->set->owner_id !== $request->user()->id) {
             abort(403);
+        }
+
+        try {
+            SlotCompatibility::ensureUserCanPerformSlot($request->user()->id, $slot);
+        } catch (ValidationException $exception) {
+            if ($request->expectsJson()) {
+                $errors = $exception->errors();
+                $message = collect($errors)->flatten()->first() ?? 'This slot conflicts with another slot on this set.';
+
+                return response()->json([
+                    'message' => $message,
+                    'errors' => $errors,
+                ], 422);
+            }
+
+            throw $exception;
         }
 
         $slot->update([

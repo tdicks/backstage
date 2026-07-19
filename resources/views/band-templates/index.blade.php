@@ -3,7 +3,12 @@
         <div class="flex items-center justify-between" x-data="{ openCreate: false }">
             <h2 class="text-xl font-semibold text-slate-100">Band Templates</h2>
             @can('create', App\Models\BandTemplate::class)
-                <x-primary-button @click="openCreate = true">New Template</x-primary-button>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('admin.slot-conflicts.index') }}" class="inline-flex items-center rounded-md border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-100 shadow-sm transition hover:border-slate-500 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">
+                        Slot Conflicts
+                    </a>
+                    <x-primary-button @click="openCreate = true">New Template</x-primary-button>
+                </div>
 
                 <template x-teleport="body">
                     <div x-show="openCreate" x-cloak @keydown.escape.window="openCreate = false">

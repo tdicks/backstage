@@ -22,3 +22,16 @@ test('admin can create a band template with a keys slot', function () {
 
     expect($template->slots()->pluck('name')->all())->toBe(['vocals', 'keys']);
 });
+
+test('band templates page links to slot conflict configuration', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('band-templates.index'))
+        ->assertOk()
+        ->assertSee('Band Templates')
+        ->assertSee('Slot Conflicts')
+        ->assertSee(route('admin.slot-conflicts.index'), false);
+});

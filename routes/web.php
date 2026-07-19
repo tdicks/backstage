@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SlotTypeConflictController;
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DeezerLookupController;
@@ -27,14 +28,21 @@ Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegister
 
 Route::get('/share/session/{jamSession}', [ShareController::class, 'session'])->name('share.session');
 Route::get('/share/set/{set}', [ShareController::class, 'set'])->name('share.set');
+Route::view('/about', 'static.about')->name('about');
+Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
+    Route::view('/help', 'static.help')->name('help');
+
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('/settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
+
+        Route::get('/slot-conflicts', [SlotTypeConflictController::class, 'index'])->name('slot-conflicts.index');
+        Route::patch('/slot-conflicts/{slotType}', [SlotTypeConflictController::class, 'update'])->name('slot-conflicts.update');
 
         Route::get('/users', [UserAdministrationController::class, 'index'])->name('users.index');
         Route::patch('/users/{user}', [UserAdministrationController::class, 'update'])->name('users.update');

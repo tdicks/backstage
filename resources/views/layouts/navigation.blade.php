@@ -88,7 +88,16 @@
             </div>
 
             <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-2">
+                <a
+                    href="{{ route('help') }}"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-100 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    title="Help"
+                    aria-label="Help"
+                >
+                    <x-heroicon-m-question-mark-circle class="h-5 w-5" aria-hidden="true" />
+                </a>
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium leading-4 text-slate-100 transition ease-in-out duration-150 hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none">

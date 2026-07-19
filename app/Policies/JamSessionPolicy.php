@@ -20,7 +20,7 @@ class JamSessionPolicy
      */
     public function view(User $user, JamSession $jamSession): bool
     {
-        return $user->is_admin || ! $jamSession->is_hidden;
+        return (bool) $user->is_admin || ! $jamSession->is_hidden;
     }
 
     /**
@@ -28,7 +28,7 @@ class JamSessionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->is_admin;
+        return (bool) $user->is_admin;
     }
 
     /**
@@ -36,7 +36,7 @@ class JamSessionPolicy
      */
     public function update(User $user, JamSession $jamSession): bool
     {
-        return $user->is_admin;
+        return (bool) $user->is_admin;
     }
 
     /**
@@ -44,7 +44,7 @@ class JamSessionPolicy
      */
     public function delete(User $user, JamSession $jamSession): bool
     {
-        return $user->is_admin;
+        return (bool) $user->is_admin;
     }
 
     /**
@@ -52,7 +52,7 @@ class JamSessionPolicy
      */
     public function restore(User $user, JamSession $jamSession): bool
     {
-        return $user->is_admin;
+        return (bool) $user->is_admin;
     }
 
     /**
@@ -60,6 +60,6 @@ class JamSessionPolicy
      */
     public function forceDelete(User $user, JamSession $jamSession): bool
     {
-        return $user->is_admin;
+        return (bool) $user->is_admin;
     }
 }

@@ -37,6 +37,8 @@
         songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}',
         busyAction: false,
         actionError: '',
+        toast: { visible: false, type: 'error', message: '' },
+        toastTimer: null,
         canReorderSlots: @js($canManageSet && ! $setLocked),
         dragSlotId: null,
         draggingSlotId: null,
@@ -49,6 +51,28 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        showToast(type, message) {
+            this.toast = { visible: true, type, message };
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
+        },
+        async failedResponseMessage(response, fallback) {
+            let message = fallback;
+
+            try {
+                const payload = await response.json();
+                const validationErrors = Object.values(payload.errors || {}).flat();
+                message = validationErrors[0] || payload.message || fallback;
+            } catch (e) {
+                message = fallback;
+            }
+
+            if (response.status === 422) {
+                this.showToast('error', message);
+            }
+
+            return message;
         },
         closeSessionModals() {
             this.openEditSong = false;
@@ -219,13 +243,14 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Request failed');
+                    const message = await this.failedResponseMessage(response, 'Could not add slot. Try again.');
+                    throw new Error(message);
                 }
 
                 this.openAddSlot = false;
                 this.refreshSessionSets();
             } catch (e) {
-                this.actionError = 'Could not add slot. Try again.';
+                this.actionError = e.message || 'Could not add slot. Try again.';
             } finally {
                 this.busyAction = false;
             }
@@ -237,6 +262,20 @@
     @close-session-action-menus.window="closeSessionActionMenus()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
+    <template x-teleport="body">
+        <div
+            x-show="toast.visible"
+            x-cloak
+            x-transition.opacity.duration.200ms
+            class="fixed right-4 top-20 z-[160] max-w-sm rounded-lg border px-4 py-3 text-sm shadow-xl"
+            x-bind:class="toast.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
+            role="status"
+        >
+            <p class="font-semibold" x-text="toast.type === 'error' ? 'Slot conflict' : 'Slot updated'"></p>
+            <p class="mt-1" x-text="toast.message"></p>
+        </div>
+    </template>
+
     <div
         class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
         @click="songCollapsed = !songCollapsed"
@@ -394,7 +433,7 @@
                 <tr class="bg-slate-50 text-left text-slate-600">
                     <th class="px-3 py-2">Slot</th>
                     <th class="px-3 py-2">Assigned</th>
-                    <th class="px-3 py-2">Actions</th>
+                    <th class="px-3 py-2 text-right"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody x-ref="slotsContainer" @dragover="onSlotDragOver($event)" @drop="onSlotDrop($event)">

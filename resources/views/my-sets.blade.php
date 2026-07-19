@@ -8,7 +8,32 @@
     </x-slot>
 
     <div class="py-10">
-        <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+        <div
+            class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8"
+            x-data="{
+                toast: { visible: false, type: 'error', message: '' },
+                toastTimer: null,
+                showToast(type, message) {
+                    this.toast = { visible: true, type, message };
+                    clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
+                },
+            }"
+            x-on:my-sets-slot-conflict.window="showToast('error', $event.detail.message)"
+        >
+            <template x-teleport="body">
+                <div
+                    x-show="toast.visible"
+                    x-cloak
+                    x-transition.opacity.duration.200ms
+                    class="fixed right-4 top-20 z-[160] max-w-sm rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-xl"
+                    role="status"
+                >
+                    <p class="font-semibold">Slot conflict</p>
+                    <p class="mt-1" x-text="toast.message"></p>
+                </div>
+            </template>
+
             <section class="grid gap-4 md:grid-cols-3">
                 <div
                     class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
@@ -113,13 +138,29 @@
                                             });
 
                                             if (!response.ok) {
-                                                throw new Error('Request failed');
+                                                let message = 'Could not update recommendation. Try again.';
+
+                                                try {
+                                                    const payload = await response.json();
+                                                    const validationErrors = Object.values(payload.errors || {}).flat();
+                                                    message = validationErrors[0] || payload.message || message;
+                                                } catch (e) {
+                                                    message = 'Could not update recommendation. Try again.';
+                                                }
+
+                                                if (response.status === 422) {
+                                                    window.dispatchEvent(new CustomEvent('my-sets-slot-conflict', {
+                                                        detail: { message },
+                                                    }));
+                                                }
+
+                                                throw new Error(message);
                                             }
 
                                             this.hidden = true;
                                             window.dispatchEvent(new CustomEvent('target-consent-processed'));
                                         } catch (e) {
-                                            this.error = 'Could not update recommendation. Try again.';
+                                            this.error = e.message || 'Could not update recommendation. Try again.';
                                         } finally {
                                             this.busy = false;
                                         }
@@ -218,13 +259,29 @@
                                                         });
 
                                                         if (!response.ok) {
-                                                            throw new Error('Request failed');
+                                                            let message = 'Could not update approval. Try again.';
+
+                                                            try {
+                                                                const payload = await response.json();
+                                                                const validationErrors = Object.values(payload.errors || {}).flat();
+                                                                message = validationErrors[0] || payload.message || message;
+                                                            } catch (e) {
+                                                                message = 'Could not update approval. Try again.';
+                                                            }
+
+                                                            if (response.status === 422) {
+                                                                window.dispatchEvent(new CustomEvent('my-sets-slot-conflict', {
+                                                                    detail: { message },
+                                                                }));
+                                                            }
+
+                                                            throw new Error(message);
                                                         }
 
                                                         this.hidden = true;
                                                         window.dispatchEvent(new CustomEvent('pending-approval-processed'));
                                                     } catch (e) {
-                                                        this.error = 'Could not update approval. Try again.';
+                                                        this.error = e.message || 'Could not update approval. Try again.';
                                                     } finally {
                                                         this.busy = false;
                                                     }

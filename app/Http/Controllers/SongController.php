@@ -23,7 +23,7 @@ class SongController extends Controller
             'notes' => ['nullable', 'string'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id'],
             'slot_names' => ['nullable', 'array'],
-            'slot_names.*' => ['string', 'in:'.implode(',', Slot::NAMES)],
+            'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
 
         $nextSongPosition = ((int) $set->songs()->max('position')) + 1;

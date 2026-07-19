@@ -30,7 +30,7 @@ class BandTemplateController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slot_names' => ['required', 'array', 'min:1'],
-            'slot_names.*' => ['string', 'in:'.implode(',', Slot::NAMES)],
+            'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
 
         $template = BandTemplate::create(['name' => $validated['name']]);
@@ -52,7 +52,7 @@ class BandTemplateController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slot_names' => ['required', 'array', 'min:1'],
-            'slot_names.*' => ['string', 'in:'.implode(',', Slot::NAMES)],
+            'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
 
         $bandTemplate->update(['name' => $validated['name']]);

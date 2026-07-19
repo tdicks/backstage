@@ -25,6 +25,14 @@
             <div class="mt-6 w-full max-w-md overflow-hidden rounded-xl border border-blue-900/40 bg-slate-100/95 px-6 py-5 text-slate-900 shadow-2xl shadow-blue-950/50 backdrop-blur">
                 {{ $slot }}
             </div>
+
+            <footer class="mt-8 text-center text-xs text-slate-400">
+                <p>(C) TJD Tech</p>
+                <nav class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2" aria-label="Footer">
+                    <a href="{{ route('about') }}" class="transition hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">About</a>
+                    <a href="{{ route('privacy') }}" class="transition hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">Privacy Policy</a>
+                </nav>
+            </footer>
         </div>
     </body>
 </html>
