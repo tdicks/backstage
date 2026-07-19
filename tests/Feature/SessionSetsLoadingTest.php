@@ -54,6 +54,55 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         ->assertSee('Bass');
 });
 
+test('lazy session sets endpoint renders slot rows with extracted sessionSlotRow wiring', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Extracted Slot Row Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Extracted Slot Row Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Extracted Artist',
+        'title' => 'Extracted Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee('sessionSlotRow(', false)
+        ->assertSee('requestSlotUrl', false)
+        ->assertSee('takeSlotUrl', false)
+        ->assertSee('proposeSlotUrl', false)
+        ->assertSee('releaseSlotUrl', false)
+        ->assertSee('destroySlotUrl', false)
+        ->assertSee('#slot-'.$slot->id, false)
+        ->assertSee('mobile-slot-move', false);
+});
+
 test('session routes use descriptive slugs but resolve by stable id', function () {
     $owner = User::factory()->create();
 
