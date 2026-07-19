@@ -7,7 +7,9 @@
 ])
 
 @php
-    $canManageSet = auth()->user()->is_admin || $set->owner_id === auth()->id();
+    $currentUser = auth()->user();
+    $isAdmin = (bool) $currentUser?->is_admin;
+    $canManageSet = $isAdmin || $set->owner_id === auth()->id();
     $isSetOwner = $set->owner_id === auth()->id();
     $setLocked = $set->performed;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
@@ -25,14 +27,14 @@
     $setMetaTextClass = $set->feature_set ? 'text-amber-800' : 'text-slate-600';
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
-    $isAdminManagingOtherSet = auth()->user()->is_admin && ! $isSetOwner;
+    $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
     $setActionButtonClass = $isAdminManagingOtherSet
         ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
         : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
-    $adminMenuLabelSuffix = auth()->user()->is_admin ? ' 🛡️' : '';
+    $adminMenuLabelSuffix = $isAdmin ? ' 🛡️' : '';
     $summarySlotNames = collect(array_keys($slotOptions))
         ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
         ->values();
@@ -717,7 +719,7 @@
                         @endif
                     </span>
 
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <span
                             class="inline-flex items-center"
                             title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
@@ -963,7 +965,7 @@
                             @endforeach
                         </select>
                     </div>
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <div>
                             <x-input-label :value="'Set Owner'" />
                             <select name="owner_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
@@ -1001,7 +1003,7 @@
                     >
                         Turning off song requests will reject any pending song requests for this set.
                     </p>
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <input type="hidden" name="feature_set" value="0">
                         <label class="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
                             <input type="checkbox" name="feature_set" value="1" @checked($set->feature_set) class="rounded border-amber-400 text-amber-500 shadow-sm focus:ring-amber-400">

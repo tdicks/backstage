@@ -9,14 +9,16 @@
 
 @php
     $setLocked = $set->performed;
-    $isAdminManagingOtherSet = auth()->user()->is_admin && ! $isSetOwner;
+    $currentUser = auth()->user();
+    $isAdmin = (bool) $currentUser?->is_admin;
+    $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
     $songActionButtonClass = $isAdminManagingOtherSet
         ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
         : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
     $songActionMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
-    $adminMenuLabelSuffix = auth()->user()->is_admin ? ' 🛡️' : '';
+    $adminMenuLabelSuffix = $isAdmin ? ' 🛡️' : '';
 @endphp
 
 <article
