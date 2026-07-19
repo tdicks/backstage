@@ -7,7 +7,9 @@
 ])
 
 @php
-    $canManageSet = auth()->user()->is_admin || $set->owner_id === auth()->id();
+    $currentUser = auth()->user();
+    $isAdmin = $currentUser?->is_admin;
+    $canManageSet = $isAdmin || $set->owner_id === auth()->id();
     $isSetOwner = $set->owner_id === auth()->id();
     $setLocked = $set->performed;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
@@ -25,6 +27,13 @@
     $setMetaTextClass = $set->feature_set ? 'text-amber-800' : 'text-slate-600';
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
+    $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
+    $setActionButtonClass = $isAdminManagingOtherSet
+        ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
+        : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
+    $setManageMenuItemClass = $isAdminManagingOtherSet
+        ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
+        : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
     $summarySlotNames = collect(array_keys($slotOptions))
         ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
         ->values();
@@ -93,6 +102,7 @@
         addSongBusy: false,
         addSongError: '',
         shareCopied: false,
+        openActionMenu: false,
         dragSongId: null,
         draggingSongId: null,
         dropTargetSongId: null,
@@ -655,7 +665,7 @@
     }"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'"
     x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
-    @keydown.escape.window="closeSummaryModal(); openSetEdit = false; openSong = false; openSongRequest = false"
+    @keydown.escape.window="closeSummaryModal(); openSetEdit = false; openSong = false; openSongRequest = false; openActionMenu = false"
 >
     <div
         class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
@@ -708,7 +718,7 @@
                         @endif
                     </span>
 
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <span
                             class="inline-flex items-center"
                             title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
@@ -725,29 +735,85 @@
         </div>
 
         <div class="flex items-center gap-2" @click.stop>
-            @if (! $setLocked)
+            <div class="relative">
                 <button
                     type="button"
-                    @click="openSummaryModal()"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    aria-label="Summary"
-                    title="Summary"
+                    @click="openActionMenu = ! openActionMenu"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ $canManageSet ? $setActionButtonClass : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
+                    x-bind:aria-expanded="openActionMenu.toString()"
+                    aria-label="Set actions"
+                    title="Set actions"
                 >
-                    <x-heroicon-m-queue-list class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Summary</span>
+                    <x-heroicon-m-ellipsis-horizontal class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Set actions</span>
                 </button>
-            @endif
-            <span class="relative inline-flex">
-                <button
-                    type="button"
-                    @click="copySetShareLink()"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    x-bind:title="shareCopied ? 'Share link copied' : 'Copy share link'"
-                    aria-label="Copy share link"
+                <div
+                    x-show="openActionMenu"
+                    x-cloak
+                    x-transition.origin.top.right
+                    @click.outside="openActionMenu = false"
+                    class="absolute right-0 top-full z-[80] mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                 >
-                    <x-heroicon-m-share class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only" x-text="shareCopied ? 'Share link copied' : 'Copy share link'">Copy share link</span>
-                </button>
+                    @if (! $setLocked)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openSummaryModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                        >
+                            <x-heroicon-m-queue-list class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                            <span>Summary</span>
+                        </button>
+                    @endif
+                    <button
+                        type="button"
+                        @click="openActionMenu = false; copySetShareLink()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                    >
+                        <x-heroicon-m-share class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Copy share link</span>
+                    </button>
+                    @if ($canManageSet)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                        >
+                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                            <span>
+                                Edit Set
+                                @if ($isAdminManagingOtherSet)
+                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                            </span>
+                        </button>
+                        @if (! $setLocked)
+                            <button
+                                type="button"
+                                @click="openActionMenu = false; openAddSongModal()"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                            >
+                                <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                                <span>
+                                    Add Song
+                                    @if ($isAdminManagingOtherSet)
+                                        <span aria-hidden="true"> 🛡️</span>
+                                        <span class="sr-only"> Admin action</span>
+                                    @endif
+                                </span>
+                            </button>
+                        @endif
+                    @elseif ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openSongRequestModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                        >
+                            <x-heroicon-m-hand-raised class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                            <span>Request Song</span>
+                        </button>
+                    @endif
+                </div>
                 <div
                     x-show="shareCopied"
                     x-transition.opacity.duration.150ms
@@ -758,44 +824,7 @@
                 >
                     Share link copied
                 </div>
-            </span>
-            @if ($canManageSet)
-                <button
-                    type="button"
-                    @click="performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
-                    aria-label="Edit Set"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit '.$set->owner->name.'\'s set' : 'Edit Set' }}"
-                >
-                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Edit Set</span>
-                </button>
-                @if (! $setLocked)
-                    <button
-                        type="button"
-                        @click="openAddSongModal()"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
-                        aria-label="Add Song"
-                        title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Add a song to '.$set->owner->name.'\'s set' : 'Add Song' }}"
-                    >
-                        <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Add Song</span>
-                    </button>
-                @endif
-            @else
-                @if ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
-                    <button
-                        type="button"
-                        @click="openSongRequestModal()"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        aria-label="Request Song"
-                        title="Request Song"
-                    >
-                        <x-heroicon-m-hand-raised class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Request Song</span>
-                    </button>
-                @endif
-            @endif
+            </div>
         </div>
     </div>
 
@@ -947,7 +976,7 @@
                             @endforeach
                         </select>
                     </div>
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <div>
                             <x-input-label :value="'Set Owner'" />
                             <select name="owner_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
@@ -985,7 +1014,7 @@
                     >
                         Turning off song requests will reject any pending song requests for this set.
                     </p>
-                    @if (auth()->user()->is_admin)
+                    @if ($isAdmin)
                         <input type="hidden" name="feature_set" value="0">
                         <label class="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
                             <input type="checkbox" name="feature_set" value="1" @checked($set->feature_set) class="rounded border-amber-400 text-amber-500 shadow-sm focus:ring-amber-400">
