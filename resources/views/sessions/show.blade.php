@@ -25,7 +25,7 @@
                     <button
                         type="button"
                         @click="copySessionShareLink()"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-100 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        class="inline-flex w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-slate-100 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
                         x-bind:title="shareCopied ? 'Share link copied' : 'Copy share link'"
                         aria-label="Copy share link"
                     >

@@ -324,7 +324,7 @@
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span>
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true">🛡️ </span>
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                     <span class="sr-only"> Admin action</span>
                                 @endif
                                 Add Slot
@@ -339,7 +339,7 @@
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                             <span>
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true">🛡️ </span>
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                     <span class="sr-only"> Admin action</span>
                                 @endif
                                 Edit Song
@@ -386,7 +386,7 @@
                         <x-modal-secondary-button type="button" @click="openEditSong = false">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button type="submit" form="edit_song_form_{{ $song->id }}">
                             @if ($isAdminManagingOtherSet)
-                                <span aria-hidden="true">🛡️ </span>
+                                <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                 <span class="sr-only">Admin action: </span>
                             @endif
                             Save
@@ -406,7 +406,7 @@
                     @csrf
                     <div>
                         <x-input-label :value="'Slot Name'" />
-                        <select name="name" class="mt-1 w-full rounded-md border-gray-300" required>
+                        <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
                             @foreach ($slotOptions as $slotValue => $slotLabel)
                                 <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                             @endforeach
@@ -416,7 +416,7 @@
                         <x-modal-secondary-button type="button" @click="openAddSlot = false">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button x-bind:disabled="busyAction">
                             @if ($isAdminManagingOtherSet)
-                                <span aria-hidden="true">🛡️ </span>
+                                <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                 <span class="sr-only">Admin action: </span>
                             @endif
                             Add Slot

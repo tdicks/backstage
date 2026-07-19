@@ -98,6 +98,93 @@ test('my sets page shows combined pending work for owner and signup sets', funct
         ->assertSee('Band B - Track B');
 });
 
+test('my sets count endpoint returns pending approval count', function () {
+    $owner = User::factory()->create();
+    $other = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Count Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $ownedSet = Set::create([
+        'name' => 'Count Owned Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $otherSet = Set::create([
+        'name' => 'Count Other Set',
+        'description' => null,
+        'owner_id' => $other->id,
+        'jam_session_id' => $session->id,
+        'position' => 2,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $ownedSong = Song::create([
+        'set_id' => $ownedSet->id,
+        'artist' => 'Count Band',
+        'title' => 'Approval Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $otherSong = Song::create([
+        'set_id' => $otherSet->id,
+        'artist' => 'Count Band',
+        'title' => 'Consent Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $ownedSlot = Slot::create([
+        'song_id' => $ownedSong->id,
+        'name' => 'vocals',
+        'position' => 1,
+        'user_id' => null,
+    ]);
+
+    $otherSlot = Slot::create([
+        'song_id' => $otherSong->id,
+        'name' => 'bass',
+        'position' => 1,
+        'user_id' => null,
+    ]);
+
+    SlotAssignment::create([
+        'slot_id' => $ownedSlot->id,
+        'actor_user_id' => $other->id,
+        'target_user_id' => $other->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    SlotAssignment::create([
+        'slot_id' => $otherSlot->id,
+        'actor_user_id' => $other->id,
+        'target_user_id' => $owner->id,
+        'type' => SlotAssignment::TYPE_PROPOSAL,
+        'status' => SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
+    ]);
+
+    $this->getJson(route('my-sets.count'))
+        ->assertRedirect(route('login'));
+
+    $this->actingAs($owner)
+        ->getJson(route('my-sets.count'))
+        ->assertOk()
+        ->assertJson([
+            'count' => 2,
+        ]);
+});
+
 test('set owner can accept proposal assignment for their set', function () {
     $owner = User::factory()->create();
     $actor = User::factory()->create();

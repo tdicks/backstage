@@ -27,7 +27,7 @@
             </div>
 
             <footer class="mt-8 text-center text-xs text-slate-400">
-                <p>(C) TJD Tech</p>
+                <p>&copy; {{ date('Y') }} TJD Tech</p>
                 <nav class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2" aria-label="Footer">
                     <a href="{{ route('about') }}" class="transition hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">About</a>
                     <a href="{{ route('privacy') }}" class="transition hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950">Privacy Policy</a>

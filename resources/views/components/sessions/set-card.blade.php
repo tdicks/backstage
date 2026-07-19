@@ -785,7 +785,7 @@
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span>
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true">🛡️ </span>
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                     <span class="sr-only"> Admin action</span>
                                 @endif
                                 Add Song
@@ -810,7 +810,7 @@
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                             <span>
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true">🛡️ </span>
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                     <span class="sr-only"> Admin action</span>
                                 @endif
                                 Edit Set
@@ -1057,7 +1057,7 @@
                         <x-modal-secondary-button type="button" @click="openSetEdit = false">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button type="submit" form="edit_set_form_{{ $set->id }}">
                             @if ($isAdminManagingOtherSet)
-                                <span aria-hidden="true">🛡️ </span>
+                                <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                 <span class="sr-only">Admin action: </span>
                             @endif
                             Save
@@ -1175,7 +1175,7 @@
                         <x-modal-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button x-bind:disabled="addSongBusy">
                             @if ($isAdminManagingOtherSet)
-                                <span aria-hidden="true">🛡️ </span>
+                                <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                 <span class="sr-only">Admin action: </span>
                             @endif
                             Add Song

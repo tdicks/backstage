@@ -13,13 +13,82 @@
             x-data="{
                 toast: { visible: false, type: 'error', message: '' },
                 toastTimer: null,
+                refreshing: false,
+                approvalCount: @js($targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count())),
+                approvalCountUrl: @js(route('my-sets.count')),
+                pageUrl: @js(route('my-sets.index')),
                 showToast(type, message) {
                     this.toast = { visible: true, type, message };
                     clearTimeout(this.toastTimer);
                     this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
                 },
+                async refreshApprovalCount() {
+                    if (document.hidden || this.refreshing) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(this.approvalCountUrl, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const payload = await response.json();
+                        const nextCount = Number(payload.count || 0);
+
+                        if (nextCount !== this.approvalCount) {
+                            this.approvalCount = nextCount;
+                            await this.refreshContent();
+                        }
+                    } catch (e) {}
+                },
+                async refreshContent() {
+                    this.refreshing = true;
+
+                    try {
+                        const response = await fetch(this.pageUrl, {
+                            headers: {
+                                'Accept': 'text/html',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const html = await response.text();
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const nextContent = doc.querySelector('[data-my-sets-content]');
+
+                        if (!nextContent) {
+                            return;
+                        }
+
+                        this.$refs.content.innerHTML = nextContent.innerHTML;
+
+                        this.$nextTick(() => {
+                            if (window.Alpine) {
+                                window.Alpine.initTree(this.$refs.content);
+                            }
+                        });
+                    } finally {
+                        this.refreshing = false;
+                    }
+                },
+                startPolling() {
+                    window.setInterval(() => this.refreshApprovalCount(), 30000);
+                },
             }"
+            x-init="startPolling()"
             x-on:my-sets-slot-conflict.window="showToast('error', $event.detail.message)"
+            x-on:visibilitychange.window="refreshApprovalCount()"
         >
             <template x-teleport="body">
                 <div
@@ -34,6 +103,7 @@
                 </div>
             </template>
 
+            <div x-ref="content" data-my-sets-content class="space-y-6" x-bind:class="refreshing ? 'cursor-wait' : ''">
             <section class="grid gap-4 md:grid-cols-3">
                 <div
                     class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
@@ -563,6 +633,8 @@
                     @endforelse
                 </div>
             </section>
+
+            </div>
 
         </div>
     </div>

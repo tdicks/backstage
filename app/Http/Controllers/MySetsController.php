@@ -5,12 +5,30 @@ namespace App\Http\Controllers;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class MySetsController extends Controller
 {
+    public static function pendingApprovalCount(User $user): int
+    {
+        $pendingSlotProposalCount = SlotAssignment::query()
+            ->where('type', SlotAssignment::TYPE_PROPOSAL)
+            ->where('status', SlotAssignment::STATUS_AWAITING_TARGET_CONSENT)
+            ->where('target_user_id', $user->id)
+            ->count();
+
+        return $pendingSlotProposalCount + SlotAssignment::query()
+            ->where('status', SlotAssignment::STATUS_PENDING)
+            ->whereHas('slot.song.set', function ($query) use ($user): void {
+                $query->where('owner_id', $user->id);
+            })
+            ->count();
+    }
+
     public function __invoke(Request $request): View
     {
         $user = $request->user();
@@ -121,6 +139,13 @@ class MySetsController extends Controller
             'targetConsentApprovals' => $targetConsentApprovals,
             'pendingApprovals' => $pendingApprovals,
             'slotOptions' => Slot::options(),
+        ]);
+    }
+
+    public function count(Request $request): JsonResponse
+    {
+        return response()->json([
+            'count' => self::pendingApprovalCount($request->user()),
         ]);
     }
 }

@@ -93,7 +93,8 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('Add Song')
         ->assertSee('Edit Song')
         ->assertSee('Add Slot')
-        ->assertSee('🛡️')
+        ->assertSee('mr-1 inline h-4 w-4 text-sky-500', false)
+        ->assertDontSee('🛡️')
         ->assertSee('sr-only"> Admin action</span>', false);
 });
 
@@ -130,9 +131,7 @@ test('admin does not see shield suffix on their own set menu items', function ()
     $this->actingAs($admin)
         ->get(route('sessions.sets', $session))
         ->assertOk()
-        ->assertDontSee('Edit Set 🛡️')
-        ->assertDontSee('Add Song 🛡️')
-        ->assertDontSee('Edit Song 🛡️')
-        ->assertDontSee('Add Slot 🛡️')
+        ->assertDontSee('mr-1 inline h-4 w-4 text-sky-500', false)
+        ->assertDontSee('🛡️')
         ->assertDontSee('sr-only"> Admin action</span>', false);
 });

@@ -1,20 +1,40 @@
 @php
-    $pendingSlotProposalCount = \App\Models\SlotAssignment::query()
-        ->where('type', \App\Models\SlotAssignment::TYPE_PROPOSAL)
-        ->where('status', \App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT)
-        ->where('target_user_id', Auth::id())
-        ->count();
-
-    $mySetsApprovalCount = $pendingSlotProposalCount + \App\Models\SlotAssignment::query()
-        ->where('status', \App\Models\SlotAssignment::STATUS_PENDING)
-        ->whereHas('slot.song.set', function ($query): void {
-            $query->where('owner_id', Auth::id());
-        })
-        ->count();
+    $mySetsApprovalCount = \App\Http\Controllers\MySetsController::pendingApprovalCount(Auth::user());
 @endphp
 
 <nav
-    x-data="{ open: false, mySetsApprovalCount: {{ $mySetsApprovalCount }} }"
+    x-data="{
+        open: false,
+        mySetsApprovalCount: @js($mySetsApprovalCount),
+        mySetsApprovalCountUrl: @js(route('my-sets.count')),
+        async refreshMySetsApprovalCount() {
+            if (document.hidden) {
+                return;
+            }
+
+            try {
+                const response = await fetch(this.mySetsApprovalCountUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                this.mySetsApprovalCount = Number(payload.count || 0);
+            } catch (e) {}
+        },
+        startMySetsApprovalPolling() {
+            this.refreshMySetsApprovalCount();
+            window.setInterval(() => this.refreshMySetsApprovalCount(), 30000);
+        },
+    }"
+    x-init="startMySetsApprovalPolling()"
+    @visibilitychange.window="refreshMySetsApprovalCount()"
     @target-consent-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
     @pending-approval-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
     class="border-b border-slate-800 bg-slate-950"
@@ -91,7 +111,7 @@
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-2">
                 <a
                     href="{{ route('help') }}"
-                    class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-800 bg-slate-900 text-slate-100 transition hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 bg-slate-900 text-slate-100 transition hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
                     title="Help"
                     aria-label="Help"
                 >
@@ -105,9 +125,7 @@
                                 {{ Auth::user()->name }}
                                 @if (Auth::user()->is_admin)
                                     <span class="ms-1 inline-flex items-center align-middle" title="Admin">
-                                        <svg class="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
-                                        </svg>
+                                        <x-admin-shield-icon class="h-4 w-4 text-sky-400" aria-hidden="true" />
                                         <span class="sr-only">Admin</span>
                                     </span>
                                 @endif
@@ -139,9 +157,7 @@
                             <div class="mx-2 my-2 rounded-md border border-sky-500/40 bg-sky-500/5 py-1">
                                 <div class="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     <span class="inline-flex items-center gap-1">
-                                        <svg class="h-3.5 w-3.5 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
-                                        </svg>
+                                        <x-admin-shield-icon class="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
                                         <span>Admin</span>
                                     </span>
                                 </div>
@@ -207,9 +223,7 @@
                 <div class="font-medium text-base text-slate-100">{{ Auth::user()->name }}
                     @if (Auth::user()->is_admin)
                         <span class="ms-1 inline-flex items-center align-middle" title="Admin">
-                            <svg class="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
-                            </svg>
+                            <x-admin-shield-icon class="h-4 w-4 text-sky-400" aria-hidden="true" />
                             <span class="sr-only">Admin</span>
                         </span>
                     @endif
@@ -237,9 +251,7 @@
                     <div class="mx-2 my-2 rounded-md border border-sky-500/40 bg-sky-500/5 py-1">
                         <div class="px-2 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             <span class="inline-flex items-center gap-1">
-                                <svg class="h-3.5 w-3.5 text-sky-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M10.339 2.083a.75.75 0 0 0-.678 0L3.93 4.78a.75.75 0 0 0-.43.677v3.938a9.026 9.026 0 0 0 4.228 7.67l1.86 1.163a.75.75 0 0 0 .794 0l1.86-1.163A9.026 9.026 0 0 0 16.5 9.395V5.457a.75.75 0 0 0-.43-.677L10.34 2.083Z" clip-rule="evenodd" />
-                                </svg>
+                                <x-admin-shield-icon class="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
                                 <span>Admin</span>
                             </span>
                         </div>

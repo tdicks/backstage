@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::view('/help', 'static.help')->name('help');
 
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
+    Route::get('/my-sets/count', [MySetsController::class, 'count'])->name('my-sets.count');
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {

@@ -477,7 +477,7 @@
                                 <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                                 <span>
                                     @if ($isAdminManagingOtherSet)
-                                        <span aria-hidden="true">🛡️ </span>
+                                        <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                         <span class="sr-only"> Admin action</span>
                                     @endif
                                     Edit slot
@@ -512,7 +512,7 @@
         @if (! $setLocked)
         <div x-show="openPropose" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
         <div x-show="openPropose" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+            <div class="w-full max-w-md rounded-lg bg-white p-6 text-left text-slate-900 shadow-xl">
                 <h6 class="text-base font-semibold text-slate-900">Recommend {{ $slotOptions[$slotModel->name] ?? $slotModel->name }} to someone</h6>
                 <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
                     @if ($proposalUsers->isNotEmpty())
@@ -577,7 +577,7 @@
         @if ($canManageSet && ! $setLocked)
             <div x-show="openEditSlot" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
             <div x-show="openEditSlot" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
+                <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-left text-slate-900 shadow-2xl">
                     <h6 class="text-base font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
                         {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Slot' : 'Edit Slot' }}
                     </h6>
@@ -620,7 +620,7 @@
                             <x-modal-secondary-button type="button" @click="openEditSlot = false">Cancel</x-modal-secondary-button>
                             <x-modal-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true">🛡️ </span>
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
                                     <span class="sr-only">Admin action: </span>
                                 @endif
                                 Save
@@ -631,12 +631,12 @@
             </div>
         @endif
 
-        <div class="mt-2 space-y-2">
+        <div class="mt-2 space-y-2 text-left">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>
             <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
             @foreach ($slotModel->assignments->whereIn('status', [\App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT, \App\Models\SlotAssignment::STATUS_PENDING]) as $assignment)
                 <div
-                    class="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+                    class="rounded border border-amber-200 bg-amber-50 p-2 text-left text-xs text-amber-900"
                     x-data="{
                         hidden: false,
                         busy: false,

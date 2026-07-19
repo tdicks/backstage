@@ -8,7 +8,7 @@
             <div class="space-y-5 rounded-xl border border-slate-200 bg-slate-50/95 p-5 text-sm leading-6 text-slate-700 shadow-sm sm:p-6">
                 <div class="rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <p class="text-base leading-7 text-slate-800">
-                        Backstage is a jam organisation platform for planning sessions, building sets, and keeping track of who is playing each part. It gives players and organisers one shared place to arrange the music, using controls like <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>, <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-hand-raised class="h-3.5 w-3.5" aria-hidden="true" /> Request slot</span>, and <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-share class="h-3.5 w-3.5" aria-hidden="true" /> Copy Share link</span> instead of a long message thread.
+                        Backstage is a jam organisation platform for planning sessions, building sets, and keeping track of who is playing each part. It gives players and organisers an easy way to see what is coming up, and helps avoid double-booking or confusion about who is playing what.
                     </p>
                 </div>
 
@@ -18,7 +18,7 @@
                         Start in <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Jam Sessions</span> to see what is coming up. Open a session to browse the sets people are bringing, the songs in each set, and the parts that are already covered or still available.
                     </p>
                     <p>
-                        Sessions and sets can have a few small icons beside the name. You only need to know the ones you can see:
+                        Sessions and sets can have a few small icons beside the name.
                     </p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -67,6 +67,16 @@
                     </p>
                     <p>
                         If you need to step away from a part you already claimed, use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-arrow-left-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" /> Release slot</span>. Backstage also helps avoid impossible double-booking within the same set. If you are already down for a part that clashes with another one, it will tell you clearly instead of quietly changing the plan.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Keeping Track in My Sets</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> as your personal set list for the jam. It gathers the parts you have coming up, the requests you have made, and any recommendations waiting for your answer, so you can quickly see what needs your attention before the session starts.
+                    </p>
+                    <p>
+                        If you own a set, <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> also shows the approvals you need to handle. It is the easiest place to check whether someone is waiting on you, confirm who is playing, and keep your set ready for the room.
                     </p>
                 </div>
 
