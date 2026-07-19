@@ -9,6 +9,14 @@
 
 @php
     $setLocked = $set->performed;
+    $isAdminManagingOtherSet = auth()->user()->is_admin && ! $isSetOwner;
+    $songActionButtonClass = $isAdminManagingOtherSet
+        ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
+        : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
+    $songActionMenuItemClass = $isAdminManagingOtherSet
+        ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
+        : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
+    $adminMenuLabelSuffix = auth()->user()->is_admin ? ' 🛡️' : '';
 @endphp
 
 <article
@@ -26,6 +34,7 @@
     x-data="{
         openEditSong: false,
         openAddSlot: false,
+        openActionMenu: false,
         songCollapsed: false,
         songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}',
         busyAction: false,
@@ -206,7 +215,7 @@
     }"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
-    @keydown.escape.window="openEditSong = false; openAddSlot = false"
+    @keydown.escape.window="openEditSong = false; openAddSlot = false; openActionMenu = false"
 >
     <div
         class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
@@ -228,28 +237,45 @@
 
         <div class="flex flex-wrap items-center gap-2" @click.stop>
             @if ($canManageSet)
-                <button
-                    type="button"
-                    @click="if (!{{ $setLocked ? 'true' : 'false' }}) openEditSong = true"
-                    @disabled($setLocked)
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }} disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Edit song"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit a song in '.$set->owner->name.'\'s set' : 'Edit song' }}"
-                >
-                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Edit Song</span>
-                </button>
-                <button
-                    type="button"
-                    @click="if (!{{ $setLocked ? 'true' : 'false' }}) openAddSlot = true"
-                    @disabled($setLocked)
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }} disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Add slot"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Add a slot to '.$set->owner->name.'\'s set' : 'Add slot' }}"
-                >
-                    <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Add Slot</span>
-                </button>
+                <div class="relative">
+                    <button
+                        type="button"
+                        @click="openActionMenu = ! openActionMenu"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ $songActionButtonClass }}"
+                        x-bind:aria-expanded="openActionMenu.toString()"
+                        aria-label="Song actions"
+                        title="Song actions"
+                    >
+                        <x-heroicon-m-ellipsis-horizontal class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Song actions</span>
+                    </button>
+                    <div
+                        x-show="openActionMenu"
+                        x-cloak
+                        x-transition.origin.top.right
+                        @click.outside="openActionMenu = false"
+                        class="absolute right-0 top-full z-[80] mt-2 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                    >
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openEditSong = true"
+                            @disabled($setLocked)
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                            <span>Edit Song{{ $adminMenuLabelSuffix }}</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openAddSlot = true"
+                            @disabled($setLocked)
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                            <span>Add Slot{{ $adminMenuLabelSuffix }}</span>
+                        </button>
+                    </div>
+                </div>
             @endif
         </div>
     </div>
