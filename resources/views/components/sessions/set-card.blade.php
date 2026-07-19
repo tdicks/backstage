@@ -781,7 +781,7 @@
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                             <span>
                                 Edit Set
-                                @if ($isAdmin)
+                                @if ($isAdminManagingOtherSet)
                                     <span aria-hidden="true"> 🛡️</span>
                                     <span class="sr-only"> Admin action</span>
                                 @endif
@@ -796,7 +796,7 @@
                                 <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                                 <span>
                                     Add Song
-                                    @if ($isAdmin)
+                                    @if ($isAdminManagingOtherSet)
                                         <span aria-hidden="true"> 🛡️</span>
                                         <span class="sr-only"> Admin action</span>
                                     @endif

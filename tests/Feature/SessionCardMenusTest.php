@@ -97,3 +97,43 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('Add Slot 🛡️')
         ->assertSee('sr-only"> Admin action</span>', false);
 });
+
+test('admin does not see shield suffix on their own set menu items', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::query()->create([
+        'name' => 'Admin Own Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Admin Own Menu Set',
+        'description' => null,
+        'owner_id' => $admin->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Own Artist',
+        'title' => 'Own Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.show', $session))
+        ->assertOk()
+        ->assertDontSee('Edit Set 🛡️')
+        ->assertDontSee('Add Song 🛡️')
+        ->assertDontSee('Edit Song 🛡️')
+        ->assertDontSee('Add Slot 🛡️')
+        ->assertDontSee('sr-only"> Admin action</span>', false);
+});
