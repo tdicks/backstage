@@ -4,7 +4,7 @@
             <h2 class="text-xl font-semibold leading-tight text-slate-100">
                 Slot Conflicts
             </h2>
-            <p class="mt-1 text-sm text-slate-400">Control which slot types cannot be assigned to the same player within a set.</p>
+            <p class="mt-1 text-sm text-slate-400">Control which slot types cannot be assigned to the same player within a song.</p>
         </div>
     </x-slot>
 

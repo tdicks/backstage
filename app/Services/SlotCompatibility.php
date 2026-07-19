@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Set;
 use App\Models\Slot;
+use App\Models\Song;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -13,18 +13,18 @@ class SlotCompatibility
 {
     public static function ensureUserCanPerformSlot(int $userId, Slot $slot, ?string $slotName = null, string $field = 'user_id'): void
     {
-        $slot->loadMissing('song.set');
+        $slot->loadMissing('song');
 
-        self::ensureUserCanPerformSlotInSet(
+        self::ensureUserCanPerformSlotInSong(
             $userId,
-            $slot->song->set,
+            $slot->song,
             $slotName ?? $slot->name,
             $slot->id,
             $field
         );
     }
 
-    public static function ensureUserCanPerformSlotInSet(int $userId, Set $set, string $slotName, ?int $exceptSlotId = null, string $field = 'user_id'): void
+    public static function ensureUserCanPerformSlotInSong(int $userId, Song $song, string $slotName, ?int $exceptSlotId = null, string $field = 'user_id'): void
     {
         $conflictingSlotNames = self::conflictingSlotNames($slotName);
 
@@ -36,7 +36,7 @@ class SlotCompatibility
             ->where('user_id', $userId)
             ->whereIn('name', $conflictingSlotNames)
             ->when($exceptSlotId, fn ($query) => $query->whereKeyNot($exceptSlotId))
-            ->whereHas('song', fn ($query) => $query->where('set_id', $set->id))
+            ->where('song_id', $song->id)
             ->first();
 
         if (! $conflictingSlot) {
@@ -49,7 +49,7 @@ class SlotCompatibility
         $playerName = User::query()->find($userId)?->name ?? 'This player';
 
         throw ValidationException::withMessages([
-            $field => "$playerName is already assigned to $conflictingLabel on this set, so they cannot also take $targetLabel. They don't have enough limbs for that.",
+            $field => "$playerName is already assigned to $conflictingLabel on this song, so they cannot also take $targetLabel. They don't have enough limbs for that.",
         ]);
     }
 
