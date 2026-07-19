@@ -425,6 +425,76 @@ test('owner recommendation is assigned when target accepts', function () {
     expect($slot->refresh()->user_id)->toBe($target->id);
 });
 
+test('accepting owner recommendation rejects target self requests on the same song', function () {
+    $owner = User::factory()->create();
+    $target = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Superseded Request Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Superseded Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Request Band',
+        'title' => 'Choose A Slot',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $requestedSlot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+        'user_id' => null,
+    ]);
+
+    $recommendedSlot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 2,
+        'user_id' => null,
+    ]);
+
+    $selfRequest = SlotAssignment::create([
+        'slot_id' => $requestedSlot->id,
+        'actor_user_id' => $target->id,
+        'target_user_id' => $target->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $recommendation = SlotAssignment::create([
+        'slot_id' => $recommendedSlot->id,
+        'actor_user_id' => $owner->id,
+        'target_user_id' => $target->id,
+        'type' => SlotAssignment::TYPE_PROPOSAL,
+        'status' => SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
+    ]);
+
+    $this->actingAs($target)
+        ->patch(route('slot-assignments.respond', $recommendation), [
+            'status' => SlotAssignment::STATUS_ACCEPTED,
+        ])
+        ->assertRedirect();
+
+    expect($recommendation->refresh()->status)->toBe(SlotAssignment::STATUS_ACCEPTED);
+    expect($recommendedSlot->refresh()->user_id)->toBe($target->id);
+    expect($selfRequest->refresh()->status)->toBe(SlotAssignment::STATUS_REJECTED);
+    expect($selfRequest->responded_at)->not->toBeNull();
+});
+
 test('editing a slot assignee accepts matching pending assignments', function () {
     $owner = User::factory()->create();
     $target = User::factory()->create();

@@ -5,38 +5,11 @@
 <nav
     x-data="{
         open: false,
-        mySetsApprovalCount: @js($mySetsApprovalCount),
-        mySetsApprovalCountUrl: @js(route('my-sets.count')),
-        async refreshMySetsApprovalCount() {
-            if (document.hidden) {
-                return;
-            }
-
-            try {
-                const response = await fetch(this.mySetsApprovalCountUrl, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (!response.ok) {
-                    return;
-                }
-
-                const payload = await response.json();
-                this.mySetsApprovalCount = Number(payload.count || 0);
-            } catch (e) {}
-        },
-        startMySetsApprovalPolling() {
-            this.refreshMySetsApprovalCount();
-            window.setInterval(() => this.refreshMySetsApprovalCount(), 30000);
-        },
     }"
-    x-init="startMySetsApprovalPolling()"
-    @visibilitychange.window="refreshMySetsApprovalCount()"
-    @target-consent-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
-    @pending-approval-processed.window="mySetsApprovalCount = Math.max(0, mySetsApprovalCount - 1)"
+    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) })"
+    @visibilitychange.window="$store.approvals.refresh()"
+    @target-consent-processed.window="$store.approvals.decrement()"
+    @pending-approval-processed.window="$store.approvals.decrement()"
     class="border-b border-slate-800 bg-slate-950"
 >
     <!-- Primary Navigation Menu -->
@@ -96,8 +69,8 @@
                         <span>{{ __('My Sets') }}</span>
                         <span
                             class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
-                            x-show="mySetsApprovalCount > 0"
-                            x-text="mySetsApprovalCount"
+                            x-show="$store.approvals.count > 0"
+                            x-text="$store.approvals.count"
                             x-cloak
                         >{{ $mySetsApprovalCount }}</span>
                     </x-nav-link>
@@ -196,8 +169,8 @@
                 <a
                     href="{{ route('my-sets.index') }}"
                     class="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold leading-none text-amber-800 shadow-sm transition hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950"
-                    x-show="! open && mySetsApprovalCount > 0"
-                    x-text="mySetsApprovalCount"
+                    x-show="! open && $store.approvals.count > 0"
+                    x-text="$store.approvals.count"
                     x-cloak
                     aria-label="View pending My Sets approvals"
                 >{{ $mySetsApprovalCount }}</a>
@@ -234,8 +207,8 @@
                 <span>{{ __('My Sets') }}</span>
                 <span
                     class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
-                    x-show="mySetsApprovalCount > 0"
-                    x-text="mySetsApprovalCount"
+                    x-show="$store.approvals.count > 0"
+                    x-text="$store.approvals.count"
                     x-cloak
                 >{{ $mySetsApprovalCount }}</span>
             </x-responsive-nav-link>

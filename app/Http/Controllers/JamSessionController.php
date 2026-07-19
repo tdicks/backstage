@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\BandTemplate;
 use App\Models\JamSession;
 use App\Models\Slot;
+use App\Models\Song;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -130,7 +132,62 @@ class JamSessionController extends Controller
             'sets.songs.slots.assignments.target',
         ]);
 
-        return view('sessions.partials.set-cards', [
+        return view('sessions.partials.set-cards', $this->sessionSetsViewData($jamSession));
+    }
+
+    public function activity(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('view', $jamSession);
+
+        $validated = $request->validate([
+            'song_ids' => ['array'],
+            'song_ids.*' => ['integer'],
+        ]);
+
+        $songIds = collect($validated['song_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $viewData = $this->slotRowViewData();
+
+        $songs = $songIds->isEmpty()
+            ? collect()
+            : Song::query()
+                ->whereIn('id', $songIds)
+                ->whereHas('set', fn ($query) => $query->where('jam_session_id', $jamSession->id))
+                ->with([
+                    'set.session',
+                    'set.owner',
+                    'slots.user',
+                    'slots.assignments.actor',
+                    'slots.assignments.target',
+                ])
+                ->orderBy('position')
+                ->orderBy('id')
+                ->get();
+
+        return response()->json([
+            'approval_count' => MySetsController::pendingApprovalCount($request->user()),
+            'songs' => $songs->mapWithKeys(fn (Song $song) => [
+                $song->id => [
+                    'slots_html' => view('components.sessions.song-slots', [
+                        'song' => $song,
+                        'set' => $song->set,
+                        'users' => $viewData['users'],
+                        'slotOptions' => $viewData['slotOptions'],
+                        'isSetOwner' => $song->set->owner_id === $request->user()->id,
+                        'canManageSet' => $request->user()->is_admin || $song->set->owner_id === $request->user()->id,
+                    ])->render(),
+                ],
+            ]),
+        ]);
+    }
+
+    private function sessionSetsViewData(JamSession $jamSession): array
+    {
+        return [
             'session' => $jamSession,
             'sessions' => JamSession::query()
                 ->visibleTo(request()->user())
@@ -139,7 +196,15 @@ class JamSessionController extends Controller
             'slotOptions' => Slot::options(),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()->orderBy('name')->get(),
-        ]);
+        ];
+    }
+
+    private function slotRowViewData(): array
+    {
+        return [
+            'slotOptions' => Slot::options(),
+            'users' => User::query()->orderBy('name')->get(),
+        ];
     }
 
     /**

@@ -194,8 +194,10 @@
     <div class="py-8">
         <div
             class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8"
-            x-data="lazySessionSets('{{ route('sessions.sets', $session) }}')"
+            x-data="lazySessionSets('{{ route('sessions.sets', $session) }}', '{{ route('sessions.activity', $session) }}')"
             @refresh-session-sets.window="refresh()"
+            x-on:refresh-session-activity.window="$store.approvals.refresh()"
+            x-on:session-song-opened.window="$store.approvals.refresh()"
         >
             @if ($session->sets_count > 0)
                 <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 shadow-sm" x-cloak></p>

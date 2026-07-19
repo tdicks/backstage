@@ -22,10 +22,11 @@
     data-session-song-card
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
+    x-bind:data-song-open="(!songCollapsed).toString()"
     draggable="{{ $isSetOwner && ! $setLocked ? 'true' : 'false' }}"
-    @dragstart="onSongDragStart($event, {{ $song->id }})"
-    @dragover="onSongDragOver($event, {{ $song->id }})"
-    @drop="onSongDrop($event)"
+    @dragstart.self="onSongDragStart($event, {{ $song->id }})"
+    @dragover.self="onSongDragOver($event, {{ $song->id }})"
+    @drop.self="onSongDrop($event)"
     x-bind:class="{
         'opacity-70': draggingSongId === {{ $song->id }}
     }"
@@ -51,7 +52,7 @@
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+            window.dispatchEvent(new CustomEvent('refresh-session-activity'));
         },
         showToast(type, message) {
             this.toast = { visible: true, type, message };
@@ -81,6 +82,17 @@
         },
         closeSessionActionMenus() {
             this.openActionMenu = false;
+        },
+        setSongCollapsed(collapsed) {
+            const wasCollapsed = this.songCollapsed;
+            this.songCollapsed = collapsed;
+
+            if (wasCollapsed && !collapsed) {
+                this.$nextTick(() => window.dispatchEvent(new CustomEvent('session-song-opened')));
+            }
+        },
+        toggleSongCollapsed() {
+            this.setSongCollapsed(!this.songCollapsed);
         },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
@@ -284,11 +296,11 @@
 
     <div
         class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
-        @click="songCollapsed = !songCollapsed"
+        @click="toggleSongCollapsed()"
         role="button"
         tabindex="0"
-        @keydown.enter.prevent="songCollapsed = !songCollapsed"
-        @keydown.space.prevent="songCollapsed = !songCollapsed"
+        @keydown.enter.prevent="toggleSongCollapsed()"
+        @keydown.space.prevent="toggleSongCollapsed()"
         x-bind:aria-expanded="(!songCollapsed).toString()"
         x-bind:title="songCollapsed ? 'Click to show song slots and assignments' : 'Click to hide song slots and assignments'"
         aria-label="Toggle song details"
@@ -460,27 +472,15 @@
                     <th class="px-3 py-2 text-right"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
-            <tbody x-ref="slotsContainer" @dragover="onSlotDragOver($event)" @drop="onSlotDrop($event)">
-                <tr x-ref="slotDropPlaceholder" class="hidden">
-                    <td colspan="3" class="px-3 py-3">
-                        <div data-slot-drop-label class="rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/70 p-4 text-sm font-medium text-sky-700 shadow-sm">Drop slot here</div>
-                    </td>
-                </tr>
-                @forelse ($song->slots as $slot)
-                    <x-sessions.slot-row
-                        :slot-model="$slot"
-                        :set="$set"
-                        :users="$users"
-                        :slot-options="$slotOptions"
-                        :is-set-owner="$isSetOwner"
-                        :can-manage-set="$canManageSet"
-                        :can-reorder-slots="$canManageSet && ! $setLocked"
-                    />
-                @empty
-                    <tr>
-                        <td colspan="3" class="px-3 py-4 text-sm text-slate-500">No slots yet.</td>
-                    </tr>
-                @endforelse
+            <tbody x-ref="slotsContainer" data-song-slots-body data-song-slots-id="{{ $song->id }}" @dragover.stop="onSlotDragOver($event)" @drop.stop="onSlotDrop($event)">
+                <x-sessions.song-slots
+                    :song="$song"
+                    :set="$set"
+                    :users="$users"
+                    :slot-options="$slotOptions"
+                    :is-set-owner="$isSetOwner"
+                    :can-manage-set="$canManageSet"
+                />
             </tbody>
         </table>
     </div>

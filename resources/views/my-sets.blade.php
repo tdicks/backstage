@@ -14,41 +14,17 @@
                 toast: { visible: false, type: 'error', message: '' },
                 toastTimer: null,
                 refreshing: false,
-                approvalCount: @js($targetConsentApprovals->count() + $pendingApprovals->sum(fn ($group) => $group['assignments']->count())),
-                approvalCountUrl: @js(route('my-sets.count')),
                 pageUrl: @js(route('my-sets.index')),
                 showToast(type, message) {
                     this.toast = { visible: true, type, message };
                     clearTimeout(this.toastTimer);
                     this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
                 },
-                async refreshApprovalCount() {
-                    if (document.hidden || this.refreshing) {
+                async refreshContent() {
+                    if (this.refreshing) {
                         return;
                     }
 
-                    try {
-                        const response = await fetch(this.approvalCountUrl, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                        });
-
-                        if (!response.ok) {
-                            return;
-                        }
-
-                        const payload = await response.json();
-                        const nextCount = Number(payload.count || 0);
-
-                        if (nextCount !== this.approvalCount) {
-                            this.approvalCount = nextCount;
-                            await this.refreshContent();
-                        }
-                    } catch (e) {}
-                },
-                async refreshContent() {
                     this.refreshing = true;
 
                     try {
@@ -82,15 +58,10 @@
                         this.refreshing = false;
                     }
                 },
-                startPolling() {
-                    window.setInterval(() => this.refreshApprovalCount(), 30000);
-                },
             }"
-            x-init="startPolling()"
             x-on:my-sets-slot-conflict.window="showToast('error', $event.detail.message)"
-            x-on:target-consent-processed.window="approvalCount = Math.max(0, approvalCount - 1); refreshContent()"
-            x-on:pending-approval-processed.window="approvalCount = Math.max(0, approvalCount - 1); refreshContent()"
-            x-on:visibilitychange.window="refreshApprovalCount()"
+            x-on:approvals-count-changed.window="refreshContent()"
+            x-on:visibilitychange.window="$store.approvals.refresh()"
         >
             <template x-teleport="body">
                 <div

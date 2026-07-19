@@ -195,6 +195,8 @@ class SlotAssignmentController extends Controller
 
     private function assignSlotAndReleaseConflicts(SlotAssignment $slotAssignment): void
     {
+        $slotAssignment->loadMissing('slot.song');
+
         $conflictingSlot = SlotCompatibility::conflictingSlotForSlot($slotAssignment->target_user_id, $slotAssignment->slot);
 
         if ($conflictingSlot) {
@@ -208,5 +210,22 @@ class SlotAssignmentController extends Controller
             'user_id' => $slotAssignment->target_user_id,
             'manual_performer_name' => null,
         ]);
+
+        $this->rejectSupersededSelfRequests($slotAssignment);
+    }
+
+    private function rejectSupersededSelfRequests(SlotAssignment $slotAssignment): void
+    {
+        SlotAssignment::query()
+            ->whereKeyNot($slotAssignment->id)
+            ->where('actor_user_id', $slotAssignment->target_user_id)
+            ->where('target_user_id', $slotAssignment->target_user_id)
+            ->where('type', SlotAssignment::TYPE_REQUEST)
+            ->where('status', SlotAssignment::STATUS_PENDING)
+            ->whereHas('slot', fn ($query) => $query->where('song_id', $slotAssignment->slot->song_id))
+            ->update([
+                'status' => SlotAssignment::STATUS_REJECTED,
+                'responded_at' => now(),
+            ]);
     }
 }

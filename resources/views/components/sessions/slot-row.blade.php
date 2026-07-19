@@ -25,10 +25,10 @@
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     data-slot-id="{{ $slotModel->id }}"
     draggable="{{ $canReorderSlots ? 'true' : 'false' }}"
-    @dragstart="onSlotDragStart($event, {{ $slotModel->id }})"
-    @dragover="onSlotDragOver($event, {{ $slotModel->id }})"
-    @drop="onSlotDrop($event)"
-    @dragend="onSlotDragEnd()"
+    @dragstart.stop="onSlotDragStart($event, {{ $slotModel->id }})"
+    @dragover.stop="onSlotDragOver($event, {{ $slotModel->id }})"
+    @drop.stop="onSlotDrop($event)"
+    @dragend.stop="onSlotDragEnd()"
     x-bind:class="{
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
@@ -89,7 +89,7 @@
             return selectedUserId !== initialUserId && selectedUserId !== '' && selectedUserId !== currentUserId;
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+            window.dispatchEvent(new CustomEvent('refresh-session-activity'));
         },
         showToast(type, message) {
             const anchorRect = (this.$refs.toastAnchor || this.$refs.actionMenuButton || this.$el).getBoundingClientRect();
@@ -769,6 +769,7 @@
                                 }
 
                                 this.hidden = true;
+                                this.refreshSessionSets();
                             } catch (e) {
                                 this.error = e.message || 'Could not update assignment. Try again.';
                             } finally {
