@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Slot;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,7 +14,7 @@ class UserDirectoryController extends Controller
         $query = trim($request->string('q')->toString());
 
         $users = User::query()
-            ->select(['id', 'name', 'bio'])
+            ->select(['id', 'name', 'bio', 'is_admin', 'slot_coverage'])
             ->where('hide_from_directory', false)
             ->when($query !== '', function ($builder) use ($query): void {
                 $builder->where(function ($nested) use ($query): void {
@@ -28,6 +29,7 @@ class UserDirectoryController extends Controller
         return view('directory.index', [
             'users' => $users,
             'query' => $query,
+            'slotOptions' => Slot::options(),
         ]);
     }
 }

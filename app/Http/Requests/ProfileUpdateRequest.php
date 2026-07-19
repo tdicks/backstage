@@ -29,6 +29,8 @@ class ProfileUpdateRequest extends FormRequest
             'bio' => ['nullable', 'string'],
             'hide_from_directory' => ['nullable', 'boolean'],
             'hide_from_slot_proposals' => ['nullable', 'boolean'],
+            'slot_coverage' => ['nullable', 'array'],
+            'slot_coverage.*' => ['string'],
         ];
     }
 }

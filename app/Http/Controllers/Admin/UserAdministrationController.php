@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Slot;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\JsonResponse;
@@ -45,6 +46,7 @@ class UserAdministrationController extends Controller
             'search' => $search,
             'sort' => $sort,
             'direction' => $direction,
+            'slotOptions' => Slot::options(),
         ]);
     }
 
@@ -58,6 +60,8 @@ class UserAdministrationController extends Controller
             'bio' => ['nullable', 'string', 'max:2000'],
             'hide_from_directory' => ['nullable', 'boolean'],
             'hide_from_slot_proposals' => ['nullable', 'boolean'],
+            'slot_coverage' => ['nullable', 'array'],
+            'slot_coverage.*' => ['string'],
             'is_admin' => ['nullable', 'boolean'],
         ]);
 
@@ -73,6 +77,7 @@ class UserAdministrationController extends Controller
             'bio' => $validated['bio'] ?? null,
             'hide_from_directory' => (bool) ($validated['hide_from_directory'] ?? false),
             'hide_from_slot_proposals' => (bool) ($validated['hide_from_slot_proposals'] ?? false),
+            'slot_coverage' => $validated['slot_coverage'] ?? [],
         ];
 
         if ($request->user()->id !== $user->id) {

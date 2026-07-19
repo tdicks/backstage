@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Slot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'slotOptions' => Slot::options(),
         ]);
     }
 
@@ -32,6 +34,7 @@ class ProfileController extends Controller
             ...$validated,
             'hide_from_directory' => $request->boolean('hide_from_directory'),
             'hide_from_slot_proposals' => $request->boolean('hide_from_slot_proposals'),
+            'slot_coverage' => $request->input('slot_coverage', []),
         ]);
 
         if ($request->user()->isDirty('email')) {

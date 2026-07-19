@@ -68,6 +68,23 @@
             <x-input-error class="mt-2" :messages="$errors->get('hide_from_slot_proposals')" />
         </div>
 
+        @if ($slotOptions)
+            <div>
+                <x-input-label :value="__('Slot Coverage')" />
+                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover.</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    @foreach ($slotOptions as $key => $name)
+                        @php $checked = in_array($key, old('slot_coverage', $user->slot_coverage ?? []), true); @endphp
+                        <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition {{ $checked ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300' }}">
+                            <input type="checkbox" name="slot_coverage[]" value="{{ $key }}" @checked($checked) class="sr-only">
+                            {{ $name }}
+                        </label>
+                    @endforeach
+                </div>
+                <x-input-error class="mt-2" :messages="$errors->get('slot_coverage')" />
+            </div>
+        @endif
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 
