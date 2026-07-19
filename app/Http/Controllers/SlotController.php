@@ -24,8 +24,7 @@ class SlotController extends Controller
         ]);
 
         if (! empty($validated['user_id'])) {
-            $song->load('set');
-            SlotCompatibility::ensureUserCanPerformSlotInSet((int) $validated['user_id'], $song->set, $validated['name']);
+            SlotCompatibility::ensureUserCanPerformSlotInSong((int) $validated['user_id'], $song, $validated['name']);
         }
 
         $nextPosition = ((int) $song->slots()->max('position')) + 1;
@@ -162,7 +161,7 @@ class SlotController extends Controller
         } catch (ValidationException $exception) {
             if ($request->expectsJson()) {
                 $errors = $exception->errors();
-                $message = collect($errors)->flatten()->first() ?? 'This slot conflicts with another slot on this set.';
+                $message = collect($errors)->flatten()->first() ?? 'This slot conflicts with another slot on this song.';
 
                 return response()->json([
                     'message' => $message,

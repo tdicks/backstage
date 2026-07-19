@@ -29,9 +29,9 @@ function createSlotCompatibilitySet(User $owner): Set
     ]);
 }
 
-function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = null, int $position = 1): Slot
+function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = null, int $position = 1, ?Song $song = null): Slot
 {
-    $song = Song::create([
+    $song ??= Song::create([
         'set_id' => $set->id,
         'artist' => 'Test Artist '.$position,
         'title' => 'Test Song '.$position,
@@ -47,12 +47,20 @@ function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = n
     ]);
 }
 
-test('player cannot take bass and guitar slots in the same set', function () {
+test('player cannot take bass and guitar slots on the same song', function () {
     $owner = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
 
-    createSlotCompatibilitySlot($set, 'bass', $owner, 1);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 2);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Test Artist',
+        'title' => 'Test Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
 
     $this->actingAs($owner)
         ->post(route('slots.take', $guitarSlot))
@@ -67,8 +75,16 @@ test('ajax take slot conflict returns json for toast notification', function () 
     $owner = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
 
-    createSlotCompatibilitySlot($set, 'bass', $owner, 1);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 2);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Test Artist',
+        'title' => 'Test Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
 
     $response = $this->actingAs($owner)
         ->withHeaders([
@@ -97,6 +113,20 @@ test('player can take the same instrument on multiple songs in the same set', fu
     expect($secondDrumsSlot->refresh()->user_id)->toBe($owner->id);
 });
 
+test('player can take conflicting slot types on different songs in the same set', function () {
+    $owner = User::factory()->create();
+    $set = createSlotCompatibilitySet($owner);
+
+    createSlotCompatibilitySlot($set, 'bass', $owner, 1);
+    $guitarSlotOnDifferentSong = createSlotCompatibilitySlot($set, 'lead_guitar', null, 2);
+
+    $this->actingAs($owner)
+        ->post(route('slots.take', $guitarSlotOnDifferentSong))
+        ->assertRedirect();
+
+    expect($guitarSlotOnDifferentSong->refresh()->user_id)->toBe($owner->id);
+});
+
 test('vocals do not conflict with instrument slots', function () {
     $owner = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
@@ -111,13 +141,21 @@ test('vocals do not conflict with instrument slots', function () {
     expect($vocalsSlot->refresh()->user_id)->toBe($owner->id);
 });
 
-test('set owner cannot manually assign a player to incompatible slot types', function () {
+test('set owner cannot manually assign a player to incompatible slot types on the same song', function () {
     $owner = User::factory()->create();
     $player = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
 
-    createSlotCompatibilitySlot($set, 'bass', $player, 1);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 2);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Test Artist',
+        'title' => 'Test Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    createSlotCompatibilitySlot($set, 'bass', $player, 1, $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
 
     $this->actingAs($owner)
         ->patch(route('slots.update', $guitarSlot), [
@@ -131,13 +169,41 @@ test('set owner cannot manually assign a player to incompatible slot types', fun
     expect($guitarSlot->refresh()->user_id)->toBeNull();
 });
 
-test('set owner cannot approve a request that conflicts with an existing set slot', function () {
+test('set owner can assign a player to conflicting slot types on different songs', function () {
     $owner = User::factory()->create();
     $player = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
 
-    createSlotCompatibilitySlot($set, 'keys', $player, 1);
-    $drumsSlot = createSlotCompatibilitySlot($set, 'drums', null, 2);
+    createSlotCompatibilitySlot($set, 'bass', $player, 1);
+    $guitarSlotOnDifferentSong = createSlotCompatibilitySlot($set, 'lead_guitar', null, 2);
+
+    $this->actingAs($owner)
+        ->patch(route('slots.update', $guitarSlotOnDifferentSong), [
+            'name' => 'lead_guitar',
+            'user_id' => $player->id,
+            'manual_performer_name' => null,
+            'position' => $guitarSlotOnDifferentSong->position,
+        ])
+        ->assertRedirect();
+
+    expect($guitarSlotOnDifferentSong->refresh()->user_id)->toBe($player->id);
+});
+
+test('set owner cannot approve a request that conflicts with an existing slot on the same song', function () {
+    $owner = User::factory()->create();
+    $player = User::factory()->create();
+    $set = createSlotCompatibilitySet($owner);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Test Artist',
+        'title' => 'Test Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    createSlotCompatibilitySlot($set, 'keys', $player, 1, $song);
+    $drumsSlot = createSlotCompatibilitySlot($set, 'drums', null, 1, $song);
 
     $assignment = SlotAssignment::create([
         'slot_id' => $drumsSlot->id,
@@ -155,4 +221,29 @@ test('set owner cannot approve a request that conflicts with an existing set slo
 
     expect($assignment->refresh()->status)->toBe(SlotAssignment::STATUS_PENDING);
     expect($drumsSlot->refresh()->user_id)->toBeNull();
+});
+
+test('set owner can approve a request for conflicting slot types on different songs', function () {
+    $owner = User::factory()->create();
+    $player = User::factory()->create();
+    $set = createSlotCompatibilitySet($owner);
+
+    createSlotCompatibilitySlot($set, 'keys', $player, 1);
+    $drumsSlotOnDifferentSong = createSlotCompatibilitySlot($set, 'drums', null, 2);
+
+    $assignment = SlotAssignment::create([
+        'slot_id' => $drumsSlotOnDifferentSong->id,
+        'actor_user_id' => $player->id,
+        'target_user_id' => $player->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->patch(route('slot-assignments.respond', $assignment), [
+            'status' => SlotAssignment::STATUS_ACCEPTED,
+        ])
+        ->assertRedirect();
+
+    expect($drumsSlotOnDifferentSong->refresh()->user_id)->toBe($player->id);
 });
