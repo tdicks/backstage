@@ -53,6 +53,34 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         ->assertSee('Bass');
 });
 
+test('session routes use descriptive slugs but resolve by stable id', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Original Friendly Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $oldSessionUrl = route('sessions.show', $session);
+    $oldSetsUrl = route('sessions.sets', $session);
+
+    expect($oldSessionUrl)->toContain('/sessions/'.$session->id.'-original-friendly-session');
+    expect($oldSetsUrl)->toContain('/sessions/'.$session->id.'-original-friendly-session/sets');
+
+    $session->update(['name' => 'Renamed Friendly Session']);
+
+    $this->actingAs($owner)
+        ->get($oldSessionUrl)
+        ->assertOk()
+        ->assertSee('Renamed Friendly Session');
+
+    $this->actingAs($owner)
+        ->get($oldSetsUrl, ['X-Requested-With' => 'XMLHttpRequest'])
+        ->assertOk();
+});
+
 test('session page shows set loading errors before loading placeholders', function () {
     $view = file_get_contents(resource_path('views/sessions/show.blade.php'));
 

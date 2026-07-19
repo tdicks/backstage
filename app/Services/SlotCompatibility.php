@@ -26,18 +26,7 @@ class SlotCompatibility
 
     public static function ensureUserCanPerformSlotInSong(int $userId, Song $song, string $slotName, ?int $exceptSlotId = null, string $field = 'user_id'): void
     {
-        $conflictingSlotNames = self::conflictingSlotNames($slotName);
-
-        if ($conflictingSlotNames === []) {
-            return;
-        }
-
-        $conflictingSlot = Slot::query()
-            ->where('user_id', $userId)
-            ->whereIn('name', $conflictingSlotNames)
-            ->when($exceptSlotId, fn ($query) => $query->whereKeyNot($exceptSlotId))
-            ->where('song_id', $song->id)
-            ->first();
+        $conflictingSlot = self::conflictingSlotInSong($userId, $song, $slotName, $exceptSlotId);
 
         if (! $conflictingSlot) {
             return;
@@ -51,6 +40,34 @@ class SlotCompatibility
         throw ValidationException::withMessages([
             $field => "$playerName is already assigned to $conflictingLabel on this song, so they cannot also take $targetLabel. They don't have enough limbs for that.",
         ]);
+    }
+
+    public static function conflictingSlotForSlot(int $userId, Slot $slot, ?string $slotName = null): ?Slot
+    {
+        $slot->loadMissing('song');
+
+        return self::conflictingSlotInSong(
+            $userId,
+            $slot->song,
+            $slotName ?? $slot->name,
+            $slot->id
+        );
+    }
+
+    public static function conflictingSlotInSong(int $userId, Song $song, string $slotName, ?int $exceptSlotId = null): ?Slot
+    {
+        $conflictingSlotNames = self::conflictingSlotNames($slotName);
+
+        if ($conflictingSlotNames === []) {
+            return null;
+        }
+
+        return Slot::query()
+            ->where('user_id', $userId)
+            ->whereIn('name', $conflictingSlotNames)
+            ->when($exceptSlotId, fn ($query) => $query->whereKeyNot($exceptSlotId))
+            ->where('song_id', $song->id)
+            ->first();
     }
 
     private static function conflictingSlotNames(string $slotName): array

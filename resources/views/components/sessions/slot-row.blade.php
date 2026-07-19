@@ -131,21 +131,25 @@
         closeSessionActionMenus() {
             this.openActionMenu = false;
         },
+        positionActionMenu() {
+            const buttonRect = this.$refs.actionMenuButton.getBoundingClientRect();
+            const viewportPadding = 8;
+            const menuWidth = Math.min(288, window.innerWidth - (viewportPadding * 2));
+            const left = window.scrollX + Math.max(
+                viewportPadding,
+                Math.min(window.innerWidth - menuWidth - viewportPadding, buttonRect.right - menuWidth)
+            );
+            const top = window.scrollY + buttonRect.bottom + viewportPadding;
+
+            this.actionMenuStyle = `left: ${left}px; top: ${top}px; width: ${menuWidth}px;`;
+        },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
             if (shouldOpen) {
-                const buttonRect = this.$refs.actionMenuButton.getBoundingClientRect();
-                const menuWidth = 288;
-                const viewportPadding = 8;
-                const left = Math.max(
-                    viewportPadding,
-                    Math.min(window.innerWidth - menuWidth - viewportPadding, buttonRect.right - menuWidth)
-                );
-                const top = buttonRect.bottom + viewportPadding;
-
-                this.actionMenuStyle = `left: ${left}px; top: ${top}px; width: ${menuWidth}px;`;
+                this.positionActionMenu();
             }
+
             this.openActionMenu = shouldOpen;
         },
         openProposeModal() {
@@ -306,6 +310,53 @@
                 this.busyAction = false;
             }
         },
+        async clearSlot() {
+            if (this.setLocked) {
+                return;
+            }
+
+            this.busyAction = true;
+            this.actionError = '';
+            this.actionFeedback = '';
+
+            try {
+                const response = await fetch('{{ route('slots.update', $slotModel) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    },
+                    body: JSON.stringify({
+                        _method: 'PATCH',
+                        name: @js($slotModel->name),
+                        user_id: null,
+                        manual_performer_name: '',
+                        position: @js($slotModel->position),
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                this.refreshSessionSets();
+            } catch (e) {
+                this.actionError = 'Could not clear slot. Try again.';
+            } finally {
+                this.busyAction = false;
+            }
+        },
+        async copySlotDirectLink() {
+            await window.copyShareLink(@js(route('sessions.show', $set->session).'#slot-'.$slotModel->id));
+            this.actionFeedback = 'Direct link copied.';
+            setTimeout(() => {
+                if (this.actionFeedback === 'Direct link copied.') {
+                    this.actionFeedback = '';
+                }
+            }, 1800);
+        },
         async submitEditSlot(event) {
             if (this.setLocked) {
                 return;
@@ -410,13 +461,14 @@
                         <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only">Slot actions</span>
                     </button>
+                    <template x-teleport="body">
                     <div
                         x-show="openActionMenu"
                         x-cloak
                         x-transition.origin.top.right
                         @click.outside="openActionMenu = false"
                         x-bind:style="actionMenuStyle"
-                        class="fixed z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                        class="absolute z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                     >
                         @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())
                             <button
@@ -471,6 +523,22 @@
                         @if ($canManageSet)
                             <button
                                 type="button"
+                                @click="openActionMenu = false; clearSlot()"
+                                x-show="!slotIsOpen && !assignedToCurrentUser"
+                                x-bind:disabled="busyAction"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $slotManageMenuItemClass }}"
+                            >
+                                <x-heroicon-m-x-circle class="h-4 w-4" aria-hidden="true" />
+                                <span>
+                                    @if ($isAdminManagingOtherSet)
+                                        <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                                        <span class="sr-only"> Admin action</span>
+                                    @endif
+                                    Clear Slot
+                                </span>
+                            </button>
+                            <button
+                                type="button"
                                 @click="openActionMenu = false; openEditSlotModal()"
                                 class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $slotManageMenuItemClass }}"
                             >
@@ -484,7 +552,16 @@
                                 </span>
                             </button>
                         @endif
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; copySlotDirectLink()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                        >
+                            <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                            <span>Copy Direct Link</span>
+                        </button>
                     </div>
+                    </template>
                 </div>
             @endif
 
@@ -631,12 +708,12 @@
             </div>
         @endif
 
-        <div class="mt-2 space-y-2 text-left">
+        <div class="mt-2 flex flex-wrap justify-start gap-1.5 text-left">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>
             <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
             @foreach ($slotModel->assignments->whereIn('status', [\App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT, \App\Models\SlotAssignment::STATUS_PENDING]) as $assignment)
                 <div
-                    class="rounded border border-amber-200 bg-amber-50 p-2 text-left text-xs text-amber-900"
+                    class="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50/80 px-2 py-1 text-left text-xs text-amber-900 shadow-sm"
                     x-data="{
                         hidden: false,
                         busy: false,
@@ -702,75 +779,68 @@
                     x-show="!hidden"
                     x-transition
                 >
-                    <p>
-                        @php
-                            $requestorName = $assignment->actor->name;
-                            $targetName = $assignment->target->name;
-                            $awaitingTargetConsent = $assignment->status === \App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT;
-                            if (auth()->user() == $assignment->actor)
-                            {
-                                $requestorName = 'you';
-                            }
-                            if (auth()->user() == $assignment->target)
-                            {
-                                $targetName = 'you';
-                            }
-                        @endphp
+                    @php
+                        $requestorName = $assignment->actor->name;
+                        $targetName = $assignment->target->name;
+                        $awaitingTargetConsent = $assignment->status === \App\Models\SlotAssignment::STATUS_AWAITING_TARGET_CONSENT;
+                        if (auth()->user() == $assignment->actor)
+                        {
+                            $requestorName = 'you';
+                        }
+                        if (auth()->user() == $assignment->target)
+                        {
+                            $targetName = 'you';
+                        }
+                        if ($assignment->actor == auth()->user())
+                        {
+                            $canRespond = false;
+                            $canCancel = $assignment->type === \App\Models\SlotAssignment::TYPE_REQUEST || $awaitingTargetConsent;
+                        }
+                        elseif ($awaitingTargetConsent)
+                        {
+                            $canRespond = auth()->user()->is_admin || $assignment->target == auth()->user();
+                            $canCancel = false;
+                        }
+                        else
+                        {
+                            $canRespond = auth()->user()->is_admin || $set->owner == auth()->user();
+                            $canCancel = false;
+                        }
+                    @endphp
+                    <span class="inline-flex items-center gap-1 font-medium">
                         @if ($assignment->actor == $assignment->target)
-                            {{ ucfirst($requestorName) }} requested this slot
+                            <x-heroicon-m-hand-raised class="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />
+                            <span>{{ ucfirst($requestorName) }} requested this</span>
                         @else
-                            {{ ucfirst($requestorName) }} recommended {{ $targetName }} for this slot
+                            <x-heroicon-m-user-plus class="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />
+                            <span>{{ ucfirst($requestorName) }} recommended {{ $targetName }}</span>
                         @endif
-                    </p>
-                    @if ($awaitingTargetConsent)
-                        <p class="mt-1 text-amber-800">Awaiting {{ $targetName }}'s consent.</p>
-                    @elseif ($assignment->type === \App\Models\SlotAssignment::TYPE_PROPOSAL)
-                        <p class="mt-1 text-amber-800">{{ ucfirst($targetName) }} accepted the recommendation. Awaiting set organiser approval.</p>
-                    @endif
+                    </span>
                     @if ($assignment->message)
-                        <p class="mt-1">"{{ $assignment->message }}"</p>
+                        <span class="max-w-48 truncate text-amber-800" title="{{ $assignment->message }}">"{{ $assignment->message }}"</span>
                     @endif
-                    <p x-show="error" x-text="error" class="mt-2 text-xs text-red-700"></p>
-                    <div class="mt-2 flex gap-2">
-                        @php
-                            if ($assignment->actor == auth()->user())
-                            {
-                                $canRespond = false;
-                                $canCancel = $assignment->type === \App\Models\SlotAssignment::TYPE_REQUEST || $awaitingTargetConsent;
-                            }
-                            elseif ($awaitingTargetConsent)
-                            {
-                                $canRespond = auth()->user()->is_admin || $assignment->target == auth()->user();
-                                $canCancel = false;
-                            }
-                            else
-                            {
-                                $canRespond = auth()->user()->is_admin || $set->owner == auth()->user();
-                                $canCancel = false;
-                            }
-                        @endphp
+                    <p x-show="error" x-text="error" class="basis-full text-xs text-red-700"></p>
+                    <div class="inline-flex gap-1">
                         @if ($canRespond && ! $setLocked)
                             <button
                                 type="button"
                                 @click="respond('accepted', @js($awaitingTargetConsent ? null : $assignment->target->name), @js(! $awaitingTargetConsent && $assignment->target_user_id === auth()->id()))"
                                 x-bind:disabled="busy"
-                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
                                 aria-label="Accept assignment"
                                 title="Accept this assignment"
                             >
                                 <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
-                                <span>Accept</span>
                             </button>
                             <button
                                 type="button"
                                 @click="respond('rejected')"
                                 x-bind:disabled="busy"
-                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
                                 aria-label="Reject assignment"
                                 title="Reject this assignment"
                             >
                                 <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                <span>Reject</span>
                             </button>
                         @endif
                         @if ($canCancel && ! $setLocked)
@@ -778,12 +848,11 @@
                                 type="button"
                                 @click="respond('rejected')"
                                 x-bind:disabled="busy"
-                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
                                 aria-label="Cancel assignment"
                                 title="Cancel this assignment"
                             >
                                 <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                <span>Cancel</span>
                             </button>
                         @endif
                     </div>

@@ -88,6 +88,8 @@
             }"
             x-init="startPolling()"
             x-on:my-sets-slot-conflict.window="showToast('error', $event.detail.message)"
+            x-on:target-consent-processed.window="approvalCount = Math.max(0, approvalCount - 1); refreshContent()"
+            x-on:pending-approval-processed.window="approvalCount = Math.max(0, approvalCount - 1); refreshContent()"
             x-on:visibilitychange.window="refreshApprovalCount()"
         >
             <template x-teleport="body">
@@ -181,6 +183,8 @@
                                 $set = $consentApproval->slot->song->set;
                                 $session = $set->session;
                                 $slotLabel = $slotOptions[$consentApproval->slot->name] ?? str($consentApproval->slot->name)->replace('_', ' ')->title();
+                                $conflictingSlot = \App\Services\SlotCompatibility::conflictingSlotForSlot($consentApproval->target_user_id, $consentApproval->slot);
+                                $conflictingSlotLabel = $conflictingSlot ? ($slotOptions[$conflictingSlot->name] ?? str($conflictingSlot->name)->replace('_', ' ')->title()) : null;
                             @endphp
                             <article
                                 class="rounded-lg border border-amber-200 bg-amber-50/70 p-4"
@@ -252,6 +256,11 @@
                                         @if ($consentApproval->message)
                                             <p class="mt-2 text-sm text-slate-600">{{ $consentApproval->message }}</p>
                                         @endif
+                                        @if ($conflictingSlot)
+                                            <p class="mt-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-sm font-medium text-amber-900">
+                                                Accepting this will move you from {{ $conflictingSlotLabel }} to {{ $slotLabel }} on this song.
+                                            </p>
+                                        @endif
                                         <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
                                     </div>
                                     <div class="flex gap-2">
@@ -302,6 +311,8 @@
                                         @php
                                             $slotLabel = $slotOptions[$approval->slot->name] ?? str($approval->slot->name)->replace('_', ' ')->title();
                                             $isRecommendation = $approval->type === \App\Models\SlotAssignment::TYPE_PROPOSAL;
+                                            $conflictingSlot = \App\Services\SlotCompatibility::conflictingSlotForSlot($approval->target_user_id, $approval->slot);
+                                            $conflictingSlotLabel = $conflictingSlot ? ($slotOptions[$conflictingSlot->name] ?? str($conflictingSlot->name)->replace('_', ' ')->title()) : null;
                                         @endphp
                                         <div
                                             class="{{ $isRecommendation ? 'my-3 rounded-lg border border-amber-200 bg-amber-50/70 p-4' : 'py-3' }}"
@@ -377,6 +388,11 @@
                                                     @endif
                                                     @if ($approval->message)
                                                         <p class="mt-1 text-sm text-slate-600">{{ $approval->message }}</p>
+                                                    @endif
+                                                    @if ($conflictingSlot)
+                                                        <p class="mt-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-sm font-medium text-amber-900">
+                                                            Approving this will move {{ $approval->target->name }} from {{ $conflictingSlotLabel }} to {{ $slotLabel }} on this song.
+                                                        </p>
                                                     @endif
                                                     <p x-show="error" x-text="error" class="mt-1 text-sm text-rose-700"></p>
                                                 </div>

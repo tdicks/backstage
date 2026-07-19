@@ -40,6 +40,8 @@ test('set share page is available to guests with social metadata', function () {
         'position' => 2,
     ]);
 
+    expect(route('share.set', $set))->toContain('/share/set/'.$set->id.'-heavy-openers');
+
     $this->get(route('share.set', $set))
         ->assertOk()
         ->assertSee('User A&#039;s set - Heavy Openers', false)
@@ -77,10 +79,44 @@ test('session share page is available to guests with feature set metadata', func
         'feature_set' => false,
     ]);
 
+    expect(route('share.session', $session))->toContain('/share/session/'.$session->id.'-feature-jam');
+
     $this->get(route('share.session', $session))
         ->assertOk()
         ->assertSee('Feature Jam')
         ->assertSee('Feature Owner - Headline Set')
         ->assertDontSee('Regular Set')
         ->assertSee('property="og:url" content="'.route('share.session', $session).'"', false);
+});
+
+test('share links resolve by stable id when names change', function () {
+    $owner = User::factory()->create(['name' => 'Stable Owner']);
+    $session = JamSession::create([
+        'name' => 'Original Session Name',
+        'date' => now()->addDays(12),
+        'description' => null,
+    ]);
+    $set = Set::create([
+        'name' => 'Original Set Name',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $oldSessionUrl = route('share.session', $session);
+    $oldSetUrl = route('share.set', $set);
+
+    $session->update(['name' => 'Renamed Session']);
+    $set->update(['name' => 'Renamed Set']);
+
+    $this->get($oldSessionUrl)
+        ->assertOk()
+        ->assertSee('Renamed Session');
+
+    $this->get($oldSetUrl)
+        ->assertOk()
+        ->assertSee('Stable Owner&#039;s set - Renamed Set', false);
 });

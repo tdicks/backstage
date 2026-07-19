@@ -99,6 +99,7 @@
         addSongBusy: false,
         addSongError: '',
         shareCopied: false,
+        directLinkCopied: false,
         openActionMenu: false,
         dragSongId: null,
         draggingSongId: null,
@@ -132,6 +133,11 @@
             await window.copyShareLink(@js(route('share.set', $set)));
             this.shareCopied = true;
             setTimeout(() => this.shareCopied = false, 1800);
+        },
+        async copySetDirectLink() {
+            await window.copyShareLink(@js(route('sessions.show', $set->session).'#set-'.$set->id));
+            this.directLinkCopied = true;
+            setTimeout(() => this.directLinkCopied = false, 1800);
         },
         ensureDropPlaceholder(container, draggedEl) {
             if (!this.dropPlaceholderEl) {
@@ -835,16 +841,24 @@
                         <x-heroicon-m-share class="h-4 w-4 text-slate-500" aria-hidden="true" />
                         <span>Copy Share link</span>
                     </button>
+                    <button
+                        type="button"
+                        @click="openActionMenu = false; copySetDirectLink()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                    >
+                        <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Copy Direct Link</span>
+                    </button>
                 </div>
                 <div
-                    x-show="shareCopied"
+                    x-show="shareCopied || directLinkCopied"
                     x-transition.opacity.duration.150ms
                     x-cloak
                     role="status"
                     aria-live="polite"
                     class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
                 >
-                    Share link copied
+                    <span x-text="directLinkCopied ? 'Direct link copied' : 'Share link copied'">Share link copied</span>
                 </div>
             </div>
         </div>

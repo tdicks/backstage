@@ -185,6 +185,62 @@ test('my sets count endpoint returns pending approval count', function () {
         ]);
 });
 
+test('my sets approval card warns when approval will move a player from a conflicting slot', function () {
+    $owner = User::factory()->create();
+    $player = User::factory()->create(['name' => 'Conflicted Player']);
+
+    $session = JamSession::create([
+        'name' => 'Conflict Warning Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Conflict Warning Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Conflict Band',
+        'title' => 'Conflict Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'keys',
+        'position' => 1,
+        'user_id' => $player->id,
+    ]);
+
+    $drumsSlot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 2,
+        'user_id' => null,
+    ]);
+
+    SlotAssignment::create([
+        'slot_id' => $drumsSlot->id,
+        'actor_user_id' => $player->id,
+        'target_user_id' => $player->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertSee('Approving this will move Conflicted Player from Keys to Drums on this song.');
+});
+
 test('set owner can accept proposal assignment for their set', function () {
     $owner = User::factory()->create();
     $actor = User::factory()->create();

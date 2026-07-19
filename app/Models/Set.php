@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Set extends Model
 {
@@ -46,6 +47,27 @@ class Set extends Model
         return $this->hasMany(Song::class)
             ->orderBy('position')
             ->orderBy('id');
+    }
+
+    public function getRouteKey(): string
+    {
+        return $this->routeSlug();
+    }
+
+    public function routeSlug(): string
+    {
+        return $this->id.'-'.Str::slug($this->name);
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        $id = Str::before((string) $value, '-');
+
+        if (! ctype_digit($id)) {
+            return null;
+        }
+
+        return $this->whereKey((int) $id)->first();
     }
 
     public function songRequests(): HasMany

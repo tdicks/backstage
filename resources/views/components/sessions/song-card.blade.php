@@ -33,6 +33,7 @@
         openEditSong: false,
         openAddSlot: false,
         openActionMenu: false,
+        directLinkCopied: false,
         songCollapsed: false,
         songKey: 'backstage:u{{ auth()->id() }}:song:{{ $song->id }}',
         busyAction: false,
@@ -93,6 +94,11 @@
         openAddSlotModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.openAddSlot = true;
+        },
+        async copySongDirectLink() {
+            await window.copyShareLink(@js(route('sessions.show', $set->session).'#song-'.$song->id));
+            this.directLinkCopied = true;
+            setTimeout(() => this.directLinkCopied = false, 1800);
         },
         clearSlotDropPlaceholder() {
             this.$refs.slotDropPlaceholder?.classList.add('hidden');
@@ -345,6 +351,24 @@
                                 Edit Song
                             </span>
                         </button>
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; copySongDirectLink()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                        >
+                            <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                            <span>Copy Direct Link</span>
+                        </button>
+                    </div>
+                    <div
+                        x-show="directLinkCopied"
+                        x-transition.opacity.duration.150ms
+                        x-cloak
+                        role="status"
+                        aria-live="polite"
+                        class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
+                    >
+                        Direct link copied
                     </div>
                 </div>
             @endif

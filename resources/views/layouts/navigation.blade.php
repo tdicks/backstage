@@ -181,7 +181,34 @@
             </div>
 
             <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <div class="-me-2 flex items-center gap-2 sm:hidden">
+                @if (Auth::user()->is_admin)
+                    <span
+                        class="inline-flex items-center justify-center text-sky-400"
+                        x-show="! open"
+                        x-cloak
+                        title="Admin"
+                        aria-label="Admin"
+                    >
+                        <x-admin-shield-icon class="h-4 w-4 text-sky-400" aria-hidden="true" />
+                    </span>
+                @endif
+                <a
+                    href="{{ route('my-sets.index') }}"
+                    class="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold leading-none text-amber-800 shadow-sm transition hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950"
+                    x-show="! open && mySetsApprovalCount > 0"
+                    x-text="mySetsApprovalCount"
+                    x-cloak
+                    aria-label="View pending My Sets approvals"
+                >{{ $mySetsApprovalCount }}</a>
+                <a
+                    href="{{ route('help') }}"
+                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
+                    title="Help"
+                    aria-label="Help"
+                >
+                    <x-heroicon-m-question-mark-circle class="h-5 w-5" aria-hidden="true" />
+                </a>
                 <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <x-heroicon-m-bars-3 :class="{'hidden': open, 'inline-flex': ! open }" class="h-6 w-6 inline-flex" aria-hidden="true" />
                     <x-heroicon-m-x-mark :class="{'hidden': ! open, 'inline-flex': open }" class="h-6 w-6 hidden" aria-hidden="true" />

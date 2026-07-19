@@ -70,6 +70,21 @@ test('summary endpoint includes checked-in status for assigned players', functio
     $response->assertJsonPath('songs.0.slot_map.drums.state', 'open');
 });
 
+test('set routes use descriptive slugs but resolve by stable id', function () {
+    $owner = User::factory()->create();
+    [, $set] = createSessionWithSet($owner);
+
+    $oldSummaryUrl = route('sets.summary', $set);
+
+    expect($oldSummaryUrl)->toContain('/sets/'.$set->id.'-set-a/summary');
+
+    $set->update(['name' => 'Renamed Set A']);
+
+    $this->actingAs($owner)
+        ->getJson($oldSummaryUrl)
+        ->assertOk();
+});
+
 test('summary endpoint requires authentication', function () {
     $owner = User::factory()->create();
     [, $set] = createSessionWithSet($owner);

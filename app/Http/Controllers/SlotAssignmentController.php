@@ -8,6 +8,7 @@ use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class SlotAssignmentController extends Controller
@@ -106,23 +107,18 @@ class SlotAssignmentController extends Controller
             $ownerRecommended = $slotAssignment->actor_user_id === $slotAssignment->slot->song->set->owner_id;
             $targetAccepted = $validated['status'] === SlotAssignment::STATUS_ACCEPTED;
 
-            if ($targetAccepted && $ownerRecommended) {
-                SlotCompatibility::ensureUserCanPerformSlot($slotAssignment->target_user_id, $slotAssignment->slot);
-            }
-
-            $slotAssignment->update([
-                'status' => $targetAccepted
-                    ? ($ownerRecommended ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
-                    : SlotAssignment::STATUS_REJECTED,
-                'responded_at' => now(),
-            ]);
-
-            if ($targetAccepted && $ownerRecommended) {
-                $slotAssignment->slot->update([
-                    'user_id' => $slotAssignment->target_user_id,
-                    'manual_performer_name' => null,
+            DB::transaction(function () use ($slotAssignment, $targetAccepted, $ownerRecommended): void {
+                $slotAssignment->update([
+                    'status' => $targetAccepted
+                        ? ($ownerRecommended ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
+                        : SlotAssignment::STATUS_REJECTED,
+                    'responded_at' => now(),
                 ]);
-            }
+
+                if ($targetAccepted && $ownerRecommended) {
+                    $this->assignSlotAndReleaseConflicts($slotAssignment);
+                }
+            });
 
             if ($request->expectsJson()) {
                 $slotAssignment->slot->load('user');
@@ -167,21 +163,16 @@ class SlotAssignmentController extends Controller
             abort(403);
         }
 
-        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
-            SlotCompatibility::ensureUserCanPerformSlot($slotAssignment->target_user_id, $slotAssignment->slot);
-        }
-
-        $slotAssignment->update([
-            'status' => $validated['status'],
-            'responded_at' => now(),
-        ]);
-
-        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
-            $slotAssignment->slot->update([
-                'user_id' => $slotAssignment->target_user_id,
-                'manual_performer_name' => null,
+        DB::transaction(function () use ($slotAssignment, $validated): void {
+            $slotAssignment->update([
+                'status' => $validated['status'],
+                'responded_at' => now(),
             ]);
-        }
+
+            if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED) {
+                $this->assignSlotAndReleaseConflicts($slotAssignment);
+            }
+        });
 
         if ($request->expectsJson()) {
             $slotAssignment->slot->load('user');
@@ -200,5 +191,22 @@ class SlotAssignmentController extends Controller
         }
 
         return back()->with('status', 'Assignment response recorded.');
+    }
+
+    private function assignSlotAndReleaseConflicts(SlotAssignment $slotAssignment): void
+    {
+        $conflictingSlot = SlotCompatibility::conflictingSlotForSlot($slotAssignment->target_user_id, $slotAssignment->slot);
+
+        if ($conflictingSlot) {
+            $conflictingSlot->update([
+                'user_id' => null,
+                'manual_performer_name' => null,
+            ]);
+        }
+
+        $slotAssignment->slot->update([
+            'user_id' => $slotAssignment->target_user_id,
+            'manual_performer_name' => null,
+        ]);
     }
 }
