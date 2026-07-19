@@ -18,7 +18,6 @@
     $songActionMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
-    $adminMenuLabelSuffix = $isAdmin ? ' 🛡️' : '';
 @endphp
 
 <article
@@ -265,7 +264,13 @@
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                            <span>Edit Song{{ $adminMenuLabelSuffix }}</span>
+                            <span>
+                                Edit Song
+                                @if ($isAdmin)
+                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                            </span>
                         </button>
                         <button
                             type="button"
@@ -274,7 +279,13 @@
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                            <span>Add Slot{{ $adminMenuLabelSuffix }}</span>
+                            <span>
+                                Add Slot
+                                @if ($isAdmin)
+                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                            </span>
                         </button>
                     </div>
                 </div>

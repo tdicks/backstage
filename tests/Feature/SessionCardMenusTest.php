@@ -94,5 +94,6 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('Edit Set 🛡️')
         ->assertSee('Add Song 🛡️')
         ->assertSee('Edit Song 🛡️')
-        ->assertSee('Add Slot 🛡️');
+        ->assertSee('Add Slot 🛡️')
+        ->assertSee('sr-only"> Admin action</span>', false);
 });

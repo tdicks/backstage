@@ -34,7 +34,6 @@
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
-    $adminMenuLabelSuffix = $isAdmin ? ' 🛡️' : '';
     $summarySlotNames = collect(array_keys($slotOptions))
         ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
         ->values();
@@ -780,7 +779,13 @@
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
                         >
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                            <span>Edit Set{{ $adminMenuLabelSuffix }}</span>
+                            <span>
+                                Edit Set
+                                @if ($isAdmin)
+                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                            </span>
                         </button>
                         @if (! $setLocked)
                             <button
@@ -789,7 +794,13 @@
                                 class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
                             >
                                 <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                                <span>Add Song{{ $adminMenuLabelSuffix }}</span>
+                                <span>
+                                    Add Song
+                                    @if ($isAdmin)
+                                        <span aria-hidden="true"> 🛡️</span>
+                                        <span class="sr-only"> Admin action</span>
+                                    @endif
+                                </span>
                             </button>
                         @endif
                     @elseif ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
