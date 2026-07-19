@@ -12,9 +12,6 @@
     $currentUser = auth()->user();
     $isAdmin = $currentUser?->is_admin;
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
-    $songActionButtonClass = $isAdminManagingOtherSet
-        ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
-        : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
     $songActionMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
@@ -52,6 +49,26 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        closeSessionModals() {
+            this.openEditSong = false;
+            this.openAddSlot = false;
+        },
+        closeSessionActionMenus() {
+            this.openActionMenu = false;
+        },
+        toggleActionMenu() {
+            const shouldOpen = !this.openActionMenu;
+            window.dispatchEvent(new CustomEvent('close-session-action-menus'));
+            this.openActionMenu = shouldOpen;
+        },
+        openEditSongModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openEditSong = true;
+        },
+        openAddSlotModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openAddSlot = true;
         },
         clearSlotDropPlaceholder() {
             this.$refs.slotDropPlaceholder?.classList.add('hidden');
@@ -216,7 +233,9 @@
     }"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
-    @keydown.escape.window="openEditSong = false; openAddSlot = false; openActionMenu = false"
+    @close-session-modals.window="closeSessionModals()"
+    @close-session-action-menus.window="closeSessionActionMenus()"
+    @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
         class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
@@ -241,13 +260,13 @@
                 <div class="relative">
                     <button
                         type="button"
-                        @click="openActionMenu = ! openActionMenu"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ $songActionButtonClass }}"
+                        @click="toggleActionMenu()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                         x-bind:aria-expanded="openActionMenu.toString()"
                         aria-label="Song actions"
                         title="Song actions"
                     >
-                        <x-heroicon-m-ellipsis-horizontal class="h-4 w-4" aria-hidden="true" />
+                        <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only">Song actions</span>
                     </button>
                     <div
@@ -255,36 +274,36 @@
                         x-cloak
                         x-transition.origin.top.right
                         @click.outside="openActionMenu = false"
-                        class="absolute right-0 top-full z-[80] mt-2 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                        class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                     >
                         <button
                             type="button"
-                            @click="openActionMenu = false; openEditSong = true"
-                            @disabled($setLocked)
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                            <span>
-                                Edit Song
-                                @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true"> 🛡️</span>
-                                    <span class="sr-only"> Admin action</span>
-                                @endif
-                            </span>
-                        </button>
-                        <button
-                            type="button"
-                            @click="openActionMenu = false; openAddSlot = true"
+                            @click="openActionMenu = false; openAddSlotModal()"
                             @disabled($setLocked)
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span>
-                                Add Slot
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span aria-hidden="true">🛡️ </span>
                                     <span class="sr-only"> Admin action</span>
                                 @endif
+                                Add Slot
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openEditSongModal()"
+                            @disabled($setLocked)
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                            <span>
+                                @if ($isAdminManagingOtherSet)
+                                    <span aria-hidden="true">🛡️ </span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                                Edit Song
                             </span>
                         </button>
                     </div>
@@ -294,10 +313,12 @@
     </div>
 
     @if ($canManageSet && ! $setLocked)
-        <div x-show="openEditSong" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
-        <div x-show="openEditSong" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="openEditSong" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
+        <div x-show="openEditSong" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
-                <h5 class="text-lg font-semibold text-slate-900">Edit Song</h5>
+                <h5 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                    {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Song' : 'Edit Song' }}
+                </h5>
                 <form id="edit_song_form_{{ $song->id }}" method="POST" action="{{ route('songs.update', $song) }}" class="mt-4 space-y-4">
                     @csrf
                     @method('PATCH')
@@ -324,16 +345,24 @@
                     </form>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openEditSong = false">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button type="submit" form="edit_song_form_{{ $song->id }}">Save</x-modal-primary-button>
+                        <x-modal-primary-button type="submit" form="edit_song_form_{{ $song->id }}">
+                            @if ($isAdminManagingOtherSet)
+                                <span aria-hidden="true">🛡️ </span>
+                                <span class="sr-only">Admin action: </span>
+                            @endif
+                            Save
+                        </x-modal-primary-button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div x-show="openAddSlot" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
-        <div x-show="openAddSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="openAddSlot" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
+        <div x-show="openAddSlot" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
-                <h5 class="text-lg font-semibold text-slate-900">Add Slot</h5>
+                <h5 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                    {{ $isAdminManagingOtherSet ? 'Add Slot to '.$set->owner->name.'\'s Song' : 'Add Slot' }}
+                </h5>
                 <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4" @submit.prevent="submitAddSlot($event)">
                     @csrf
                     <div>
@@ -346,7 +375,13 @@
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openAddSlot = false">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button x-bind:disabled="busyAction">Add Slot</x-modal-primary-button>
+                        <x-modal-primary-button x-bind:disabled="busyAction">
+                            @if ($isAdminManagingOtherSet)
+                                <span aria-hidden="true">🛡️ </span>
+                                <span class="sr-only">Admin action: </span>
+                            @endif
+                            Add Slot
+                        </x-modal-primary-button>
                     </div>
                 </form>
             </div>

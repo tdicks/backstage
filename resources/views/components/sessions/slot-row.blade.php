@@ -14,6 +14,10 @@
     $proposalUsers = $users
         ->where('id', '!=', auth()->id())
         ->where('hide_from_slot_proposals', false);
+    $isAdminManagingOtherSet = auth()->user()?->is_admin && ! $isSetOwner;
+    $slotManageMenuItemClass = $isAdminManagingOtherSet
+        ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
+        : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
 @endphp
 
 <tr
@@ -31,6 +35,8 @@
     x-data="{
         openPropose: false,
         openEditSlot: false,
+        openActionMenu: false,
+        actionMenuStyle: '',
         assignedUserName: @js($slotModel->assignedPerformerName()),
         slotLabel: @js($slotOptions[$slotModel->name] ?? $slotModel->name),
         slotIsOpen: @js($slotModel->isOpen()),
@@ -42,8 +48,36 @@
         busyAction: false,
         actionError: '',
         actionFeedback: '',
-        proposeTargetUserId: @js($proposalUsers->first()?->id),
+        proposalUserOptions: @js($proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values()),
+        proposeTargetUserId: '',
+        proposeTargetUserQuery: '',
+        showProposalUserSuggestions: false,
         proposeMessage: '',
+        filteredProposalUsers() {
+            const query = this.proposeTargetUserQuery.trim().toLowerCase();
+            if (query === '') {
+                return [];
+            }
+
+            const users = query === ''
+                ? this.proposalUserOptions
+                : this.proposalUserOptions.filter((user) => user.name.toLowerCase().includes(query));
+
+            return users.slice(0, 8);
+        },
+        updateProposalUserQuery() {
+            const selectedUser = this.proposalUserOptions.find((user) => String(user.id) === String(this.proposeTargetUserId));
+            if (!selectedUser || selectedUser.name !== this.proposeTargetUserQuery) {
+                this.proposeTargetUserId = '';
+            }
+
+            this.showProposalUserSuggestions = true;
+        },
+        selectProposalUser(user) {
+            this.proposeTargetUserId = String(user.id);
+            this.proposeTargetUserQuery = user.name;
+            this.showProposalUserSuggestions = false;
+        },
         shouldShowAssigneeWarning() {
             const selectedUserId = String(this.editAssignedUserId ?? '');
             const initialUserId = String(this.initialEditAssignedUserId ?? '');
@@ -53,6 +87,42 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        closeSessionModals() {
+            this.openPropose = false;
+            this.openEditSlot = false;
+        },
+        closeSessionActionMenus() {
+            this.openActionMenu = false;
+        },
+        toggleActionMenu() {
+            const shouldOpen = !this.openActionMenu;
+            window.dispatchEvent(new CustomEvent('close-session-action-menus'));
+            if (shouldOpen) {
+                const buttonRect = this.$refs.actionMenuButton.getBoundingClientRect();
+                const menuWidth = 288;
+                const viewportPadding = 8;
+                const left = Math.max(
+                    viewportPadding,
+                    Math.min(window.innerWidth - menuWidth - viewportPadding, buttonRect.right - menuWidth)
+                );
+                const top = buttonRect.bottom + viewportPadding;
+
+                this.actionMenuStyle = `left: ${left}px; top: ${top}px; width: ${menuWidth}px;`;
+            }
+            this.openActionMenu = shouldOpen;
+        },
+        openProposeModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.proposeTargetUserId = '';
+            this.proposeTargetUserQuery = '';
+            this.showProposalUserSuggestions = false;
+            this.openPropose = true;
+        },
+        openEditSlotModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.editAssignedUserId = this.initialEditAssignedUserId;
+            this.openEditSlot = true;
         },
         async requestSlot() {
             if (this.setLocked) {
@@ -265,7 +335,9 @@
         },
         setLocked: @js($setLocked),
     }"
-    @keydown.escape.window="openPropose = false; openEditSlot = false"
+    @close-session-modals.window="closeSessionModals()"
+    @close-session-action-menus.window="closeSessionActionMenus()"
+    @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
     <td class="px-3 py-3">
@@ -277,105 +349,158 @@
     </td>
     <td class="px-3 py-3">
         <div class="flex flex-wrap gap-2">
-            @if ($canManageSet)
-                @if (! $setLocked)
-                <button
-                    type="button"
-                    @click="editAssignedUserId = initialEditAssignedUserId; openEditSlot = true"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ auth()->user()->is_admin && ! $isSetOwner ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400' : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
-                    aria-label="Edit Slot"
-                    title="{{ auth()->user()->is_admin && ! $isSetOwner ? '🛡 Edit a slot in '.$set->owner->name.'\'s set' : 'Edit Slot' }}"
-                >
-                    <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Edit Slot</span>
-                </button>
-                @endif
-            @endif
+            @if (! $setLocked && ($canManageSet || $set->signups_open || $slotModel->user_id === auth()->id()))
+                <div class="relative">
+                    <button
+                        type="button"
+                        x-ref="actionMenuButton"
+                        @click="toggleActionMenu()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        x-bind:aria-expanded="openActionMenu.toString()"
+                        aria-label="Slot actions"
+                        title="Slot actions"
+                    >
+                        <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Slot actions</span>
+                    </button>
+                    <div
+                        x-show="openActionMenu"
+                        x-cloak
+                        x-transition.origin.top.right
+                        @click.outside="openActionMenu = false"
+                        x-bind:style="actionMenuStyle"
+                        class="fixed z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                    >
+                        @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())
+                            <button
+                                type="button"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                                x-show="slotIsOpen && !assignedToCurrentUser"
+                                @click="openActionMenu = false; takeSlot()"
+                                x-bind:disabled="busyAction"
+                            >
+                                <x-heroicon-m-arrow-down-on-square class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                <span>Take this slot</span>
+                            </button>
+                        @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
+                            <button
+                                type="button"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                                x-show="slotIsOpen && !assignedToCurrentUser && !hasPendingOwnRequest"
+                                @click="openActionMenu = false; requestSlot()"
+                                x-bind:disabled="busyAction"
+                            >
+                                <x-heroicon-m-hand-raised class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                <span>Request slot</span>
+                            </button>
+                        @endif
 
-            @if ($slotModel->user_id === auth()->id() && ! $setLocked)
-                <button
-                    type="button"
-                    @click="releaseSlot()"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 opacity-60 transition hover:text-slate-800 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:opacity-100"
-                    x-show="assignedToCurrentUser"
-                    title="Give up this slot and make it available for others"
-                    aria-label="Remove Me"
-                    x-bind:disabled="busyAction"
-                >
-                    <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Remove Me</span>
-                </button>
-            @endif
+                        @if ($slotModel->user_id === auth()->id())
+                            <button
+                                type="button"
+                                @click="openActionMenu = false; releaseSlot()"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                                x-show="assignedToCurrentUser"
+                                x-bind:disabled="busyAction"
+                            >
+                                <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                <span>Release slot</span>
+                            </button>
+                        @endif
 
-            @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id() && ! $setLocked)
-                <button
-                    type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    x-show="slotIsOpen && !assignedToCurrentUser"
-                    @click="takeSlot()"
-                    x-bind:disabled="busyAction"
-                    aria-label="Take slot"
-                    title="Take this slot as set owner"
-                >
-                    <x-heroicon-m-arrow-down-on-square class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Take Slot</span>
-                </button>
-            @elseif ($set->signups_open && $slotModel->user_id !== auth()->id() && ! $setLocked)
-                <button
-                    type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    x-show="slotIsOpen && !assignedToCurrentUser && !hasPendingOwnRequest"
-                    @click="requestSlot()"
-                    x-bind:disabled="busyAction"
-                    aria-label="Request slot"
-                    title="Request this slot to be assigned to you. The session owner will need to approve your request."
-                >
-                    <x-heroicon-m-hand-raised class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Request</span>
-                </button>
-            @endif
+                        @if ($set->signups_open && $slotModel->isOpen())
+                            <button
+                                type="button"
+                                @click="openActionMenu = false; openProposeModal()"
+                                x-show="slotIsOpen"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                                x-bind:disabled="busyAction || proposalUserOptions.length === 0"
+                            >
+                                <x-heroicon-m-user-plus class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                <span>Recommend someone else</span>
+                            </button>
+                        @endif
 
-            @if ($set->signups_open && $slotModel->isOpen() && ! $setLocked)
-                <button
-                    type="button"
-                    @click="openPropose = true"
-                    x-show="slotIsOpen"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    x-bind:disabled="busyAction || !proposeTargetUserId"
-                    aria-label="Recommend"
-                    title="Recommend someone for this slot"
-                >
-                    <x-heroicon-m-user-plus class="h-4 w-4" aria-hidden="true" />
-                    <span class="sr-only">Recommend</span>
-                </button>
+                        @if ($canManageSet)
+                            <button
+                                type="button"
+                                @click="openActionMenu = false; openEditSlotModal()"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $slotManageMenuItemClass }}"
+                            >
+                                <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                                <span>
+                                    @if ($isAdminManagingOtherSet)
+                                        <span aria-hidden="true">🛡️ </span>
+                                        <span class="sr-only"> Admin action</span>
+                                    @endif
+                                    Edit slot
+                                </span>
+                            </button>
+                        @endif
+                    </div>
+                </div>
             @endif
         </div>
 
         @if (! $setLocked)
-        <div x-show="openPropose" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
-        <div x-show="openPropose" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="openPropose" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
+        <div x-show="openPropose" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
-                <h6 class="text-base font-semibold text-slate-900">Propose someone for {{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</h6>
+                <h6 class="text-base font-semibold text-slate-900">Recommend {{ $slotOptions[$slotModel->name] ?? $slotModel->name }} to someone</h6>
                 <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
                     @if ($proposalUsers->isNotEmpty())
                         <div>
-                            <x-input-label :value="'User'" />
-                            <select x-model="proposeTargetUserId" class="mt-1 w-full rounded-md border-gray-300" required>
-                                @foreach ($proposalUsers as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                @endforeach
-                            </select>
+                            <p class="mb-3 text-xs leading-5 text-slate-500">Think someone would enjoy this slot? Recommend it to them!</p>
+                            <div class="relative">
+                                <x-input-label for="proposal_user_{{ $slotModel->id }}" :value="'Who?'" />
+                                <x-text-input
+                                    id="proposal_user_{{ $slotModel->id }}"
+                                    type="search"
+                                    x-model="proposeTargetUserQuery"
+                                    @input="updateProposalUserQuery()"
+                                    @focus="showProposalUserSuggestions = proposeTargetUserQuery.trim() !== ''"
+                                    @keydown.escape="showProposalUserSuggestions = false"
+                                    class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
+                                    autocomplete="off"
+                                    required
+                                />
+                                <div
+                                    x-show="showProposalUserSuggestions && filteredProposalUsers().length > 0"
+                                    x-cloak
+                                    class="absolute z-[120] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                                    @click.outside="showProposalUserSuggestions = false"
+                                >
+                                    <template x-for="user in filteredProposalUsers()" :key="user.id">
+                                        <button
+                                            type="button"
+                                            @click="selectProposalUser(user)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none"
+                                            x-text="user.name"
+                                        ></button>
+                                    </template>
+                                </div>
+                                <p x-show="showProposalUserSuggestions && proposeTargetUserQuery.trim() !== '' && filteredProposalUsers().length === 0" x-cloak class="mt-1 text-xs text-slate-500">
+                                    No matching users are available for recommendations.
+                                </p>
+                            </div>
                         </div>
                     @else
                         <p class="text-sm text-gray-600">{{ $noProposableUsersMessage }}</p>
                     @endif
                     <div>
                         <x-input-label :value="'Message (optional)'" />
-                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                        <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                        <p class="mt-2 text-xs leading-5 text-slate-500">
+                            @if ($isSetOwner)
+                                They will get a chance to say yes before the slot changes.
+                            @else
+                                They will get a chance to say yes first, then the set organiser can give it the final nod.
+                            @endif
+                        </p>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openPropose = false">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button x-bind:disabled="busyAction || !proposeTargetUserId">Send Proposal</x-modal-primary-button>
+                        <x-modal-primary-button x-bind:disabled="busyAction || !proposeTargetUserId" class="disabled:cursor-not-allowed disabled:opacity-40">Send Proposal</x-modal-primary-button>
                     </div>
                 </form>
             </div>
@@ -383,10 +508,12 @@
         @endif
 
         @if ($canManageSet && ! $setLocked)
-            <div x-show="openEditSlot" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
-            <div x-show="openEditSlot" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div x-show="openEditSlot" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSlot = false"></div>
+            <div x-show="openEditSlot" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
-                    <h6 class="text-base font-semibold text-slate-900">Edit Slot</h6>
+                    <h6 class="text-base font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                        {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Slot' : 'Edit Slot' }}
+                    </h6>
                     <form id="edit_slot_form_{{ $slotModel->id }}" method="POST" action="{{ route('slots.update', $slotModel) }}" class="mt-4 space-y-4" @submit.prevent="submitEditSlot($event)">
                         @csrf
                         @method('PATCH')
@@ -424,7 +551,13 @@
                         </form>
                         <div class="flex justify-end gap-2">
                             <x-modal-secondary-button type="button" @click="openEditSlot = false">Cancel</x-modal-secondary-button>
-                            <x-modal-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">Save</x-modal-primary-button>
+                            <x-modal-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction">
+                                @if ($isAdminManagingOtherSet)
+                                    <span aria-hidden="true">🛡️ </span>
+                                    <span class="sr-only">Admin action: </span>
+                                @endif
+                                Save
+                            </x-modal-primary-button>
                         </div>
                     </div>
                 </div>

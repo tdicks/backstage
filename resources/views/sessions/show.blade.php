@@ -4,6 +4,9 @@
             <div>
                 <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
                     <span>{{ $session->name }}</span>
+                    @if (auth()->user()?->is_admin && $session->allow_checkins)
+                        <x-heroicon-m-arrow-right-on-rectangle class="h-6 w-6 text-emerald-400" aria-hidden="true" title="Check-ins are open for this jam" />
+                    @endif
                     @if ($session->is_closed)
                         <x-heroicon-m-lock-closed class="h-6 w-6 text-amber-400" aria-hidden="true" title="This jam is closed to new sets" />
                     @endif
@@ -53,9 +56,9 @@
 
             @can('update', $session)
                 <template x-teleport="body">
-                    <div x-show="openEditSession" x-cloak data-drag-blocking-modal>
-                        <div class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
-                        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
+                    <div x-cloak>
+                        <div x-show="openEditSession" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
+                        <div x-show="openEditSession" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
                             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                                 <div class="px-6 pt-6">
                                 <h3 class="text-lg font-semibold text-slate-900">Edit Jam Session</h3>
@@ -160,9 +163,9 @@
 
             @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
                 <template x-teleport="body">
-                    <div x-show="openSet" x-cloak data-drag-blocking-modal>
-                        <div class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
-                        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div x-cloak>
+                        <div x-show="openSet" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
+                        <div x-show="openSet" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                                 <h3 class="text-lg font-semibold text-slate-900">New Set for {{ $session->name }}</h3>
                                 <form method="POST" action="{{ route('sets.store', $session) }}" class="mt-4 space-y-4">
@@ -173,7 +176,7 @@
                                     </div>
                                     <div>
                                         <x-input-label for="set_description" value="Description" />
-                                        <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                                        <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                                     </div>
                                     <div class="flex justify-end gap-3">
                                         <x-modal-secondary-button type="button" @click="openSet = false">Cancel</x-modal-secondary-button>

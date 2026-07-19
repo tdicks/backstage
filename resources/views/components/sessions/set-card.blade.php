@@ -28,9 +28,6 @@
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
-    $setActionButtonClass = $isAdminManagingOtherSet
-        ? 'text-sky-600 hover:text-sky-700 focus:ring-sky-400'
-        : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400';
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
@@ -116,6 +113,20 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        closeSessionModals() {
+            this.closeSummaryModal();
+            this.openSetEdit = false;
+            this.openSong = false;
+            this.openSongRequest = false;
+        },
+        closeSessionActionMenus() {
+            this.openActionMenu = false;
+        },
+        toggleActionMenu() {
+            const shouldOpen = !this.openActionMenu;
+            window.dispatchEvent(new CustomEvent('close-session-action-menus'));
+            this.openActionMenu = shouldOpen;
         },
         async copySetShareLink() {
             await window.copyShareLink(@js(route('share.set', $set)));
@@ -309,6 +320,7 @@
             }
         },
         openSummaryModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.openSummary = true;
             this.loadSummary(true);
             this.startSummaryPolling();
@@ -331,16 +343,24 @@
                 this.summaryPollId = null;
             }
         },
+        openSetEditModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.performedDraft = this.initialSetPerformed;
+            this.songRequestsDraft = this.initialSongRequestsEnabled;
+            this.openSetEdit = true;
+        },
         openAddSongModal() {
             if (this.setLocked) {
                 return;
             }
 
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.openSong = true;
             this.addSongError = '';
             this.resetSongAutocomplete();
         },
         openSongRequestModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.openSongRequest = true;
             this.resetSongRequestAutocomplete();
         },
@@ -665,7 +685,9 @@
     }"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'"
     x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
-    @keydown.escape.window="closeSummaryModal(); openSetEdit = false; openSong = false; openSongRequest = false; openActionMenu = false"
+    @close-session-modals.window="closeSessionModals()"
+    @close-session-action-menus.window="closeSessionActionMenus()"
+    @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
         class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
@@ -738,13 +760,13 @@
             <div class="relative">
                 <button
                     type="button"
-                    @click="openActionMenu = ! openActionMenu"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-md transition focus:outline-none focus:ring-2 {{ $canManageSet ? $setActionButtonClass : 'text-slate-500 hover:text-slate-800 focus:ring-amber-400' }}"
+                    @click="toggleActionMenu()"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-bind:aria-expanded="openActionMenu.toString()"
                     aria-label="Set actions"
                     title="Set actions"
                 >
-                    <x-heroicon-m-ellipsis-horizontal class="h-4 w-4" aria-hidden="true" />
+                    <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Set actions</span>
                 </button>
                 <div
@@ -752,57 +774,23 @@
                     x-cloak
                     x-transition.origin.top.right
                     @click.outside="openActionMenu = false"
-                    class="absolute right-0 top-full z-[80] mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                    class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                 >
-                    @if (! $setLocked)
+                    @if ($canManageSet && ! $setLocked)
                         <button
                             type="button"
-                            @click="openActionMenu = false; openSummaryModal()"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
-                        >
-                            <x-heroicon-m-queue-list class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                            <span>Summary</span>
-                        </button>
-                    @endif
-                    <button
-                        type="button"
-                        @click="openActionMenu = false; copySetShareLink()"
-                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
-                    >
-                        <x-heroicon-m-share class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                        <span>Copy share link</span>
-                    </button>
-                    @if ($canManageSet)
-                        <button
-                            type="button"
-                            @click="openActionMenu = false; performedDraft = initialSetPerformed; songRequestsDraft = initialSongRequestsEnabled; openSetEdit = true"
+                            @click="openActionMenu = false; openAddSongModal()"
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
                         >
-                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                            <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span>
-                                Edit Set
                                 @if ($isAdminManagingOtherSet)
-                                    <span aria-hidden="true"> 🛡️</span>
+                                    <span aria-hidden="true">🛡️ </span>
                                     <span class="sr-only"> Admin action</span>
                                 @endif
+                                Add Song
                             </span>
                         </button>
-                        @if (! $setLocked)
-                            <button
-                                type="button"
-                                @click="openActionMenu = false; openAddSongModal()"
-                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
-                            >
-                                <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                                <span>
-                                    Add Song
-                                    @if ($isAdminManagingOtherSet)
-                                        <span aria-hidden="true"> 🛡️</span>
-                                        <span class="sr-only"> Admin action</span>
-                                    @endif
-                                </span>
-                            </button>
-                        @endif
                     @elseif ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
                         <button
                             type="button"
@@ -813,6 +801,40 @@
                             <span>Request Song</span>
                         </button>
                     @endif
+                    @if ($canManageSet)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openSetEditModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                        >
+                            <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                            <span>
+                                @if ($isAdminManagingOtherSet)
+                                    <span aria-hidden="true">🛡️ </span>
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                                Edit Set
+                            </span>
+                        </button>
+                    @endif
+                    @if (! $setLocked)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openSummaryModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                        >
+                            <x-heroicon-m-queue-list class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                            <span>Live Summary</span>
+                        </button>
+                    @endif
+                    <button
+                        type="button"
+                        @click="openActionMenu = false; copySetShareLink()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                    >
+                        <x-heroicon-m-share class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Copy Share link</span>
+                    </button>
                 </div>
                 <div
                     x-show="shareCopied"
@@ -828,8 +850,8 @@
         </div>
     </div>
 
-    <div x-show="openSummary" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
-    <div x-show="openSummary" x-cloak class="fixed inset-0 z-50 flex items-start justify-center p-2 sm:items-center sm:p-4">
+    <div x-show="openSummary" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
+    <div x-show="openSummary" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center p-2 sm:items-center sm:p-4">
         <div class="flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
                 <div>
@@ -951,10 +973,12 @@
     </div>
 
     @if ($canManageSet)
-        <div x-show="openSetEdit" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
-        <div x-show="openSetEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="openSetEdit" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
+        <div x-show="openSetEdit" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
-                <h4 class="text-lg font-semibold text-slate-900">Edit Set</h4>
+                <h4 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                    {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Set' : 'Edit Set' }}
+                </h4>
                 <form id="edit_set_form_{{ $set->id }}" method="POST" action="{{ route('sets.update', $set) }}" class="mt-4 space-y-4">
                     @csrf
                     @method('PATCH')
@@ -1031,17 +1055,25 @@
                     </form>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openSetEdit = false">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button type="submit" form="edit_set_form_{{ $set->id }}">Save</x-modal-primary-button>
+                        <x-modal-primary-button type="submit" form="edit_set_form_{{ $set->id }}">
+                            @if ($isAdminManagingOtherSet)
+                                <span aria-hidden="true">🛡️ </span>
+                                <span class="sr-only">Admin action: </span>
+                            @endif
+                            Save
+                        </x-modal-primary-button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div x-show="openSong" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
-        <div x-show="openSong" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
+        <div x-show="openSong" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
+        <div x-show="openSong" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                 <div class="px-6 pt-6">
-                    <h4 class="text-lg font-semibold text-slate-900">Add Song to {{ $set->name }}</h4>
+                    <h4 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                        {{ $isAdminManagingOtherSet ? 'Add Song to '.$set->owner->name.'\'s Set' : 'Add Song to '.$set->name }}
+                    </h4>
                 </div>
                 <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
                 <form method="POST" action="{{ route('songs.store', $set) }}" class="space-y-4" @submit.prevent="submitAddSong($event)">
@@ -1141,15 +1173,21 @@
                     </div>
                     <div class="flex justify-end gap-3">
                         <x-modal-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()">Cancel</x-modal-secondary-button>
-                        <x-modal-primary-button x-bind:disabled="addSongBusy">Add Song</x-modal-primary-button>
+                        <x-modal-primary-button x-bind:disabled="addSongBusy">
+                            @if ($isAdminManagingOtherSet)
+                                <span aria-hidden="true">🛡️ </span>
+                                <span class="sr-only">Admin action: </span>
+                            @endif
+                            Add Song
+                        </x-modal-primary-button>
                     </div>
                 </form>
                 </div>
             </div>
         </div>
     @else
-        <div x-show="openSongRequest" x-cloak data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
-        <div x-show="openSongRequest" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="openSongRequest" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
+        <div x-show="openSongRequest" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
                 <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4">

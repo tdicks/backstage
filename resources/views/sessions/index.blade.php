@@ -63,6 +63,9 @@
                             <div>
                                 <h3 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
                                     <span>{{ $session->name }}</span>
+                                    @if (auth()->user()?->is_admin && $session->allow_checkins)
+                                        <x-heroicon-m-arrow-right-on-rectangle class="h-5 w-5 text-emerald-600" aria-hidden="true" title="Check-ins are open for this jam" />
+                                    @endif
                                     @if ($session->is_closed)
                                         <x-heroicon-m-lock-closed class="h-5 w-5 text-amber-400" aria-hidden="true" title="This jam is closed to new sets" />
                                     @endif
