@@ -29,15 +29,20 @@ function createSlotCompatibilitySet(User $owner): Set
     ]);
 }
 
-function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = null, int $position = 1, ?Song $song = null): Slot
+function createSongForSet(Set $set, int $position = 1): Song
 {
-    $song ??= Song::create([
+    return Song::create([
         'set_id' => $set->id,
         'artist' => 'Test Artist '.$position,
         'title' => 'Test Song '.$position,
         'notes' => null,
         'position' => $position,
     ]);
+}
+
+function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = null, int $position = 1, ?Song $song = null): Slot
+{
+    $song ??= createSongForSet($set, $position);
 
     return Slot::create([
         'song_id' => $song->id,
@@ -50,14 +55,7 @@ function createSlotCompatibilitySlot(Set $set, string $slotName, ?User $user = n
 test('player cannot take bass and guitar slots on the same song', function () {
     $owner = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
-
-    $song = Song::create([
-        'set_id' => $set->id,
-        'artist' => 'Test Artist',
-        'title' => 'Test Song',
-        'notes' => null,
-        'position' => 1,
-    ]);
+    $song = createSongForSet($set);
 
     createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
     $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
@@ -74,14 +72,7 @@ test('player cannot take bass and guitar slots on the same song', function () {
 test('ajax take slot conflict returns json for toast notification', function () {
     $owner = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
-
-    $song = Song::create([
-        'set_id' => $set->id,
-        'artist' => 'Test Artist',
-        'title' => 'Test Song',
-        'notes' => null,
-        'position' => 1,
-    ]);
+    $song = createSongForSet($set);
 
     createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
     $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
@@ -145,14 +136,7 @@ test('set owner cannot manually assign a player to incompatible slot types on th
     $owner = User::factory()->create();
     $player = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
-
-    $song = Song::create([
-        'set_id' => $set->id,
-        'artist' => 'Test Artist',
-        'title' => 'Test Song',
-        'notes' => null,
-        'position' => 1,
-    ]);
+    $song = createSongForSet($set);
 
     createSlotCompatibilitySlot($set, 'bass', $player, 1, $song);
     $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
@@ -193,14 +177,7 @@ test('set owner cannot approve a request that conflicts with an existing slot on
     $owner = User::factory()->create();
     $player = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
-
-    $song = Song::create([
-        'set_id' => $set->id,
-        'artist' => 'Test Artist',
-        'title' => 'Test Song',
-        'notes' => null,
-        'position' => 1,
-    ]);
+    $song = createSongForSet($set);
 
     createSlotCompatibilitySlot($set, 'keys', $player, 1, $song);
     $drumsSlot = createSlotCompatibilitySlot($set, 'drums', null, 1, $song);
