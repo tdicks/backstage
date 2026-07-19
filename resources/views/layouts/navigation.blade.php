@@ -85,7 +85,7 @@
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-2">
                 <a
                     href="{{ route('help') }}"
-                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 bg-slate-900 text-slate-100 transition hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
+                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
                     title="Help"
                     aria-label="Help"
                 >

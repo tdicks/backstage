@@ -22,11 +22,14 @@ test('about and privacy pages are public without the app navigation', function (
 test('about and privacy pages use the app layout for authenticated users', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('about'))
+    $aboutResponse = $this->actingAs($user)->get(route('about'));
+
+    $aboutResponse
         ->assertOk()
         ->assertSee('About')
         ->assertSee('My Sets')
-        ->assertSee('Help');
+        ->assertSee('Help')
+        ->assertDontSee('href="'.route('help').'" class="inline-flex h-10 w-10 items-center justify-center border-b-2 bg-slate-900', false);
 
     $this->actingAs($user)->get(route('privacy'))
         ->assertOk()
