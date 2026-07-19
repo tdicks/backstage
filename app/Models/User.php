@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 
 #[Fillable(['name', 'email', 'password', 'is_admin', 'bio', 'hide_from_directory', 'hide_from_slot_proposals'])]
 #[Hidden(['password', 'remember_token'])]
@@ -18,6 +18,7 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+
     use HasRelationships;
     use Notifiable;
 
@@ -40,6 +41,11 @@ class User extends Authenticatable
     public function slots(): HasMany
     {
         return $this->hasMany(Slot::class);
+    }
+
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
     }
 
     public function songs()

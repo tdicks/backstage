@@ -12,6 +12,7 @@
         "php": "^8.3",
         "blade-ui-kit/blade-heroicons": "*",
         "laravel/framework": "^13.8",
+        "laravel/socialite": "*",
         "laravel/tinker": "^3.0",
         "staudenmeir/eloquent-has-many-deep": "*"
     },
