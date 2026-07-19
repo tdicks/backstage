@@ -57,8 +57,8 @@ test('player cannot take bass and guitar slots on the same song', function () {
     $set = createSlotCompatibilitySet($owner);
     $song = createSongForSet($set);
 
-    createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
+    createSlotCompatibilitySlot($set, 'bass', $owner, song: $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, song: $song);
 
     $this->actingAs($owner)
         ->post(route('slots.take', $guitarSlot))
@@ -74,8 +74,8 @@ test('ajax take slot conflict returns json for toast notification', function () 
     $set = createSlotCompatibilitySet($owner);
     $song = createSongForSet($set);
 
-    createSlotCompatibilitySlot($set, 'bass', $owner, 1, $song);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
+    createSlotCompatibilitySlot($set, 'bass', $owner, song: $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, song: $song);
 
     $response = $this->actingAs($owner)
         ->withHeaders([
@@ -138,8 +138,8 @@ test('set owner cannot manually assign a player to incompatible slot types on th
     $set = createSlotCompatibilitySet($owner);
     $song = createSongForSet($set);
 
-    createSlotCompatibilitySlot($set, 'bass', $player, 1, $song);
-    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, 1, $song);
+    createSlotCompatibilitySlot($set, 'bass', $player, song: $song);
+    $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, song: $song);
 
     $this->actingAs($owner)
         ->patch(route('slots.update', $guitarSlot), [
@@ -179,8 +179,8 @@ test('set owner cannot approve a request that conflicts with an existing slot on
     $set = createSlotCompatibilitySet($owner);
     $song = createSongForSet($set);
 
-    createSlotCompatibilitySlot($set, 'keys', $player, 1, $song);
-    $drumsSlot = createSlotCompatibilitySlot($set, 'drums', null, 1, $song);
+    createSlotCompatibilitySlot($set, 'keys', $player, song: $song);
+    $drumsSlot = createSlotCompatibilitySlot($set, 'drums', null, song: $song);
 
     $assignment = SlotAssignment::create([
         'slot_id' => $drumsSlot->id,
