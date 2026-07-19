@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Facades\Socialite;
@@ -73,5 +74,22 @@ test('social callback links an existing user by email', function () {
 
 test('unsupported social providers are not routed', function () {
     $this->get(route('social.redirect', 'github'))
+        ->assertNotFound();
+});
+
+test('social login setting hides buttons and blocks provider redirects', function () {
+    Setting::query()->create([
+        'key' => 'enable_social_logins',
+        'name' => 'Enable Social Logins',
+        'input_type' => 'checkbox',
+        'value' => '0',
+    ]);
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('Continue with Google')
+        ->assertDontSee('Continue with Facebook');
+
+    $this->get(route('social.redirect', 'google'))
         ->assertNotFound();
 });

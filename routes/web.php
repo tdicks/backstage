@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DeezerLookupController;
@@ -32,6 +33,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::patch('/settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
+
         Route::get('/users', [UserAdministrationController::class, 'index'])->name('users.index');
         Route::patch('/users/{user}', [UserAdministrationController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/role', [UserAdministrationController::class, 'toggleRole'])->name('users.toggle-role');

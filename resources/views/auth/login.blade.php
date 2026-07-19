@@ -2,20 +2,22 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <div class="space-y-3">
-        <a href="{{ route('social.redirect', 'google') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            {{ __('Continue with Google') }}
-        </a>
-        <a href="{{ route('social.redirect', 'facebook') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            {{ __('Continue with Facebook') }}
-        </a>
-    </div>
+    @if ($socialLoginsEnabled)
+        <div class="space-y-3">
+            <a href="{{ route('social.redirect', 'google') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                {{ __('Continue with Google') }}
+            </a>
+            <a href="{{ route('social.redirect', 'facebook') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                {{ __('Continue with Facebook') }}
+            </a>
+        </div>
 
-    <div class="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500">
-        <div class="h-px flex-1 bg-slate-200"></div>
-        <span>{{ __('or') }}</span>
-        <div class="h-px flex-1 bg-slate-200"></div>
-    </div>
+        <div class="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500">
+            <div class="h-px flex-1 bg-slate-200"></div>
+            <span>{{ __('or') }}</span>
+            <div class="h-px flex-1 bg-slate-200"></div>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('login') }}">
         @csrf
