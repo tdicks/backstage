@@ -59,6 +59,8 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertSee('Clear Slot')
         ->assertSee('Edit slot')
         ->assertSee('Copy Direct Link')
+        ->assertSee('mobile-song-move', false)
+        ->assertSee('mobile-slot-move', false)
         ->assertSee('#set-'.$set->id, false)
         ->assertSee('#song-'.$song->id, false)
         ->assertSee('#slot-'.$slot->id, false)
@@ -112,6 +114,46 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('mr-1 inline h-4 w-4 text-sky-500', false)
         ->assertDontSee('🛡️')
         ->assertSee('sr-only"> Admin action</span>', false);
+});
+
+test('non-manager still sees song actions menu with direct link action', function () {
+    $owner = User::factory()->create();
+    $guest = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Guest Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Guest Menu Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Guest Artist',
+        'title' => 'Guest Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($guest)
+        ->get(route('sessions.sets', $session))
+        ->assertOk()
+        ->assertSee('aria-label="Song actions"', false)
+        ->assertSee('Copy Direct Link')
+        ->assertDontSee('Add Slot')
+        ->assertDontSee('Edit Song');
 });
 
 test('admin does not see shield suffix on their own set menu items', function () {

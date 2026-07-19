@@ -36,7 +36,7 @@ class JamSessionController extends Controller
         $sessions = JamSession::query()
             ->visibleTo(request()->user())
             ->where('is_archived', false)
-            ->withCount('sets')
+            ->withCount(['sets' => fn ($query) => $query->visibleTo(request()->user())])
             ->latest('date')
             ->get();
 
@@ -58,7 +58,7 @@ class JamSessionController extends Controller
         $sessions = JamSession::query()
             ->visibleTo(request()->user())
             ->where('is_archived', true)
-            ->withCount('sets')
+            ->withCount(['sets' => fn ($query) => $query->visibleTo(request()->user())])
             ->latest('date')
             ->get();
 
@@ -109,7 +109,7 @@ class JamSessionController extends Controller
     {
         $this->authorize('view', $jamSession);
 
-        $jamSession->loadCount('sets');
+        $jamSession->loadCount(['sets' => fn ($query) => $query->visibleTo(request()->user())]);
 
         return view('sessions.show', [
             'session' => $jamSession,
@@ -117,19 +117,24 @@ class JamSessionController extends Controller
         ]);
     }
 
-    public function sets(JamSession $jamSession): View
+    public function sets(Request $request, JamSession $jamSession): View
     {
         $this->authorize('view', $jamSession);
 
         $jamSession->load([
-            'sets.session',
-            'sets.owner',
-            'sets.songRequests.requester',
-            'sets.songRequests.responder',
-            'sets.songRequests.bandTemplate',
-            'sets.songs.slots.user',
-            'sets.songs.slots.assignments.actor',
-            'sets.songs.slots.assignments.target',
+            'sets' => function ($query) use ($request): void {
+                $query->visibleTo($request->user())
+                    ->with([
+                        'session',
+                        'owner',
+                        'songRequests.requester',
+                        'songRequests.responder',
+                        'songRequests.bandTemplate',
+                        'songs.slots.user',
+                        'songs.slots.assignments.actor',
+                        'songs.slots.assignments.target',
+                    ]);
+            },
         ]);
 
         return view('sessions.partials.set-cards', $this->sessionSetsViewData($jamSession));
@@ -156,7 +161,7 @@ class JamSessionController extends Controller
             ? collect()
             : Song::query()
                 ->whereIn('id', $songIds)
-                ->whereHas('set', fn ($query) => $query->where('jam_session_id', $jamSession->id))
+                ->whereHas('set', fn ($query) => $query->where('jam_session_id', $jamSession->id)->visibleTo($request->user()))
                 ->with([
                     'set.session',
                     'set.owner',

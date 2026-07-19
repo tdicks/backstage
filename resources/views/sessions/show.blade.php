@@ -178,6 +178,12 @@
                                         <x-input-label for="set_description" value="Description" />
                                         <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
                                     </div>
+                                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                        <input type="hidden" name="is_hidden" value="0">
+                                        <input type="checkbox" name="is_hidden" value="1" class="rounded border-slate-300 text-slate-600 shadow-sm focus:ring-slate-500">
+                                        <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                                        Hide this set from other users (admins can still see it).
+                                    </label>
                                     <div class="flex justify-end gap-3">
                                         <x-modal-secondary-button type="button" @click="openSet = false">Cancel</x-modal-secondary-button>
                                         <x-modal-primary-button>Create Set</x-modal-primary-button>

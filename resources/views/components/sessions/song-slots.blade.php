@@ -5,6 +5,8 @@
     'slotOptions',
     'isSetOwner' => false,
     'canManageSet' => false,
+    'canMoveSlotUp' => false,
+    'canMoveSlotDown' => false,
 ])
 
 @php
@@ -25,6 +27,8 @@
         :is-set-owner="$isSetOwner"
         :can-manage-set="$canManageSet"
         :can-reorder-slots="$canManageSet && ! $setLocked"
+        :can-move-slot-up="! $loop->first"
+        :can-move-slot-down="! $loop->last"
     />
 @empty
     <tr>

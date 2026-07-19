@@ -19,7 +19,7 @@ class SetPolicy
      */
     public function view(User $user, Set $set): bool
     {
-        return true;
+        return $user->is_admin || ! $set->is_hidden || $set->owner_id === $user->id;
     }
 
     /**

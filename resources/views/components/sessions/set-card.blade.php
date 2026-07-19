@@ -27,6 +27,7 @@
     $setMetaTextClass = $set->feature_set ? 'text-amber-800' : 'text-slate-600';
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
+    $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
@@ -41,6 +42,7 @@
     data-session-set-card
     class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-bind:data-set-open="(!setCollapsed).toString()"
+    x-bind:draggable="isDesktopReorderEnabled && canReorderSongs ? 'true' : 'false'"
     x-data="{
         openSong: false,
         openSongRequest: false,
@@ -107,6 +109,7 @@
         dropTargetSongId: null,
         dropTargetPosition: 'before',
         dropPlaceholderEl: null,
+        isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,
         hasOpenDragBlockingModal() {
             return Array.from(document.querySelectorAll('[data-drag-blocking-modal]')).some((el) => window.getComputedStyle(el).display !== 'none');
         },
@@ -115,6 +118,33 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        },
+        async moveSong(songId, direction) {
+            if (!this.canDragSongs() || this.reorderBusy) {
+                return;
+            }
+
+            this.clearDropPlaceholder();
+
+            const songsContainer = this.$refs.songsContainer;
+            const songElements = Array.from(songsContainer.querySelectorAll('[data-song-id]'));
+            const currentIndex = songElements.findIndex((el) => Number(el.dataset.songId) === Number(songId));
+            const targetIndex = currentIndex + direction;
+
+            if (currentIndex < 0 || targetIndex < 0 || targetIndex >= songElements.length) {
+                return;
+            }
+
+            const draggedEl = songElements[currentIndex];
+            const targetEl = songElements[targetIndex];
+
+            if (direction < 0) {
+                songsContainer.insertBefore(draggedEl, targetEl);
+            } else {
+                songsContainer.insertBefore(draggedEl, targetEl.nextElementSibling);
+            }
+
+            await this.persistSongOrder();
         },
         closeSessionModals() {
             this.closeSummaryModal();
@@ -692,6 +722,7 @@
     }"
     x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'"
     x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
+    x-on:mobile-song-move.window="if ($event.detail.setId === {{ $set->id }}) moveSong($event.detail.songId, $event.detail.direction)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
@@ -746,16 +777,23 @@
                             <span class="sr-only">Sign ups closed</span>
                         @endif
                     </span>
+                @endif
 
-                    @if ($isAdmin)
-                        <span
-                            class="inline-flex items-center"
-                            title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
-                        >
-                            <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
-                            <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
-                        </span>
-                    @endif
+                @if ($set->is_hidden)
+                    <span class="inline-flex items-center" title="Hidden set">
+                        <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                        <span class="sr-only">Hidden set</span>
+                    </span>
+                @endif
+
+                @if ($isAdmin && ! $set->performed)
+                    <span
+                        class="inline-flex items-center"
+                        title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
+                    >
+                        <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
+                        <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
+                    </span>
                 @endif
             </div>
             @if ($set->description)
@@ -1060,6 +1098,12 @@
                         <input type="checkbox" name="song_requests" value="1" x-model="songRequestsDraft" @checked($set->song_requests) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
                         Accept song requests.
                     </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                        <input type="hidden" name="is_hidden" value="0">
+                        <input type="checkbox" name="is_hidden" value="1" @checked($set->is_hidden) class="rounded border-slate-300 text-slate-600 shadow-sm focus:ring-slate-500">
+                        <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                        Hide this set from other users (admins can still see it).
+                    </label>
                     <p
                         x-show="initialSongRequestsEnabled && !songRequestsDraft"
                         x-cloak
@@ -1319,6 +1363,9 @@
                     :slot-options="$slotOptions"
                     :is-set-owner="$isSetOwner"
                     :can-manage-set="$canManageSet"
+                    :can-reorder-songs="$isSetOwner && ! $setLocked"
+                    :can-move-song-up="! $loop->first"
+                    :can-move-song-down="! $loop->last"
                 />
             @empty
                 <p class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>

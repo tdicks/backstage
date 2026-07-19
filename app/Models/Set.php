@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,7 @@ class Set extends Model
         'position',
         'performed',
         'signups_open',
+        'is_hidden',
         'song_requests',
         'feature_set',
     ];
@@ -27,9 +29,26 @@ class Set extends Model
             'position' => 'integer',
             'performed' => 'boolean',
             'signups_open' => 'boolean',
+            'is_hidden' => 'boolean',
             'song_requests' => 'boolean',
             'feature_set' => 'boolean',
         ];
+    }
+
+    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    {
+        if (! $user) {
+            return $query->where('is_hidden', false);
+        }
+
+        if ($user?->is_admin) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $query) use ($user): void {
+            $query->where('is_hidden', false)
+                ->orWhere('owner_id', $user->id);
+        });
     }
 
     public function owner(): BelongsTo

@@ -229,3 +229,81 @@ test('session activity endpoint batches approval count and open song slot update
         ->toContain('useRefreshProvider')
         ->toContain('clearRefreshProvider');
 });
+
+test('hidden sets stay visible to the owner but hidden from other users', function () {
+    $owner = User::factory()->create();
+    $other = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Hidden Set Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $hiddenSet = Set::query()->create([
+        'name' => 'Hidden Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'is_hidden' => true,
+    ]);
+
+    Song::query()->create([
+        'set_id' => $hiddenSet->id,
+        'artist' => 'Hidden Artist',
+        'title' => 'Hidden Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee('Hidden Set');
+
+    $this->actingAs($other)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertDontSee('Hidden Set');
+});
+
+test('hidden sets are not counted for other users on the session list', function () {
+    $owner = User::factory()->create();
+    $other = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Hidden Count Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    Set::query()->create([
+        'name' => 'Count Hidden Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'is_hidden' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee('1 sets');
+
+    $this->actingAs($other)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee('0 sets');
+});

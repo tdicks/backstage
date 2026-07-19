@@ -14,8 +14,10 @@ class SessionController extends Controller
 {
     public function index(): View
     {
+        $user = request()->user();
+
         $sessions = Session::query()
-            ->withCount('sets')
+            ->withCount(['sets' => fn ($query) => $query->visibleTo($user)])
             ->latest('date')
             ->get();
 
@@ -48,10 +50,14 @@ class SessionController extends Controller
     public function show(Session $session): View
     {
         $session->load([
-            'sets.owner',
-            'sets.songs.slots.user',
-            'sets.songs.slots.assignments.actor',
-            'sets.songs.slots.assignments.target',
+            'sets' => fn ($query) => $query
+                ->visibleTo(request()->user())
+                ->with([
+                    'owner',
+                    'songs.slots.user',
+                    'songs.slots.assignments.actor',
+                    'songs.slots.assignments.target',
+                ]),
         ]);
 
         return view('sessions.show', [

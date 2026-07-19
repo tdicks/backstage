@@ -35,6 +35,7 @@ class MySetsController extends Controller
 
         $ownedSets = Set::query()
             ->where('owner_id', $user->id)
+            ->visibleTo($user)
             ->with(['session', 'songs.slots.user'])
             ->get();
 
@@ -49,6 +50,7 @@ class MySetsController extends Controller
 
         $signedSets = Set::query()
             ->whereIn('id', $signedSetIds)
+            ->visibleTo($user)
             ->with(['session', 'songs.slots.user'])
             ->get();
 

@@ -6,6 +6,8 @@
     'isSetOwner' => false,
     'canManageSet' => false,
     'canReorderSlots' => false,
+    'canMoveSlotUp' => false,
+    'canMoveSlotDown' => false,
 ])
 
 @php
@@ -24,7 +26,7 @@
     id="slot-{{ $slotModel->id }}"
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     data-slot-id="{{ $slotModel->id }}"
-    draggable="{{ $canReorderSlots ? 'true' : 'false' }}"
+    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots ? 'true' : 'false'"
     @dragstart.stop="onSlotDragStart($event, {{ $slotModel->id }})"
     @dragover.stop="onSlotDragOver($event, {{ $slotModel->id }})"
     @drop.stop="onSlotDrop($event)"
@@ -53,6 +55,7 @@
         toastStyle: '',
         toastTimer: null,
         proposalUserOptions: @js($proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values()),
+        isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,
         proposeTargetUserId: '',
         proposeTargetUserQuery: '',
         showProposalUserSuggestions: false,
@@ -444,6 +447,34 @@
     </td>
     <td x-ref="toastAnchor" class="px-3 py-3 text-right">
         <div class="flex flex-wrap justify-end gap-2">
+            @if ($canReorderSlots)
+                <div class="flex items-center gap-1 md:hidden">
+                    @if ($canMoveSlotUp)
+                        <button
+                            type="button"
+                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: -1 } }))"
+                            x-bind:disabled="busyAction"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Move slot up"
+                            title="Move slot up"
+                        >
+                            <x-heroicon-m-chevron-up class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    @endif
+                    @if ($canMoveSlotDown)
+                        <button
+                            type="button"
+                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: 1 } }))"
+                            x-bind:disabled="busyAction"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Move slot down"
+                            title="Move slot down"
+                        >
+                            <x-heroicon-m-chevron-down class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    @endif
+                </div>
+            @endif
             <x-sessions.slot-action-menu
                 :set="$set"
                 :slot-model="$slotModel"

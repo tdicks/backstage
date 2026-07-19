@@ -5,6 +5,9 @@
     'slotOptions',
     'isSetOwner' => false,
     'canManageSet' => false,
+    'canReorderSongs' => false,
+    'canMoveSongUp' => false,
+    'canMoveSongDown' => false,
 ])
 
 @php
@@ -23,7 +26,7 @@
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
     x-bind:data-song-open="(!songCollapsed).toString()"
-    draggable="{{ $isSetOwner && ! $setLocked ? 'true' : 'false' }}"
+    x-bind:draggable="isDesktopReorderEnabled && canReorderSongs ? 'true' : 'false'"
     @dragstart.self="onSongDragStart($event, {{ $song->id }})"
     @dragover.self="onSongDragOver($event, {{ $song->id }})"
     @drop.self="onSongDrop($event)"
@@ -42,6 +45,7 @@
         toast: { visible: false, type: 'error', message: '' },
         toastTimer: null,
         canReorderSlots: @js($canManageSet && ! $setLocked),
+        isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,
         dragSlotId: null,
         draggingSlotId: null,
         dropTargetSlotId: null,
@@ -53,6 +57,33 @@
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-activity'));
+        },
+        async moveSlot(slotId, direction) {
+            if (!this.canDragSlots() || this.busyAction) {
+                return;
+            }
+
+            this.clearSlotDropPlaceholder();
+
+            const slotsContainer = this.$refs.slotsContainer;
+            const slotElements = Array.from(slotsContainer.querySelectorAll('[data-slot-id]'));
+            const currentIndex = slotElements.findIndex((el) => Number(el.dataset.slotId) === Number(slotId));
+            const targetIndex = currentIndex + direction;
+
+            if (currentIndex < 0 || targetIndex < 0 || targetIndex >= slotElements.length) {
+                return;
+            }
+
+            const draggedEl = slotElements[currentIndex];
+            const targetEl = slotElements[targetIndex];
+
+            if (direction < 0) {
+                slotsContainer.insertBefore(draggedEl, targetEl);
+            } else {
+                slotsContainer.insertBefore(draggedEl, targetEl.nextElementSibling);
+            }
+
+            await this.persistSlotOrder();
         },
         showToast(type, message) {
             this.toast = { visible: true, type, message };
@@ -276,6 +307,7 @@
     }"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
+    x-on:mobile-slot-move.window="if ($event.detail.songId === {{ $song->id }}) moveSlot($event.detail.slotId, $event.detail.direction)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
@@ -305,34 +337,62 @@
         x-bind:title="songCollapsed ? 'Click to show song slots and assignments' : 'Click to hide song slots and assignments'"
         aria-label="Toggle song details"
     >
-        <div>
+        <div class="min-w-0 flex-1">
             <h4 class="text-base font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h4>
             @if ($song->notes)
                 <p class="mt-1 text-sm leading-6 text-slate-600">{{ $song->notes }}</p>
             @endif
         </div>
 
-        <div class="flex flex-wrap items-center gap-2" @click.stop>
-            @if ($canManageSet)
-                <div class="relative">
-                    <button
-                        type="button"
-                        @click="toggleActionMenu()"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        x-bind:aria-expanded="openActionMenu.toString()"
-                        aria-label="Song actions"
-                        title="Song actions"
-                    >
-                        <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Song actions</span>
-                    </button>
-                    <div
-                        x-show="openActionMenu"
-                        x-cloak
-                        x-transition.origin.top.right
-                        @click.outside="openActionMenu = false"
-                        class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
-                    >
+        <div class="flex shrink-0 items-center gap-2" @click.stop>
+            @if ($isSetOwner && ! $setLocked)
+                <div class="flex items-center gap-1 md:hidden">
+                    @if ($canMoveSongUp)
+                        <button
+                            type="button"
+                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: -1 } }))"
+                            x-bind:disabled="reorderBusy"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Move song up"
+                            title="Move song up"
+                        >
+                            <x-heroicon-m-chevron-up class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    @endif
+                    @if ($canMoveSongDown)
+                        <button
+                            type="button"
+                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: 1 } }))"
+                            x-bind:disabled="reorderBusy"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Move song down"
+                            title="Move song down"
+                        >
+                            <x-heroicon-m-chevron-down class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    @endif
+                </div>
+            @endif
+            <div class="relative">
+                <button
+                    type="button"
+                    @click="toggleActionMenu()"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    x-bind:aria-expanded="openActionMenu.toString()"
+                    aria-label="Song actions"
+                    title="Song actions"
+                >
+                    <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Song actions</span>
+                </button>
+                <div
+                    x-show="openActionMenu"
+                    x-cloak
+                    x-transition.origin.top.right
+                    @click.outside="openActionMenu = false"
+                    class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                >
+                    @if ($canManageSet)
                         <button
                             type="button"
                             @click="openActionMenu = false; openAddSlotModal()"
@@ -363,27 +423,27 @@
                                 Edit Song
                             </span>
                         </button>
-                        <button
-                            type="button"
-                            @click="openActionMenu = false; copySongDirectLink()"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
-                        >
-                            <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                            <span>Copy Direct Link</span>
-                        </button>
-                    </div>
-                    <div
-                        x-show="directLinkCopied"
-                        x-transition.opacity.duration.150ms
-                        x-cloak
-                        role="status"
-                        aria-live="polite"
-                        class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
+                    @endif
+                    <button
+                        type="button"
+                        @click="openActionMenu = false; copySongDirectLink()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
                     >
-                        Direct link copied
-                    </div>
+                        <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Copy Direct Link</span>
+                    </button>
                 </div>
-            @endif
+                <div
+                    x-show="directLinkCopied"
+                    x-transition.opacity.duration.150ms
+                    x-cloak
+                    role="status"
+                    aria-live="polite"
+                    class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
+                >
+                    Direct link copied
+                </div>
+            </div>
         </div>
     </div>
 

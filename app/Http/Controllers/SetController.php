@@ -15,6 +15,7 @@ class SetController extends Controller
 {
     public function summary(Set $set): JsonResponse
     {
+        $this->authorize('view', $set);
         $this->authorize('view', $set->session);
 
         $viewerId = request()->user()?->id;
@@ -111,6 +112,7 @@ class SetController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'is_hidden' => ['nullable', 'boolean'],
         ]);
 
         $nextPosition = ((int) $jamSession->sets()->max('position')) + 1;
@@ -120,6 +122,7 @@ class SetController extends Controller
             'owner_id' => $request->user()->id,
             'position' => $nextPosition,
             'performed' => false,
+            'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'song_requests' => true,
         ]);
 
@@ -138,6 +141,7 @@ class SetController extends Controller
             'position' => ['nullable', 'integer', 'min:0'],
             'performed' => ['nullable', 'boolean'],
             'signups_open' => ['nullable', 'boolean'],
+            'is_hidden' => ['nullable', 'boolean'],
             'song_requests' => ['nullable', 'boolean'],
             'jam_session_id' => ['nullable', 'integer', 'exists:jam_sessions,id'],
         ];
@@ -157,6 +161,7 @@ class SetController extends Controller
             'position' => $validated['position'] ?? $set->position,
             'performed' => (bool) ($validated['performed'] ?? false),
             'signups_open' => (bool) ($validated['signups_open'] ?? false),
+            'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'song_requests' => (bool) ($validated['song_requests'] ?? false),
             'jam_session_id' => $validated['jam_session_id'] ?? $set->jam_session_id,
         ];
