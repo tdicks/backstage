@@ -173,11 +173,11 @@
 		}
 	}">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-8 flex items-center justify-center gap-4">
-				<x-application-logo class="h-12 w-12 fill-current text-slate-100" />
+			<div class="mb-8 flex flex-col items-center justify-center gap-3 text-center">
+				<x-application-logo class="h-14 w-14 text-slate-100" />
 				<div>
-					<h1 class="text-3xl font-semibold">Backstage</h1>
-					<p class="text-sm text-slate-300">Jam check-in.</p>
+					<h1 class="text-sm font-semibold tracking-[0.18em] text-slate-200">BACKSTAGE</h1>
+					<p class="mt-1 text-sm text-slate-300">Jam check-in.</p>
 				</div>
 			</div>
 

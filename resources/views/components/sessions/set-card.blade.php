@@ -903,10 +903,17 @@
                                             <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'user'">
                                                 <div class="space-y-1">
                                                     <span
-                                                        class="text-sm font-medium"
-                                                        x-bind:class="song.slot_map[slot.name].checked_in ? 'text-emerald-700' : 'text-slate-900'"
-                                                        x-text="song.slot_map[slot.name].display"
-                                                    ></span>
+                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm"
+                                                        x-bind:class="song.slot_map[slot.name].is_current_user ? 'border-sky-200 bg-sky-50/90 text-sky-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800'"
+                                                        x-bind:title="song.slot_map[slot.name].is_manual ? 'Manually assigned' : ''"
+                                                    >
+                                                        <template x-if="song.slot_map[slot.name].is_manual">
+                                                            <span class="mr-1 inline-flex items-center" aria-hidden="true">
+                                                                <x-heroicon-m-pencil-square class="h-3.5 w-3.5" />
+                                                            </span>
+                                                        </template>
+                                                        <span x-text="song.slot_map[slot.name].display"></span>
+                                                    </span>
                                                     <span
                                                         x-show="song.slot_map[slot.name].checked_in"
                                                         class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
@@ -916,7 +923,7 @@
                                                 </div>
                                             </template>
                                             <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'open'">
-                                                <span class="text-sm font-medium text-amber-700">Open</span>
+                                                <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50/80 px-3 py-1 text-xs font-semibold text-amber-800 shadow-sm">Open</span>
                                             </template>
                                             <template x-if="!song.slot_map[slot.name] || song.slot_map[slot.name].state === 'empty'">
                                                 <span class="text-sm text-slate-500">-</span>
@@ -950,10 +957,17 @@
                                             <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'user'">
                                                 <div class="space-y-1">
                                                     <span
-                                                        class="font-medium"
-                                                        x-bind:class="song.slot_map[slot.name].checked_in ? 'text-emerald-700' : 'text-slate-900'"
-                                                        x-text="song.slot_map[slot.name].display"
-                                                    ></span>
+                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm"
+                                                        x-bind:class="song.slot_map[slot.name].is_current_user ? 'border-sky-200 bg-sky-50/90 text-sky-800' : 'border-emerald-200 bg-emerald-50/80 text-emerald-800'"
+                                                        x-bind:title="song.slot_map[slot.name].is_manual ? 'Manually assigned' : ''"
+                                                    >
+                                                        <template x-if="song.slot_map[slot.name].is_manual">
+                                                            <span class="mr-1 inline-flex items-center" aria-hidden="true">
+                                                                <x-heroicon-m-pencil-square class="h-3.5 w-3.5" />
+                                                            </span>
+                                                        </template>
+                                                        <span x-text="song.slot_map[slot.name].display"></span>
+                                                    </span>
                                                     <span
                                                         x-show="song.slot_map[slot.name].checked_in"
                                                         class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
@@ -963,7 +977,7 @@
                                                 </div>
                                             </template>
                                             <template x-if="song.slot_map[slot.name] && song.slot_map[slot.name].state === 'open'">
-                                                <span class="text-amber-700">Open</span>
+                                                <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50/80 px-3 py-1 text-xs font-semibold text-amber-800 shadow-sm">Open</span>
                                             </template>
                                             <template x-if="!song.slot_map[slot.name] || song.slot_map[slot.name].state === 'empty'">
                                                 <span class="text-xs text-slate-500">-</span>

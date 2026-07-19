@@ -62,6 +62,7 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertSee('#set-'.$set->id, false)
         ->assertSee('#song-'.$song->id, false)
         ->assertSee('#slot-'.$slot->id, false)
+        ->assertSee("x-bind:title=\"assignmentIsManual ? 'Manually assigned' : ''\"", false)
         ->assertDontSee('aria-label="Admin"', false)
         ->assertDontSee('aria-label="Edit Set"', false)
         ->assertDontSee('aria-label="Add Song"', false)

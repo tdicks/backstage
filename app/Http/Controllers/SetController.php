@@ -17,6 +17,8 @@ class SetController extends Controller
     {
         $this->authorize('view', $set->session);
 
+        $viewerId = request()->user()?->id;
+
         $set->load([
             'songs.slots.user:id,name',
         ]);
@@ -31,7 +33,7 @@ class SetController extends Controller
             ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
             ->values();
 
-        $songs = $set->songs->map(function ($song) use ($slotNames, $slotOptions, $checkedInUserIds) {
+        $songs = $set->songs->map(function ($song) use ($slotNames, $slotOptions, $checkedInUserIds, $viewerId) {
             $slotMap = [];
 
             foreach ($slotNames as $slotName) {
@@ -42,15 +44,21 @@ class SetController extends Controller
                         'state' => 'empty',
                         'display' => '-',
                         'checked_in' => false,
+                        'is_manual' => false,
+                        'is_current_user' => false,
                     ];
                     continue;
                 }
 
                 if ($slot->user) {
+                    $isCurrentUser = $slot->user->id === $viewerId;
+
                     $slotMap[$slotName] = [
                         'state' => 'user',
-                        'display' => $slot->user->name,
+                        'display' => $isCurrentUser ? 'You' : $slot->user->name,
                         'checked_in' => in_array($slot->user->id, $checkedInUserIds, true),
+                        'is_manual' => false,
+                        'is_current_user' => $isCurrentUser,
                     ];
                     continue;
                 }
@@ -60,6 +68,8 @@ class SetController extends Controller
                         'state' => 'user',
                         'display' => $slot->manual_performer_name,
                         'checked_in' => false,
+                        'is_manual' => true,
+                        'is_current_user' => false,
                     ];
                     continue;
                 }
@@ -68,6 +78,8 @@ class SetController extends Controller
                     'state' => 'open',
                     'display' => 'Open',
                     'checked_in' => false,
+                    'is_manual' => false,
+                    'is_current_user' => false,
                 ];
             }
 

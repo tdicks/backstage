@@ -17,8 +17,9 @@
     <body class="font-sans antialiased text-slate-100">
         <div class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-950 via-slate-900 to-slate-950 px-4 py-8 sm:px-6">
             <div>
-                <a href="/">
-                    <x-application-logo class="h-20 w-20 fill-current text-blue-300" />
+                <a href="/" class="inline-flex flex-col items-center gap-3">
+                    <x-application-logo class="h-20 w-20 text-blue-300" />
+                    <span class="text-sm font-semibold tracking-[0.18em] text-slate-300">BACKSTAGE</span>
                 </a>
             </div>
 

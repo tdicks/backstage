@@ -210,11 +210,11 @@ test('session activity endpoint batches approval count and open song slot update
 
     expect($response->json('songs.'.$firstSong->id.'.slots_html'))
         ->toContain('Bass')
-        ->toContain('Recommended Player');
+        ->toContain('You');
 
     expect($response->json('songs.'.$secondSong->id.'.slots_html'))
         ->toContain('Vocals')
-        ->toContain('Recommended Player');
+        ->toContain('You');
 
     $script = file_get_contents(resource_path('js/components/lazySessionSets.js'));
     $store = file_get_contents(resource_path('js/stores/approvals.js'));
