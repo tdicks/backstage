@@ -115,6 +115,7 @@ class SetController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'is_hidden' => ['nullable', 'boolean'],
+            'free_for_all' => ['nullable', 'boolean'],
         ]);
 
         $nextPosition = ((int) $jamSession->sets()->max('position')) + 1;
@@ -125,6 +126,7 @@ class SetController extends Controller
             'position' => $nextPosition,
             'performed' => false,
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
+            'free_for_all' => (bool) ($validated['free_for_all'] ?? false),
             'song_requests' => true,
         ]);
 
@@ -147,6 +149,7 @@ class SetController extends Controller
             'signups_open' => ['nullable', 'boolean'],
             'is_hidden' => ['nullable', 'boolean'],
             'song_requests' => ['nullable', 'boolean'],
+            'free_for_all' => ['nullable', 'boolean'],
             'jam_session_id' => ['nullable', 'integer', 'exists:jam_sessions,id'],
         ];
 
@@ -167,6 +170,7 @@ class SetController extends Controller
             'signups_open' => (bool) ($validated['signups_open'] ?? false),
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'song_requests' => (bool) ($validated['song_requests'] ?? false),
+            'free_for_all' => (bool) ($validated['free_for_all'] ?? false),
             'jam_session_id' => $validated['jam_session_id'] ?? $set->jam_session_id,
         ];
 

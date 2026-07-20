@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
                 ->visibleTo(request()->user())
                 ->where('is_archived', false)
                 ->orderByDesc('date')
-                ->get(['id', 'name', 'date']));
+                ->get(['id', 'name', 'date', 'is_closed', 'allow_checkins']));
 
             $view->with('hasArchivedJamSessions', JamSession::query()
                 ->visibleTo($user)

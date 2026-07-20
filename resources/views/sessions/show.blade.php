@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, shareCopied: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.openEditSession = true; }, async copySessionShareLink() { await window.copyShareLink(@js(route('share.session', $session))); this.shareCopied = true; setTimeout(() => this.shareCopied = false, 1800); } }" @keydown.escape.window="openEditSession = false; openSet = false">
+        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, free_for_all_create: false, shareCopied: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.openEditSession = true; }, async copySessionShareLink() { await window.copyShareLink(@js(route('share.session', $session))); this.shareCopied = true; setTimeout(() => this.shareCopied = false, 1800); } }" @keydown.escape.window="openEditSession = false; openSet = false">
             <div>
                 <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
                     <span>{{ $session->name }}</span>
@@ -96,6 +96,25 @@
                                         </label>
                                     </div>
                                     <div>
+                                        <input type="hidden" name="allow_checkins" value="0">
+                                        <label for="session_allow_checkins" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                            <input
+                                                id="session_allow_checkins"
+                                                type="checkbox"
+                                                name="allow_checkins"
+                                                value="1"
+                                                x-model="editSessionAllowCheckins"
+                                                x-bind:disabled="editSessionClosed"
+                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
+                                                @checked($session->allow_checkins)
+                                            >
+                                            <span>Allow user check-ins for this session</span>
+                                        </label>
+                                        <p x-show="initialEditSessionAllowCheckins && !editSessionAllowCheckins" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                            This action will check out all attendees from this session.
+                                        </p>
+                                    </div>
+                                    <div>
                                         <input type="hidden" name="is_hidden" value="0">
                                         <label for="session_is_hidden" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                             <input
@@ -122,25 +141,6 @@
                                             >
                                             <span>Archive this jam session</span>
                                         </label>
-                                    </div>
-                                    <div>
-                                        <input type="hidden" name="allow_checkins" value="0">
-                                        <label for="session_allow_checkins" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                                            <input
-                                                id="session_allow_checkins"
-                                                type="checkbox"
-                                                name="allow_checkins"
-                                                value="1"
-                                                x-model="editSessionAllowCheckins"
-                                                x-bind:disabled="editSessionClosed"
-                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
-                                                @checked($session->allow_checkins)
-                                            >
-                                            <span>Allow user check-ins for this session</span>
-                                        </label>
-                                        <p x-show="initialEditSessionAllowCheckins && !editSessionAllowCheckins" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                                            This action will check out all attendees from this session.
-                                        </p>
                                     </div>
                                 </form>
                                 </div>
@@ -184,6 +184,15 @@
                                         <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
                                         Hide this set from other users (admins can still see it).
                                     </label>
+                                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                        <input type="hidden" name="free_for_all" value="0">
+                                        <input type="checkbox" name="free_for_all" value="1" x-model="free_for_all_create" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                                        <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                                        Free for all mode.
+                                    </label>
+                                    <p x-show="free_for_all_create" x-cloak class="text-xs text-amber-700">
+                                        In free for all mode, any unclaimed slots can be taken without requiring any approvals.
+                                    </p>
                                     <div class="flex justify-end gap-3">
                                         <x-modal-secondary-button type="button" @click="openSet = false">Cancel</x-modal-secondary-button>
                                         <x-modal-primary-button>Create Set</x-modal-primary-button>

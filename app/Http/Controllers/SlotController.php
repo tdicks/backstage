@@ -174,8 +174,11 @@ class SlotController extends Controller
 
         $set = $slot->song->set;
         $user = $request->user();
+        $isSetManager = $set->owner_id === $user->id || $set->isCollaborator($user) || $user->is_admin;
+        $isCollaborator = $set->isCollaborator($user);
+        $canFreeTake = $set->free_for_all && $slot->isOpen();
 
-        if ($set->owner_id !== $user->id && ! $set->isCollaborator($user) && ! $user->is_admin) {
+        if (! $isSetManager && ! $canFreeTake) {
             abort(403);
         }
 
@@ -199,6 +202,31 @@ class SlotController extends Controller
             'user_id' => $request->user()->id,
             'manual_performer_name' => null,
         ]);
+
+        // Notify set owner/collaborators if slot was taken without approval (collaborator or free for all mode)
+        if ($isCollaborator || $canFreeTake) {
+            $slot->load('user', 'song');
+            $slotLabel = Slot::options()[$slot->name] ?? $slot->name;
+            $songTitle = $slot->song->artist.' - '.$slot->song->title;
+
+            if ($isCollaborator) {
+                $body = $request->user()->name.' took the '.$slotLabel.' slot on '.$songTitle.' as a collaborator.';
+            } else {
+                $body = $request->user()->name.' claimed the '.$slotLabel.' slot on '.$songTitle.' (free for all mode).';
+            }
+
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::SLOT_TAKEN_WITHOUT_APPROVAL,
+                app(NotificationService::class)->managersForSet($set),
+                $request->user(),
+                [
+                    'title' => 'Slot taken on your set',
+                    'body' => $body,
+                    'action_url' => route('sessions.show', $set->session).'#slot-'.$slot->id,
+                    'action_label' => 'Open slot',
+                ]
+            );
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

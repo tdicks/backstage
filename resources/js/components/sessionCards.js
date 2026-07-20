@@ -80,6 +80,8 @@ export function sessionSetCard(config) {
         performedDraft: config.performedDraft,
         initialSongRequestsEnabled: config.initialSongRequestsEnabled,
         songRequestsDraft: config.songRequestsDraft,
+        initialFreeForAll: config.initialFreeForAll,
+        freeForAllDraft: config.freeForAllDraft,
         reorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
@@ -380,6 +382,7 @@ export function sessionSetCard(config) {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.performedDraft = this.initialSetPerformed;
             this.songRequestsDraft = this.initialSongRequestsEnabled;
+            this.freeForAllDraft = this.initialFreeForAll;
             this.openSetEdit = true;
         },
         openCollaboratorsModal() {
@@ -900,7 +903,7 @@ export function sessionSongCard(config) {
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-activity'));
+            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
         async moveSlot(slotId, direction) {
             if (!this.canDragSlots() || this.busyAction) {
@@ -1270,7 +1273,7 @@ export function sessionSlotRow(config) {
             return selectedUserId !== initialUserId && selectedUserId !== '' && selectedUserId !== currentUserId;
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-activity'));
+            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
         showToast(type, message) {
             const anchorRect = (this.$refs.toastAnchor || this.$refs.actionMenuButton || this.$el).getBoundingClientRect();
@@ -1604,6 +1607,8 @@ export function sessionSlotRow(config) {
                     throw new Error('Request failed');
                 }
 
+                this.openEditSlot = false;
+                this.$el.remove();
                 this.refreshSessionSets();
             } catch (e) {
                 this.actionError = 'Could not delete slot. Try again.';

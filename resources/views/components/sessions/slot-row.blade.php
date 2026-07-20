@@ -3,6 +3,7 @@
     'set',
     'users',
     'slotOptions',
+    'jamSessionClosed' => false,
     'isSetOwner' => false,
     'canManageSet' => false,
     'canReorderSlots' => false,
@@ -26,7 +27,7 @@
     id="slot-{{ $slotModel->id }}"
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     data-slot-id="{{ $slotModel->id }}"
-    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots ? 'true' : 'false'"
+    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots && !jamSessionClosed ? 'true' : 'false'"
     @dragstart.stop="onSlotDragStart($event, {{ $slotModel->id }})"
     @dragover.stop="onSlotDragOver($event, {{ $slotModel->id }})"
     @drop.stop="onSlotDrop($event)"
@@ -75,8 +76,9 @@
                     @if ($canMoveSlotUp)
                         <button
                             type="button"
+                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                             @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: -1 } }))"
-                            x-bind:disabled="busyAction"
+                            x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                             class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Move slot up"
                             title="Move slot up"
@@ -87,8 +89,9 @@
                     @if ($canMoveSlotDown)
                         <button
                             type="button"
+                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                             @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: 1 } }))"
-                            x-bind:disabled="busyAction"
+                            x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                             class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Move slot down"
                             title="Move slot down"
@@ -102,6 +105,7 @@
                 :set="$set"
                 :slot-model="$slotModel"
                 :set-locked="$setLocked"
+                :jam-session-closed="$jamSessionClosed"
                 :can-manage-set="$canManageSet"
                 :is-set-owner="$isSetOwner"
                 :is-admin-managing-other-set="$isAdminManagingOtherSet"

@@ -2,6 +2,7 @@
     'set',
     'slotModel',
     'setLocked' => false,
+    'jamSessionClosed' => false,
     'canManageSet' => false,
     'isSetOwner' => false,
     'isAdminManagingOtherSet' => false,
@@ -35,12 +36,28 @@
             @if ($set->signups_open && $canManageSet && $slotModel->user_id !== auth()->id())
                 <button
                     type="button"
+                    @disabled($jamSessionClosed && !auth()->user()?->is_admin)
+                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                    x-show="slotIsOpen && !assignedToCurrentUser"
+                    @click="openActionMenu = false; takeSlot()"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                >
+                    @if ($set->free_for_all)
+                        <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                    @else
+                        <x-heroicon-m-arrow-down-on-square class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    @endif
+                    <span>Take this slot</span>
+                </button>
+            @elseif ($set->signups_open && $set->free_for_all && $slotModel->user_id !== auth()->id())
+                <button
+                    type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                     x-show="slotIsOpen && !assignedToCurrentUser"
                     @click="openActionMenu = false; takeSlot()"
                     x-bind:disabled="busyAction"
                 >
-                    <x-heroicon-m-arrow-down-on-square class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
                     <span>Take this slot</span>
                 </button>
             @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
@@ -72,10 +89,11 @@
             @if ($set->signups_open && $slotModel->isOpen())
                 <button
                     type="button"
+                    @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                     @click="openActionMenu = false; openProposeModal()"
                     x-show="slotIsOpen"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                    x-bind:disabled="busyAction || proposalUserOptions.length === 0"
+                    x-bind:disabled="busyAction || proposalUserOptions.length === 0 || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-user-plus class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span>Recommend someone else</span>
@@ -86,8 +104,9 @@
                 <button
                     type="button"
                     @click="openActionMenu = false; clearSlot()"
+                    @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                     x-show="!slotIsOpen && !assignedToCurrentUser"
-                    x-bind:disabled="busyAction"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $slotManageMenuItemClass }}"
                 >
                     <x-heroicon-m-x-circle class="h-4 w-4" aria-hidden="true" />
@@ -102,7 +121,8 @@
                 <button
                     type="button"
                     @click="openActionMenu = false; openEditSlotModal()"
-                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $slotManageMenuItemClass }}"
+                    @disabled($jamSessionClosed && !auth()->user()?->is_admin)
+                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $slotManageMenuItemClass }}"
                 >
                     <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                     <span>

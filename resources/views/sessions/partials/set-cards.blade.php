@@ -6,6 +6,7 @@
             :users="$users"
             :templates="$templates"
             :slot-options="$slotOptions"
+            :jam-session-closed="$session->is_closed"
         />
     @empty
         <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">

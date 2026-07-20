@@ -4,6 +4,7 @@
     'users',
     'slotOptions',
     'pendingSlotAssignments' => [],
+    'jamSessionClosed' => false,
     'isSetOwner' => false,
     'canManageSet' => false,
     'canReorderSongs' => false,
@@ -28,7 +29,7 @@
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
     x-bind:data-song-open="(!songCollapsed).toString()"
-    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots ? 'true' : 'false'"
+    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'"
     @dragstart.self="onSongDragStart($event, {{ $song->id }})"
     @dragover.self="onSongDragOver($event, {{ $song->id }})"
     @drop.self="onSongDrop($event)"
@@ -37,7 +38,8 @@
     }"
     x-data="sessionSongCard(@js([
         'songKey' => 'backstage:u'.auth()->id().':song:'.$song->id,
-        'canReorderSlots' => $canManageSet && ! $setLocked,
+        'canReorderSlots' => $canManageSet && ! $setLocked && ! ($jamSessionClosed && !auth()->user()?->is_admin),
+        'isAdminUser' => auth()->user()?->is_admin ?? false,
         'setLocked' => $setLocked,
         'songDirectUrl' => route('sessions.show', $set->session).'#song-'.$song->id,
         'songsReorderUrl' => route('songs.reorder', $set),
@@ -90,8 +92,9 @@
                     @if ($canMoveSongUp)
                         <button
                             type="button"
+                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                             @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: -1 } }))"
-                            x-bind:disabled="reorderBusy"
+                            x-bind:disabled="reorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                             class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Move song up"
                             title="Move song up"
@@ -102,8 +105,9 @@
                     @if ($canMoveSongDown)
                         <button
                             type="button"
+                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                             @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: 1 } }))"
-                            x-bind:disabled="reorderBusy"
+                            x-bind:disabled="reorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                             class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Move song down"
                             title="Move song down"
@@ -137,7 +141,7 @@
                         <button
                             type="button"
                             @click="openActionMenu = false; openAddSlotModal()"
-                            @disabled($setLocked)
+                            @disabled($setLocked || ($jamSessionClosed && !auth()->user()?->is_admin))
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
@@ -152,7 +156,7 @@
                         <button
                             type="button"
                             @click="openActionMenu = false; openEditSongModal()"
-                            @disabled($setLocked)
+                            @disabled($setLocked || ($jamSessionClosed && !auth()->user()?->is_admin))
                             class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $songActionMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
@@ -279,6 +283,7 @@
                     :set="$set"
                     :users="$users"
                     :slot-options="$slotOptions"
+                    :jam-session-closed="$jamSessionClosed"
                     :is-set-owner="$isSetOwner"
                     :can-manage-set="$canManageSet"
                 />

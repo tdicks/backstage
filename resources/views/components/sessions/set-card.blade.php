@@ -75,6 +75,8 @@
         'performedDraft' => $setLocked,
         'initialSongRequestsEnabled' => (bool) $set->song_requests,
         'songRequestsDraft' => (bool) $set->song_requests,
+        'initialFreeForAll' => (bool) $set->free_for_all,
+        'freeForAllDraft' => (bool) $set->free_for_all,
         'shareSetUrl' => route('share.set', $set),
         'setDirectUrl' => route('sessions.show', $set->session).'#set-'.$set->id,
         'songsReorderUrl' => route('songs.reorder', $set),
@@ -136,7 +138,7 @@
                     </span>
                 @endif
 
-                @if (! $set->performed)
+                @if (! $set->performed && ! $sessionLocked)
                     <span class="inline-flex items-center" title="Sign ups {{ $set->signups_open ? 'open' : 'closed' }}">
                         @if ($set->signups_open)
                             <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
@@ -146,6 +148,12 @@
                             <span class="sr-only">Sign ups closed</span>
                         @endif
                     </span>
+                    @if ($set->free_for_all && $set->signups_open)
+                        <span class="inline-flex items-center" title="Free for all mode">
+                            <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                            <span class="sr-only">Free for all mode</span>
+                        </span>
+                    @endif
                 @endif
 
                 @if ($set->is_hidden)
@@ -155,7 +163,7 @@
                     </span>
                 @endif
 
-                @if ($isAdmin && ! $set->performed)
+                @if ($isAdmin && ! $set->performed && ! $sessionLocked)
                     <span
                         class="inline-flex items-center"
                         title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
@@ -191,11 +199,12 @@
                     data-session-action-menu
                     class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                 >
-                    @if ($canManageSet && ! $setLocked)
+                    @if ($canManageSet && ! $setLocked && ! $isAdminManagingOtherSet)
                         <button
                             type="button"
+                            @disabled($sessionLocked && !$isAdmin)
                             @click="openActionMenu = false; openAddSongModal()"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $setManageMenuItemClass }}"
                         >
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span>
@@ -206,7 +215,7 @@
                                 Add Song
                             </span>
                         </button>
-                    @elseif ($set->signups_open && $set->song_requests && ! $setLocked && ! $sessionLocked)
+                    @elseif (!$sessionLocked && !($isSetOwner || $isCollaborator) && $set->song_requests && !$setLocked)
                         <button
                             type="button"
                             @click="openActionMenu = false; openSongRequestModal()"
@@ -220,7 +229,8 @@
                         <button
                             type="button"
                             @click="openActionMenu = false; openSetEditModal()"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                            @disabled($sessionLocked && !$isAdmin)
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                             <span>
@@ -236,7 +246,8 @@
                         <button
                             type="button"
                             @click="openActionMenu = false; openCollaboratorsModal()"
-                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                            @disabled($sessionLocked && !$isAdmin)
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }} disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <x-heroicon-m-user-group class="h-4 w-4" aria-hidden="true" />
                             <span>
@@ -496,6 +507,19 @@
                         class="-mt-1 text-xs text-amber-700"
                     >
                         Turning off song requests will reject any pending song requests for this set.
+                    </p>
+                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                        <input type="hidden" name="free_for_all" value="0">
+                        <input type="checkbox" name="free_for_all" value="1" x-model="freeForAllDraft" @checked($set->free_for_all) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
+                        <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                        Free for all mode.
+                    </label>
+                    <p
+                        x-show="freeForAllDraft"
+                        x-cloak
+                        class="-mt-1 text-xs text-amber-700"
+                    >
+                        In free for all mode, any unclaimed slots can be taken without requiring any approvals.
                     </p>
                     @if ($isAdmin)
                         <input type="hidden" name="feature_set" value="0">
@@ -760,6 +784,7 @@
                     :can-reorder-songs="$isSetOwner && ! $setLocked"
                     :can-move-song-up="! $loop->first"
                     :can-move-song-down="! $loop->last"
+                    :jam-session-closed="$sessionLocked"
                 />
             @empty
                 <p class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>

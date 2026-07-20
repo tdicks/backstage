@@ -16,6 +16,8 @@ final class NotificationTypeCatalog
 
     public const SLOT_MANUALLY_ASSIGNED = 'slot_manually_assigned';
 
+    public const SLOT_TAKEN_WITHOUT_APPROVAL = 'slot_taken_without_approval';
+
     public const SET_COLLABORATOR_ADDED = 'set_collaborator_added';
 
     public const SET_COLLABORATOR_REMOVED = 'set_collaborator_removed';
@@ -67,6 +69,12 @@ final class NotificationTypeCatalog
             self::SLOT_MANUALLY_ASSIGNED => [
                 'label' => 'Slot manually assigned',
                 'description' => 'When someone manually assigns you to a slot on a set.',
+                'category' => 'slots',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SLOT_TAKEN_WITHOUT_APPROVAL => [
+                'label' => 'Slot taken without approval',
+                'description' => 'When someone takes a slot on your set without needing approval (collaborator or free for all mode).',
                 'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],

@@ -5,6 +5,13 @@
 
     <div class="py-10">
         <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            <div class="mb-8 flex justify-center">
+                <a href="/" class="inline-flex flex-col items-center gap-3">
+                    <x-application-logo class="h-20 w-20 text-blue-300" />
+                    <span class="text-sm font-semibold tracking-[0.18em] text-slate-300">BACKSTAGE</span>
+                </a>
+            </div>
+
             <div class="space-y-5 rounded-xl border border-slate-200 bg-slate-50/95 p-5 text-sm leading-6 text-slate-700 shadow-sm sm:p-6">
                 <div class="rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <p class="text-base leading-7 text-slate-800">
@@ -67,6 +74,16 @@
                     </p>
                     <p>
                         If you need to step away from a part you already claimed, use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-arrow-left-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" /> Release slot</span>. Backstage also helps avoid impossible double-booking within the same set. If you are already down for a part that clashes with another one, it will tell you clearly instead of quietly changing the plan.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Free For All Mode</h3>
+                    <p>
+                        Sometimes a set organiser wants a "first come, first served" style of set organisation, where players can claim slots immediately without waiting for approval. When a set has <span class="inline-flex items-center gap-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-800 shadow-sm"><x-heroicon-m-fire class="h-3.5 w-3.5" aria-hidden="true" /> Free for all mode</span> turned on, any unclaimed slot can be claimed instantly by clicking <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-fire class="h-3.5 w-3.5 text-orange-500" aria-hidden="true" /> Take this slot</span>.
+                    </p>
+                    <p>
+                        No approvals needed, no requests pending — just grab a spot and you are in. It is perfect for a quick-fire session or for last minute sets on the fly.
                     </p>
                 </div>
 

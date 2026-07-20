@@ -129,8 +129,20 @@
 
                                 @forelse ($navJamSessions as $navSession)
                                     <x-dropdown-link :href="route('sessions.show', $navSession)">
-                                        <span class="block truncate">{{ $navSession->name }}</span>
-                                        <span class="mt-0.5 block text-xs text-gray-500">{{ $navSession->date->format('M j, Y') }}</span>
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <span class="block truncate">{{ $navSession->name }}</span>
+                                                <span class="mt-0.5 block text-xs text-gray-500">{{ $navSession->date->format('M j, Y') }}</span>
+                                            </div>
+                                            <div class="ms-2 flex shrink-0 items-center gap-1">
+                                                @if ($navSession->is_closed)
+                                                    <x-heroicon-m-lock-closed class="h-3.5 w-3.5 text-amber-400" aria-hidden="true" title="Jam session locked" />
+                                                @endif
+                                                @if ($navSession->allow_checkins)
+                                                    <x-heroicon-m-arrow-right-on-rectangle class="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" title="Check-ins enabled" />
+                                                @endif
+                                            </div>
+                                        </div>
                                     </x-dropdown-link>
                                 @empty
                                     <span class="block px-4 py-2 text-sm text-gray-500">No jam sessions yet.</span>
@@ -303,7 +315,17 @@
             <div class="mx-4 my-1 border-t border-slate-800"></div>
             @foreach ($navJamSessions as $navSession)
                 <x-responsive-nav-link :href="route('sessions.show', $navSession)" :active="request()->routeIs('sessions.show') && request()->route('jamSession')?->id === $navSession->id">
-                    {{ $navSession->name }}
+                    <div class="flex items-center justify-between gap-2">
+                        <span>{{ $navSession->name }}</span>
+                        <div class="flex items-center gap-1">
+                            @if ($navSession->is_closed)
+                                <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-400" aria-hidden="true" title="Jam session locked" />
+                            @endif
+                            @if ($navSession->allow_checkins)
+                                <x-heroicon-m-arrow-right-on-rectangle class="h-4 w-4 text-emerald-400" aria-hidden="true" title="Check-ins enabled" />
+                            @endif
+                        </div>
+                    </div>
                 </x-responsive-nav-link>
             @endforeach
             <div class="mx-4 my-1 border-t border-slate-800"></div>
@@ -431,7 +453,7 @@
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            @click="await $store.notifications.dismissAll()"
+                            @click="await $store.notifications.dismissAll(); closeNotifications()"
                             x-show="$store.notifications.items.length > 0"
                             x-transition
                             class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"

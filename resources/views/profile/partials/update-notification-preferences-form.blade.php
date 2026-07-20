@@ -70,7 +70,7 @@
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save Preferences') }}</x-primary-button>
 
-            @if (session('status') === 'profile-updated')
+            @if (session('status') === 'Profile updated.')
                 <p
                     x-data="{ show: true }"
                     x-show="show"

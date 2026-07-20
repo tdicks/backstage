@@ -3,6 +3,7 @@
     'set',
     'users',
     'slotOptions',
+    'jamSessionClosed' => false,
     'isSetOwner' => false,
     'canManageSet' => false,
     'canMoveSlotUp' => false,
@@ -24,9 +25,10 @@
         :set="$set"
         :users="$users"
         :slot-options="$slotOptions"
+        :jam-session-closed="$jamSessionClosed"
         :is-set-owner="$isSetOwner"
         :can-manage-set="$canManageSet"
-        :can-reorder-slots="$canManageSet && ! $setLocked"
+        :can-reorder-slots="$canManageSet && ! $setLocked && ! ($jamSessionClosed && !auth()->user()?->is_admin)"
         :can-move-slot-up="! $loop->first"
         :can-move-slot-down="! $loop->last"
     />

@@ -21,6 +21,7 @@ class Set extends Model
         'is_hidden',
         'song_requests',
         'feature_set',
+        'free_for_all',
         'collaborator_ids',
     ];
 
@@ -33,6 +34,7 @@ class Set extends Model
             'is_hidden' => 'boolean',
             'song_requests' => 'boolean',
             'feature_set' => 'boolean',
+            'free_for_all' => 'boolean',
             'collaborator_ids' => 'array',
         ];
     }
