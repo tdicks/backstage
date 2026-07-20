@@ -19,6 +19,22 @@ test('user directory is searchable by name and bio', function () {
         ->assertDontSee('Bobby Drums');
 });
 
+test('user directory shows slot coverage for users', function () {
+    $viewer = User::factory()->create();
+    User::factory()->create([
+        'name' => 'Jazz Player',
+        'slot_coverage' => ['vocals', 'bass'],
+        'hide_from_directory' => false,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('directory.index'))
+        ->assertOk()
+        ->assertSee('Jazz Player')
+        ->assertSee('Vocals')
+        ->assertSee('Bass');
+});
+
 test('user directory excludes users who hide themselves', function () {
     $viewer = User::factory()->create();
     User::factory()->create([

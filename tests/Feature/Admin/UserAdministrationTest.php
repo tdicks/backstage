@@ -29,6 +29,7 @@ test('admin can update user details', function () {
         'bio' => 'Old bio',
         'hide_from_directory' => false,
         'hide_from_slot_proposals' => false,
+        'slot_coverage' => null,
     ]);
 
     $this->actingAs($admin)
@@ -38,6 +39,7 @@ test('admin can update user details', function () {
             'bio' => 'New bio',
             'hide_from_directory' => 1,
             'hide_from_slot_proposals' => 1,
+            'slot_coverage' => ['vocals', 'drums'],
             'is_admin' => 1,
         ])
         ->assertRedirect();
@@ -48,6 +50,7 @@ test('admin can update user details', function () {
     expect($user->bio)->toBe('New bio');
     expect($user->hide_from_directory)->toBeTrue();
     expect($user->hide_from_slot_proposals)->toBeTrue();
+    expect($user->slot_coverage)->toBe(['vocals', 'drums']);
     expect($user->is_admin)->toBeTrue();
 });
 

@@ -226,6 +226,21 @@
                                                                         Hide from set proposal options
                                                                     </label>
 
+                                                                    @if ($slotOptions)
+                                                                        <div>
+                                                                            <x-input-label :value="'Slot Coverage'" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
+                                                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                                                @foreach ($slotOptions as $key => $name)
+                                                                                    @php $checked = in_array($key, $user->slot_coverage ?? [], true); @endphp
+                                                                                    <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition {{ $checked ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300' }}">
+                                                                                        <input type="checkbox" name="slot_coverage[]" value="{{ $key }}" @checked($checked) class="sr-only">
+                                                                                        {{ $name }}
+                                                                                    </label>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
+
                                                                     <input type="hidden" name="is_admin" value="0">
                                                                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                                                         <input type="checkbox" name="is_admin" value="1" @checked($user->is_admin) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
