@@ -1,3 +1,6 @@
+const REFRESH_INTERVAL_MS = 30000;
+const TOAST_DISPLAY_DURATION_MS = 5000;
+
 export function registerNotificationsStore(Alpine) {
 	Alpine.store('notifications', {
 		items: [],
@@ -28,7 +31,7 @@ export function registerNotificationsStore(Alpine) {
 
 			if (!this.initialized) {
 				this.initialized = true;
-				this.intervalId = window.setInterval(() => this.refresh(), 30000);
+				this.intervalId = window.setInterval(() => this.refresh(), REFRESH_INTERVAL_MS);
 			}
 
 			await this.refresh({ showPopups: false });
@@ -142,7 +145,7 @@ export function registerNotificationsStore(Alpine) {
 		showToast(notification) {
 			this.activeToast = notification;
 			window.clearTimeout(this.toastTimer);
-			this.toastTimer = window.setTimeout(() => this.advanceToast(), 5000);
+			this.toastTimer = window.setTimeout(() => this.advanceToast(), TOAST_DISPLAY_DURATION_MS);
 		},
 
 		advanceToast() {

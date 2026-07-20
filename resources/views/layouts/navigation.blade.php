@@ -8,6 +8,7 @@
         notificationsOpen: false,
         notificationObserver: null,
         notificationTimers: {},
+        notificationSeenDelay: 3000,
         toggleNotifications() {
             this.notificationsOpen = ! this.notificationsOpen;
 
@@ -46,7 +47,7 @@
                             this.notificationTimers[id] = window.setTimeout(() => {
                                 this.$store.notifications.markSeen(id);
                                 delete this.notificationTimers[id];
-                            }, 3000);
+                            }, this.notificationSeenDelay);
 
                             return;
                         }

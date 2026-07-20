@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\NotificationTypeCatalog;
+use App\Support\NotificationSettings;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ return new class extends Migration
         });
 
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
-            foreach (['enabled', 'popup', 'email', 'text'] as $channel) {
+            foreach (NotificationSettings::channels() as $channel) {
                 DB::table('settings')->updateOrInsert(
                     ['key' => NotificationTypeCatalog::adminSettingKey($type, $channel)],
                     [
@@ -39,7 +40,7 @@ return new class extends Migration
     public function down(): void
     {
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
-            foreach (['enabled', 'popup', 'email', 'text'] as $channel) {
+            foreach (NotificationSettings::channels() as $channel) {
                 DB::table('settings')
                     ->where('key', NotificationTypeCatalog::adminSettingKey($type, $channel))
                     ->delete();

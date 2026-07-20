@@ -33,30 +33,28 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $attributes = $validated;
 
-        $request->user()->fill([
-            'name' => $validated['name'] ?? $request->user()->name,
-            'email' => $validated['email'] ?? $request->user()->email,
-            'mobile_number' => array_key_exists('mobile_number', $validated) ? $validated['mobile_number'] : $request->user()->mobile_number,
-            'bio' => array_key_exists('bio', $validated) ? ($validated['bio'] ?? null) : $request->user()->bio,
-            'hide_from_directory' => $request->has('hide_from_directory')
-                ? $request->boolean('hide_from_directory')
-                : $request->user()->hide_from_directory,
-            'hide_from_slot_proposals' => $request->has('hide_from_slot_proposals')
-                ? $request->boolean('hide_from_slot_proposals')
-                : $request->user()->hide_from_slot_proposals,
-            'slot_coverage' => array_key_exists('slot_coverage', $validated)
-                ? $request->input('slot_coverage', [])
-                : $request->user()->slot_coverage,
-            'notification_preferences' => array_key_exists('notification_preferences', $validated)
-                ? NotificationSettings::normalizeUserPreferences(
-                    $request->user(),
-                    $request->input('notification_preferences', [])
-                )
-                : NotificationSettings::userPreferences($request->user()),
-        ]);
+        foreach (['hide_from_directory', 'hide_from_slot_proposals'] as $field) {
+            if (array_key_exists($field, $attributes)) {
+                $attributes[$field] = $request->boolean($field);
+            }
+        }
 
-        if (array_key_exists('email', $validated) && $request->user()->isDirty('email')) {
+        if ($request->boolean('slot_coverage_present')) {
+            $attributes['slot_coverage'] = $request->input('slot_coverage', []);
+        }
+
+        if (array_key_exists('notification_preferences', $attributes)) {
+            $attributes['notification_preferences'] = NotificationSettings::normalizeUserPreferences(
+                $request->user(),
+                $request->input('notification_preferences', [])
+            );
+        }
+
+        $request->user()->fill($attributes);
+
+        if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
         }
 

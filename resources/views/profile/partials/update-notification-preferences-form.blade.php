@@ -12,6 +12,8 @@
     <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
         @csrf
         @method('patch')
+        <input type="hidden" name="name" value="{{ $user->name }}">
+        <input type="hidden" name="email" value="{{ $user->email }}">
 
         <div>
             <x-input-label for="mobile_number" :value="__('Mobile Number')" />
@@ -60,7 +62,7 @@
         </div>
 
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save notification preferences') }}</x-primary-button>
+            <x-primary-button>{{ __('Save Preferences') }}</x-primary-button>
 
             @if (session('status') === 'profile-updated')
                 <p
