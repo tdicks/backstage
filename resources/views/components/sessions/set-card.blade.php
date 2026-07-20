@@ -103,7 +103,9 @@
                 <span class="inline-flex items-center gap-1.5" title="Set owner">
                     <x-heroicon-m-user class="h-4 w-4 {{ $setOwnerIconClass }}" aria-hidden="true" />
                     <span class="sr-only">Set owner</span>
-                    <span>{{ $set->owner->name }}<template x-if="collaboratorNames.length > 0"><span x-text="', ' + collaboratorNames.slice(0, 2).join(', ')"></span></template></span>
+                    <span>
+                       {{ $set->owner->name }}<span x-show="collaboratorNames.length > 0" x-text="', ' + collaboratorNames.slice(0, 2).join(', ')" x-cloak></span>
+                    </span>
                 </span>
 
                 @if ($set->performed)
