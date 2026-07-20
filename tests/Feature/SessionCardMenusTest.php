@@ -61,6 +61,8 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertSee('Copy Direct Link')
         ->assertSee('mobile-song-move', false)
         ->assertSee('mobile-slot-move', false)
+        ->assertSee('fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4', false)
+        ->assertSee('flex w-full max-w-lg max-h-[calc(100dvh-2rem)] flex-col overflow-y-auto rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-4rem)]', false)
         ->assertSee('#set-'.$set->id, false)
         ->assertSee('#song-'.$song->id, false)
         ->assertSee('#slot-'.$slot->id, false)
