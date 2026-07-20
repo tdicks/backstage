@@ -613,42 +613,57 @@
             },
 
             animateSetMovement(previousRects) {
-                if (!previousRects || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+                if (!previousRects) { return; }
+
+                const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 140 : 320;
 
                 this.$nextTick(() => {
-                    const movedElements = Array.from(this.$refs.setsContainer?.querySelectorAll('[data-live-set-card]') || [])
-                        .map(el => {
-                            const previousRect = previousRects.get(el.dataset.liveSetId);
-                            if (!previousRect) { return null; }
-
-                            const currentRect = el.getBoundingClientRect();
-                            const deltaX = previousRect.left - currentRect.left;
-                            const deltaY = previousRect.top - currentRect.top;
-
-                            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) { return null; }
-
-                            return { el, deltaX, deltaY };
-                        })
-                        .filter(Boolean);
-
-                    movedElements.forEach(({ el, deltaX, deltaY }) => {
-                        el.style.transition = 'none';
-                        el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                    });
-
-                    this.$refs.setsContainer?.offsetHeight;
-
                     requestAnimationFrame(() => {
-                        movedElements.forEach(({ el }) => {
-                            el.style.transition = 'transform 260ms cubic-bezier(0.2, 0, 0, 1)';
-                            el.style.transform = 'translate(0, 0)';
-                            el.addEventListener('transitionend', () => {
-                                el.style.transition = '';
-                                el.style.transform = '';
-                            }, { once: true });
+                        const movedElements = Array.from(this.$refs.setsContainer?.querySelectorAll('[data-live-set-card]') || [])
+                            .map(el => {
+                                const previousRect = previousRects.get(el.dataset.liveSetId);
+                                if (!previousRect) { return null; }
+
+                                const currentRect = el.getBoundingClientRect();
+                                const deltaX = previousRect.left - currentRect.left;
+                                const deltaY = previousRect.top - currentRect.top;
+
+                                if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) { return null; }
+
+                                return { el, deltaX, deltaY };
+                            })
+                            .filter(Boolean);
+
+                        movedElements.forEach(({ el, deltaX, deltaY }) => {
+                            el.style.transition = 'none';
+                            el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                        });
+
+                        this.$refs.setsContainer?.offsetHeight;
+
+                        requestAnimationFrame(() => {
+                            movedElements.forEach(({ el }) => {
+                                el.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0, 0, 1)`;
+                                el.style.transform = 'translate(0, 0)';
+                                el.addEventListener('transitionend', () => {
+                                    el.style.transition = '';
+                                    el.style.transform = '';
+                                }, { once: true });
+                            });
                         });
                     });
                 });
+            },
+
+            replaceSetOrders(orderById) {
+                this.sets = this.sets.map(set => orderById.has(String(set.id))
+                    ? { ...set, order: orderById.get(String(set.id)) }
+                    : set);
+            },
+
+            applyOrderedIdsForStatus(status, orderedIds) {
+                const orderById = new Map(orderedIds.map((id, index) => [String(id), index]));
+                this.replaceSetOrders(orderById);
             },
 
             refreshSetOrderView() {
@@ -776,10 +791,7 @@
                 const orderedIds = Array.from(this.$refs.setsContainer.querySelectorAll(`[data-live-set-card][data-live-set-status='${draggedSet.status}']`))
                     .map(el => el.dataset.liveSetId);
 
-                orderedIds.forEach((id, index) => {
-                    const set = this.sets.find(s => String(s.id) === id);
-                    if (set) { set.order = index; }
-                });
+                this.applyOrderedIdsForStatus(draggedSet.status, orderedIds);
             },
 
             movableSetsForStatus(status) {
@@ -813,10 +825,11 @@
                 // Swap order with the set above
                 const prev = sameStatus[idx - 1];
                 const previousRects = this.captureSetPositions();
-                const temp = set.order;
-                set.order = prev.order;
-                prev.order = temp;
-                this.animateOrderChange(previousRects);
+                this.replaceSetOrders(new Map([
+                    [String(set.id), prev.order],
+                    [String(prev.id), set.order],
+                ]));
+                this.animateSetMovement(previousRects);
             },
 
             moveDown(set) {
@@ -831,10 +844,11 @@
                 // Swap order with the set below
                 const next = sameStatus[idx + 1];
                 const previousRects = this.captureSetPositions();
-                const temp = set.order;
-                set.order = next.order;
-                next.order = temp;
-                this.animateOrderChange(previousRects);
+                this.replaceSetOrders(new Map([
+                    [String(set.id), next.order],
+                    [String(next.id), set.order],
+                ]));
+                this.animateSetMovement(previousRects);
             },
 
             startSet(set) {
