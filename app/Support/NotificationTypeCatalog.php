@@ -14,6 +14,8 @@ final class NotificationTypeCatalog
 
     public const SLOT_DROPPED_FROM_SET = 'slot_dropped_from_set';
 
+    public const SLOT_MANUALLY_ASSIGNED = 'slot_manually_assigned';
+
     public const SET_COLLABORATOR_ADDED = 'set_collaborator_added';
 
     public const SET_COLLABORATOR_REMOVED = 'set_collaborator_removed';
@@ -27,7 +29,7 @@ final class NotificationTypeCatalog
     public const SET_UPDATED = 'set_updated';
 
     /**
-     * @return array<string, array{label: string, description: string, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
+     * @return array<string, array{label: string, description: string, category: string, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
      */
     public static function definitions(): array
     {
@@ -35,58 +37,87 @@ final class NotificationTypeCatalog
             self::SLOT_REQUEST_ACCEPTED => [
                 'label' => 'Slot request accepted',
                 'description' => 'When one of your requested slots is accepted.',
+                'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SLOT_REQUEST_RECEIVED => [
                 'label' => 'Slot request received',
                 'description' => 'When someone requests a slot on a set you own or collaborate on.',
+                'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SONG_REQUEST_RECEIVED => [
                 'label' => 'Song request received',
                 'description' => 'When someone requests a song on a set you own or collaborate on.',
+                'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SLOT_RECOMMENDATION_RECEIVED => [
                 'label' => 'Slot recommendation received',
                 'description' => 'When someone recommends you for a slot.',
+                'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SLOT_DROPPED_FROM_SET => [
                 'label' => 'Slot dropped from set',
                 'description' => 'When someone drops a slot from a set you own or collaborate on.',
+                'category' => 'slots',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SLOT_MANUALLY_ASSIGNED => [
+                'label' => 'Slot manually assigned',
+                'description' => 'When someone manually assigns you to a slot on a set.',
+                'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SET_COLLABORATOR_ADDED => [
                 'label' => 'Added as collaborator',
                 'description' => 'When someone adds you as a collaborator on a set.',
+                'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SET_COLLABORATOR_REMOVED => [
                 'label' => 'Removed as collaborator',
                 'description' => 'When someone removes you as a collaborator on a set.',
+                'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::JAM_SESSION_PUBLISHED => [
                 'label' => 'Jam session published',
                 'description' => 'When a new jam session becomes visible to you.',
+                'category' => 'jam_sessions',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::JAM_SESSION_LOCK_CHANGED => [
                 'label' => 'Jam session locked or unlocked',
                 'description' => 'When a jam session you are involved in is locked or unlocked.',
+                'category' => 'jam_sessions',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::JAM_SESSION_DATE_CHANGED => [
                 'label' => 'Jam session date changed',
                 'description' => 'When the date changes on a jam session you are involved in.',
+                'category' => 'jam_sessions',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SET_UPDATED => [
                 'label' => 'Set updated',
                 'description' => 'When a set you are involved in moves session or has songs added or removed.',
+                'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function categories(): array
+    {
+        return [
+            'slots' => 'Slots',
+            'sets' => 'Sets',
+            'jam_sessions' => 'Jam Sessions',
         ];
     }
 

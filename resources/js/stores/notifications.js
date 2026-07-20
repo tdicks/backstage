@@ -11,9 +11,8 @@ export function registerNotificationsStore(Alpine) {
 		initialized: false,
 		intervalId: null,
 		knownIds: [],
-		activeToast: null,
-		toastQueue: [],
-		toastTimer: null,
+		toasts: [],
+		toastTimers: {},
 
 		async init({
 			items = [],
@@ -126,39 +125,37 @@ export function registerNotificationsStore(Alpine) {
 		},
 
 		queueToast(notification) {
-			if (this.activeToast && this.activeToast.id === notification.id) {
+			if (this.toasts.some((item) => item.id === notification.id)) {
 				return;
 			}
 
-			if (this.toastQueue.some((item) => item.id === notification.id)) {
-				return;
-			}
-
-			if (!this.activeToast) {
-				this.showToast(notification);
-				return;
-			}
-
-			this.toastQueue.push(notification);
+			this.showToast(notification);
 		},
 
 		showToast(notification) {
-			this.activeToast = notification;
-			window.clearTimeout(this.toastTimer);
-			this.toastTimer = window.setTimeout(() => this.advanceToast(), TOAST_DISPLAY_DURATION_MS);
+			this.toasts = [...this.toasts, notification];
+			this.toastTimers[notification.id] = window.setTimeout(() => this.closeToast(notification.id), TOAST_DISPLAY_DURATION_MS);
 		},
 
-		advanceToast() {
-			this.activeToast = null;
-
-			if (this.toastQueue.length > 0) {
-				this.showToast(this.toastQueue.shift());
+		closeToast(id = null) {
+			if (id === null && this.toasts.length > 0) {
+				id = this.toasts[0].id;
 			}
+
+			if (id === null) {
+				return;
+			}
+
+			if (this.toastTimers[id]) {
+				window.clearTimeout(this.toastTimers[id]);
+				delete this.toastTimers[id];
+			}
+
+			this.toasts = this.toasts.filter((toast) => toast.id !== id);
 		},
 
-		closeToast() {
-			window.clearTimeout(this.toastTimer);
-			this.advanceToast();
+		dismissAll() {
+			this.items.forEach((item) => this.dismiss(item.id));
 		},
 
 		urlFor(template, id) {

@@ -65,6 +65,8 @@ class SlotController extends Controller
             $manualPerformerName = '';
         }
 
+        $previousUserId = $slot->user_id;
+
         DB::transaction(function () use ($slot, $validated, $manualPerformerName): void {
             $slot->update([
                 'name' => $validated['name'],
@@ -87,6 +89,22 @@ class SlotController extends Controller
                     ]);
             }
         });
+
+        // Notify user if they were newly assigned to the slot
+        if (! empty($validated['user_id']) && $validated['user_id'] !== $previousUserId) {
+            $slot->load('user', 'song');
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::SLOT_MANUALLY_ASSIGNED,
+                [$slot->user],
+                $request->user(),
+                [
+                    'title' => 'You\'ve been assigned to a slot',
+                    'body' => 'You\'ve been assigned the '.(Slot::options()[$slot->name] ?? $slot->name).' slot on '.$slot->song->artist.' - '.$slot->song->title.'.',
+                    'action_url' => route('sessions.show', $slot->song->set->session).'#slot-'.$slot->id,
+                    'action_label' => 'View slot',
+                ]
+            );
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

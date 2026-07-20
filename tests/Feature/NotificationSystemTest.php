@@ -140,3 +140,75 @@ test('notification feed excludes dismissed items and can mark notifications seen
         ->assertJsonPath('unread_count', 0)
         ->assertJsonCount(0, 'notifications');
 });
+
+test('notification popup is positioned in the bottom right on desktop', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee('sm:bottom-4 sm:right-4 sm:top-auto', false)
+        ->assertSee('sm:w-96', false);
+});
+
+test('notification popup stacks multiple toasts', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee('$store.notifications.toasts.length > 0', false)
+        ->assertSee('x-for="notification in $store.notifications.toasts"', false)
+        ->assertSee('$store.notifications.closeToast(notification.id)', false);
+});
+
+test('notification overlay has dismiss all button in footer', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee('dismissAll()', false)
+        ->assertSee('Dismiss All', false);
+});
+
+test('dismiss all method dismisses all notifications', function () {
+    $user = User::factory()->create();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        [
+            'title' => 'Test Title',
+            'body' => 'Test Body',
+            'action_url' => null,
+            'action_label' => 'Open',
+        ]
+    ));
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        [
+            'title' => 'Test Title 2',
+            'body' => 'Test Body 2',
+            'action_url' => null,
+            'action_label' => 'Open',
+        ]
+    ));
+
+    $response = $this->actingAs($user)
+        ->getJson(route('notifications.index'));
+
+    expect($response->json('notifications'))->toHaveCount(2);
+
+    // Dismiss all via store method by dismissing each notification
+    $notifications = $response->json('notifications');
+    foreach ($notifications as $notification) {
+        $this->actingAs($user)
+            ->patchJson(route('notifications.dismiss', $notification['id']));
+    }
+
+    $this->actingAs($user)
+        ->getJson(route('notifications.index'))
+        ->assertJsonPath('unread_count', 0)
+        ->assertJsonCount(0, 'notifications');
+});

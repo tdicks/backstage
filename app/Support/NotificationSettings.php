@@ -138,13 +138,13 @@ final class NotificationSettings
     }
 
     /**
-     * @return list<array{type: string, label: string, description: string, enabled: bool, popup: bool, email: bool, popup_available: bool, email_available: bool}>
+     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, enabled: bool, popup: bool, email: bool, popup_available: bool, email_available: bool}>}>
      */
     public static function profileOptions(User $user): array
     {
         $adminPreferences = self::adminPreferences();
         $userPreferences = self::userPreferences($user);
-        $options = [];
+        $groupedOptions = [];
 
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
             $admin = $adminPreferences[$type];
@@ -153,9 +153,19 @@ final class NotificationSettings
                 continue;
             }
 
+            $category = $definition['category'];
             $preferences = $userPreferences[$type];
 
-            $options[] = [
+            if (! isset($groupedOptions[$category])) {
+                $categories = NotificationTypeCatalog::categories();
+                $groupedOptions[$category] = [
+                    'category' => $category,
+                    'label' => $categories[$category],
+                    'options' => [],
+                ];
+            }
+
+            $groupedOptions[$category]['options'][] = [
                 'type' => $type,
                 'label' => $definition['label'],
                 'description' => $definition['description'],
@@ -167,11 +177,11 @@ final class NotificationSettings
             ];
         }
 
-        return $options;
+        return $groupedOptions;
     }
 
     /**
-     * @return list<array{type: string, label: string, description: string, settings: array{enabled: Setting, popup: Setting, email: Setting, text: Setting}}>
+     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, settings: array{enabled: Setting, popup: Setting, email: Setting, text: Setting}}>}>
      */
     public static function adminOptions(): array
     {
@@ -182,10 +192,21 @@ final class NotificationSettings
             ->get()
             ->keyBy('key');
 
-        $options = [];
+        $groupedOptions = [];
 
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
-            $options[] = [
+            $category = $definition['category'];
+
+            if (! isset($groupedOptions[$category])) {
+                $categories = NotificationTypeCatalog::categories();
+                $groupedOptions[$category] = [
+                    'category' => $category,
+                    'label' => $categories[$category],
+                    'options' => [],
+                ];
+            }
+
+            $groupedOptions[$category]['options'][] = [
                 'type' => $type,
                 'label' => $definition['label'],
                 'description' => $definition['description'],
@@ -198,6 +219,6 @@ final class NotificationSettings
             ];
         }
 
-        return $options;
+        return $groupedOptions;
     }
 }

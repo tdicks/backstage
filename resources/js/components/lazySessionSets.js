@@ -6,6 +6,7 @@ export function lazySessionSets(url, activityUrl = null) {
 		activityRefreshing: false,
 		error: '',
 		activityRefreshProvider: null,
+		fragmentFocusApplied: false,
 		async init() {
 			this.activityRefreshProvider = () => this.refreshActivity();
 
@@ -251,7 +252,14 @@ export function lazySessionSets(url, activityUrl = null) {
 						this.highlightNewSongs(transitions);
 					}
 
-					window.focusSessionFragmentTarget();
+					if (!this.fragmentFocusApplied && window.location.hash) {
+						window.focusSessionFragmentTarget();
+						this.fragmentFocusApplied = true;
+					}
+
+					if (!window.location.hash) {
+						this.fragmentFocusApplied = true;
+					}
 				});
 			} catch (e) {
 				if (!isBackground) {

@@ -378,28 +378,33 @@
 
     <template x-teleport="body">
         <div
-            x-show="$store.notifications.activeToast"
+            x-show="$store.notifications.toasts.length > 0"
             x-cloak
             x-transition.opacity.duration.200ms
-            class="fixed inset-x-0 top-4 z-[220] flex justify-center px-4"
+            class="fixed inset-x-0 top-4 z-[220] flex justify-center px-4 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-auto sm:justify-end sm:px-0"
             role="status"
         >
-            <div class="w-full max-w-md rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-2xl">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="font-semibold" x-text="$store.notifications.activeToast?.title"></p>
-                        <p class="mt-1 text-sky-900" x-text="$store.notifications.activeToast?.body"></p>
-                        <a
-                            x-show="$store.notifications.activeToast?.action_url"
-                            x-bind:href="$store.notifications.activeToast?.action_url"
-                            @click="closeNotifications(); $store.notifications.closeToast()"
-                            class="mt-3 inline-flex text-xs font-semibold uppercase tracking-wide text-sky-700 underline underline-offset-2"
-                            x-text="$store.notifications.activeToast?.action_label || 'Open'"
-                        ></a>
+            <div class="flex w-full max-w-md flex-col gap-3 sm:w-96">
+                <template x-for="notification in $store.notifications.toasts" :key="notification.id">
+                    <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-2xl">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold" x-text="notification.title"></p>
+                                <p class="mt-1 text-sky-900" x-text="notification.body"></p>
+                                <a
+                                    x-show="notification.action_url"
+                                    x-bind:href="notification.action_url"
+                                    @click="closeNotifications(); $store.notifications.closeToast(notification.id)"
+                                    class="mt-3 inline-flex text-xs font-semibold uppercase tracking-wide text-sky-700 underline underline-offset-2"
+                                    x-text="notification.action_label || 'Open'"
+                                ></a>
+                            </div>
+                            <button type="button" @click="$store.notifications.closeToast(notification.id)" class="text-sky-700 transition hover:text-sky-900" aria-label="Dismiss notification popup">
+                                <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" @click="$store.notifications.closeToast()" class="text-sky-700 transition hover:text-sky-900" aria-label="Dismiss notification popup">
-                        <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
-                    </button>
+                </template>
                 </div>
             </div>
         </div>
@@ -438,7 +443,7 @@
                         <template x-for="notification in $store.notifications.items" :key="notification.id">
                             <div
                                 class="flex gap-3 px-4 py-4"
-                                x-bind:class="notification.seen ? 'bg-slate-950 text-slate-400' : 'bg-sky-500/8 text-slate-100'"
+                                x-bind:class="notification.seen ? 'bg-sky-500/8 text-slate-100' : 'bg-sky-600/20 text-white'"
                                 x-bind:data-notification-id="notification.id"
                             >
                                 <a
@@ -461,7 +466,20 @@
                         </template>
                     </div>
                 </div>
-            </div>
-        </div>
-    </template>
+				<div class="border-t border-slate-800 px-4 py-3">
+					<button
+						type="button"
+						@click="$store.notifications.dismissAll()"
+						x-show="$store.notifications.items.length > 0"
+						x-transition
+						class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 transition hover:text-slate-100"
+						aria-label="Dismiss all notifications"
+					>
+						<x-heroicon-m-trash class="h-4 w-4" aria-hidden="true" />
+						Dismiss All
+					</button>
+				</div>
+			</div>
+		</div>
+	</template>
 </nav>

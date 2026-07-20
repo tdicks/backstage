@@ -91,7 +91,7 @@ class JamSessionController extends Controller
         $isClosed = (bool) ($validated['is_closed'] ?? false);
         $allowCheckins = $isClosed
             ? false
-            : (bool) ($validated['allow_checkins'] ?? true);
+            : (bool) ($validated['allow_checkins'] ?? false);
 
         $jamSession = JamSession::create([
             ...$validated,

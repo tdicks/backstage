@@ -103,6 +103,59 @@ test('lazy session sets endpoint renders slot rows with extracted sessionSlotRow
         ->assertSee('mobile-slot-move', false);
 });
 
+test('lazy session sets endpoint renders mobile slot activity card for pending slot assignments', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Mobile Slot Activity Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Mobile Slot Activity Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Mobile Artist',
+        'title' => 'Mobile Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    SlotAssignment::query()->create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $requester->id,
+        'target_user_id' => $requester->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee('Slot requests &amp; recommendations', false)
+        ->assertSee('pendingSlotActivityCount', false)
+        ->assertSee('md:hidden', false);
+});
+
 test('session routes use descriptive slugs but resolve by stable id', function () {
     $owner = User::factory()->create();
 
@@ -273,6 +326,8 @@ test('session activity endpoint batches approval count and open song slot update
         ->toContain('refreshOpenSongCards()')
         ->toContain('patchOpenSongSlots')
         ->toContain('canBackgroundRefreshSets()')
+        ->toContain('fragmentFocusApplied')
+        ->toContain('window.location.hash')
         ->toContain('hasOpenSessionActionMenu()')
         ->toContain('data-session-action-menu')
         ->toContain("source: 'provider', background: true")

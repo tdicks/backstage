@@ -14,7 +14,7 @@ function createJamSession(array $overrides = []): JamSession
         'date' => now()->toDateString(),
         'description' => null,
         'is_closed' => false,
-        'allow_checkins' => true,
+        'allow_checkins' => false,
     ], $overrides));
 }
 
@@ -30,7 +30,7 @@ test('it returns matching users for jam register search', function () {
 });
 
 test('it signs a user in and reports status', function () {
-    $session = createJamSession();
+    $session = createJamSession(['allow_checkins' => true]);
     $user = User::factory()->create();
 
     $signInResponse = $this->postJson(route('jam-register.sign-in', $session), [
@@ -77,7 +77,7 @@ test('it signs a user out', function () {
 
 test('admin can see attendees and sign everyone out', function () {
     $admin = User::factory()->create(['is_admin' => true]);
-    $session = createJamSession();
+    $session = createJamSession(['allow_checkins' => true]);
     $alice = User::factory()->create(['name' => 'Alice']);
     $bob = User::factory()->create(['name' => 'Bob']);
 
@@ -109,7 +109,7 @@ test('admin can see attendees and sign everyone out', function () {
 
 test('admin can search users who are not checked in and manually check one in', function () {
     $admin = User::factory()->create(['is_admin' => true]);
-    $session = createJamSession();
+    $session = createJamSession(['allow_checkins' => true]);
     $checkedIn = User::factory()->create(['name' => 'Alice Checked In']);
     $available = User::factory()->create(['name' => 'Alice Available']);
     User::factory()->create(['name' => 'Bob Elsewhere']);

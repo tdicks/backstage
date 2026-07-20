@@ -48,6 +48,13 @@
         </div>
 
         <div>
+            <x-input-label for="mobile_number" :value="__('Mobile Number')" />
+            <p class="mt-1 text-xs text-gray-500">Used for future text or WhatsApp notifications if you opt in later.</p>
+            <x-text-input id="mobile_number" name="mobile_number" type="text" class="mt-1 block w-full" :value="old('mobile_number', $user->mobile_number)" autocomplete="tel" />
+            <x-input-error class="mt-2" :messages="$errors->get('mobile_number')" />
+        </div>
+
+        <div>
             <x-input-label for="bio" :value="__('Bio')" />
             <p class="mt-1 text-xs text-gray-500">Describe yourself, instruments you play, and any bands or projects you're involved in.</p>
             <textarea id="bio" name="bio" rows="4" class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ old('bio', $user->bio) }}</textarea>

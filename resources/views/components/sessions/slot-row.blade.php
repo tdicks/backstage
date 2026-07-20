@@ -148,7 +148,7 @@
             :users="$users"
         />
 
-        <div class="mt-2 flex flex-wrap justify-start gap-1.5 text-left">
+        <div class="mt-2 hidden flex-wrap justify-start gap-1.5 text-left md:flex">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>
             <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
             <x-sessions.slot-assignment-pills :slot-model="$slotModel" :set="$set" :set-locked="$setLocked" />
