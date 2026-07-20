@@ -7,6 +7,8 @@ use App\Models\JamSession;
 use App\Models\Slot;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,13 +93,27 @@ class JamSessionController extends Controller
             ? false
             : (bool) ($validated['allow_checkins'] ?? true);
 
-        JamSession::create([
+        $jamSession = JamSession::create([
             ...$validated,
             'is_closed' => $isClosed,
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'is_archived' => (bool) ($validated['is_archived'] ?? false),
             'allow_checkins' => $allowCheckins,
         ]);
+
+        if (! $jamSession->is_hidden && ! $jamSession->is_archived) {
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::JAM_SESSION_PUBLISHED,
+                app(NotificationService::class)->visibleUsersForPublishedSession(),
+                $request->user(),
+                [
+                    'title' => 'New jam session published',
+                    'body' => $request->user()->name.' published '.$jamSession->name.' for '.$jamSession->date->format('M j, Y').'.',
+                    'action_url' => route('sessions.show', $jamSession),
+                    'action_label' => 'Open session',
+                ]
+            );
+        }
 
         return to_route('sessions.index')->with('status', 'Jam session created.');
     }
@@ -235,6 +251,8 @@ class JamSessionController extends Controller
             : (bool) ($validated['allow_checkins'] ?? $jamSession->allow_checkins);
 
         $wasAllowingCheckins = $jamSession->allow_checkins;
+        $wasClosed = $jamSession->is_closed;
+        $previousDate = $jamSession->date?->toDateString();
 
         $jamSession->update([
             ...$validated,
@@ -246,6 +264,37 @@ class JamSessionController extends Controller
 
         if ($wasAllowingCheckins && ! $jamSession->allow_checkins) {
             $jamSession->signIns()->delete();
+        }
+
+        $notificationService = app(NotificationService::class);
+        $participants = $notificationService->participantsForSession($jamSession);
+
+        if ($wasClosed !== $jamSession->is_closed) {
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::JAM_SESSION_LOCK_CHANGED,
+                $participants,
+                $request->user(),
+                [
+                    'title' => 'Jam session '.($jamSession->is_closed ? 'locked' : 'unlocked'),
+                    'body' => $request->user()->name.' '.($jamSession->is_closed ? 'locked ' : 'unlocked ').$jamSession->name.'.',
+                    'action_url' => route('sessions.show', $jamSession),
+                    'action_label' => 'Open session',
+                ]
+            );
+        }
+
+        if ($previousDate !== $jamSession->date?->toDateString()) {
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::JAM_SESSION_DATE_CHANGED,
+                $participants,
+                $request->user(),
+                [
+                    'title' => 'Jam session date changed',
+                    'body' => $request->user()->name.' changed '.$jamSession->name.' to '.$jamSession->date->format('M j, Y').'.',
+                    'action_url' => route('sessions.show', $jamSession),
+                    'action_label' => 'Open session',
+                ]
+            );
         }
 
         return back()->with('status', 'Jam session updated.');

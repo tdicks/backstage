@@ -56,12 +56,14 @@
 
         <div class="space-y-3">
             <label for="hide_from_directory" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="hide_from_directory" value="0">
                 <input id="hide_from_directory" type="checkbox" name="hide_from_directory" value="1" @checked(old('hide_from_directory', $user->hide_from_directory)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
                 <span>Hide me from the who’s who page</span>
             </label>
             <x-input-error class="mt-2" :messages="$errors->get('hide_from_directory')" />
 
             <label for="hide_from_slot_proposals" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="hide_from_slot_proposals" value="0">
                 <input id="hide_from_slot_proposals" type="checkbox" name="hide_from_slot_proposals" value="1" @checked(old('hide_from_slot_proposals', $user->hide_from_slot_proposals)) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
                 <span>Hide me from the slot proposal user list</span>
             </label>
@@ -71,6 +73,8 @@
         @if ($slotOptions)
             <div>
                 <x-input-label :value="__('Slot Coverage')" />
+                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover.</p>
+                <input type="hidden" name="slot_coverage_present" value="1">
                 <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover. This lets others see what you can play.</p>
                 <div class="mt-2 flex flex-wrap gap-2">
                     @foreach ($slotOptions as $key => $name)

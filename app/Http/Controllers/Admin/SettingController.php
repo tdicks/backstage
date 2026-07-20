@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\NotificationSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,12 +14,16 @@ class SettingController extends Controller
     public function index(Request $request): View
     {
         $this->authorizeAdmin($request);
+        NotificationSettings::ensureAdminSettingsExist();
+
+        $settings = Setting::query()
+            ->orderBy('name')
+            ->orderBy('key')
+            ->get();
 
         return view('admin.settings.index', [
-            'settings' => Setting::query()
-                ->orderBy('name')
-                ->orderBy('key')
-                ->get(),
+            'settings' => $settings->reject(fn (Setting $setting) => NotificationSettings::isNotificationKey($setting->key))->values(),
+            'notificationSettings' => NotificationSettings::adminOptions(),
         ]);
     }
 

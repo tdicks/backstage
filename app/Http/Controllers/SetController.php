@@ -7,6 +7,8 @@ use App\Models\JamSessionSignIn;
 use App\Models\Set;
 use App\Models\SongRequest;
 use App\Models\Slot;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -134,6 +136,8 @@ class SetController extends Controller
         $this->authorize('update', $set);
 
         $isAdmin = $request->user()->is_admin;
+        $previousSessionId = $set->jam_session_id;
+        $previousSession = $set->session()->first();
 
         $rules = [
             'name' => ['required', 'string', 'max:255'],
@@ -181,6 +185,22 @@ class SetController extends Controller
                     'responded_by_user_id' => $request->user()->id,
                     'responded_at' => now(),
                 ]);
+        }
+
+        if ($previousSessionId !== $set->jam_session_id) {
+            $set->loadMissing('session', 'songs.slots');
+
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::SET_UPDATED,
+                app(NotificationService::class)->involvedUsersForSet($set),
+                $request->user(),
+                [
+                    'title' => 'Set moved to a different session',
+                    'body' => $request->user()->name.' moved '.$set->name.' from '.($previousSession?->name ?? 'another session').' to '.$set->session->name.'.',
+                    'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                    'action_label' => 'Open set',
+                ]
+            );
         }
 
         return back()->with('status', 'Set updated.');

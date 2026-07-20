@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\User;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +36,18 @@ class SlotAssignmentController extends Controller
             'status' => SlotAssignment::STATUS_PENDING,
             'message' => $request->string('message')->toString() ?: null,
         ]);
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SLOT_REQUEST_RECEIVED,
+            app(NotificationService::class)->managersForSet($slot->song->set),
+            $user,
+            [
+                'title' => 'New slot request',
+                'body' => $user->name.' requested the '.(Slot::options()[$slot->name] ?? $slot->name).' slot on '.$slot->song->artist.' - '.$slot->song->title.'.',
+                'action_url' => route('sessions.show', $slot->song->set->session).'#slot-'.$slot->id,
+                'action_label' => 'Review request',
+            ]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -69,6 +84,18 @@ class SlotAssignmentController extends Controller
             'message' => $validated['message'] ?? null,
         ]);
 
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SLOT_RECOMMENDATION_RECEIVED,
+            User::query()->whereKey($validated['target_user_id'])->get(),
+            $actor,
+            [
+                'title' => 'New slot recommendation',
+                'body' => $actor->name.' recommended you for the '.(Slot::options()[$slot->name] ?? $slot->name).' slot on '.$slot->song->artist.' - '.$slot->song->title.'.',
+                'action_url' => route('sessions.show', $slot->song->set->session).'#slot-'.$slot->id,
+                'action_label' => 'Open slot',
+            ]
+        );
+
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Proposal sent.',
@@ -89,7 +116,7 @@ class SlotAssignmentController extends Controller
         ]);
 
         $user = $request->user();
-        $slotAssignment->load('slot.song.set');
+        $slotAssignment->load('actor', 'target', 'slot.song.set');
 
         if ($slotAssignment->status === SlotAssignment::STATUS_AWAITING_TARGET_CONSENT) {
             if ($slotAssignment->type !== SlotAssignment::TYPE_PROPOSAL) {
@@ -177,6 +204,20 @@ class SlotAssignmentController extends Controller
                 $this->assignSlotAndReleaseConflicts($slotAssignment);
             }
         });
+
+        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED && $slotAssignment->type === SlotAssignment::TYPE_REQUEST) {
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::SLOT_REQUEST_ACCEPTED,
+                $slotAssignment->target ? [$slotAssignment->target] : [],
+                $user,
+                [
+                    'title' => 'Slot request accepted',
+                    'body' => 'Your request for the '.(Slot::options()[$slotAssignment->slot->name] ?? $slotAssignment->slot->name).' slot on '.$slotAssignment->slot->song->artist.' - '.$slotAssignment->slot->song->title.' was accepted.',
+                    'action_url' => route('sessions.show', $slotAssignment->slot->song->set->session).'#slot-'.$slotAssignment->slot->id,
+                    'action_label' => 'Open slot',
+                ]
+            );
+        }
 
         if ($request->expectsJson()) {
             $slotAssignment->slot->load('user');

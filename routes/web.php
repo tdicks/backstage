@@ -8,6 +8,7 @@ use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\MySetsController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetCollaboratorController;
 use App\Http\Controllers\SetController;
@@ -55,6 +56,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/{notification}/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
+    Route::patch('/notifications/{notification}/dismiss', [NotificationController::class, 'dismiss'])->name('notifications.dismiss');
 
     Route::get('/sessions/archive', [JamSessionController::class, 'archive'])->name('sessions.archive');
     Route::resource('sessions', JamSessionController::class)

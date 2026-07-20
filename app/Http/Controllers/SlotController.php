@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -196,10 +198,27 @@ class SlotController extends Controller
             abort(403);
         }
 
+        $slot->loadMissing('song.set.session');
+        $slotLabel = Slot::options()[$slot->name] ?? $slot->name;
+        $songTitle = $slot->song->artist.' - '.$slot->song->title;
+        $setName = $slot->song->set->name;
+
         $slot->update([
             'user_id' => null,
             'manual_performer_name' => null,
         ]);
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SLOT_DROPPED_FROM_SET,
+            app(NotificationService::class)->managersForSet($slot->song->set),
+            $request->user(),
+            [
+                'title' => 'Slot dropped from your set',
+                'body' => $request->user()->name.' dropped the '.$slotLabel.' slot on '.$songTitle.' in '.$setName.'.',
+                'action_url' => route('sessions.show', $slot->song->set->session).'#slot-'.$slot->id,
+                'action_label' => 'Open slot',
+            ]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([

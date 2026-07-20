@@ -12,6 +12,77 @@
         <div class="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
             <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
                 <div class="border-b border-slate-200 px-6 py-4">
+                    <h3 class="text-lg font-semibold text-slate-900">Notifications</h3>
+                    <p class="mt-1 text-sm text-slate-600">Admin notification controls always override individual user preferences.</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3 text-left font-semibold">Notification type</th>
+                                <th class="px-4 py-3 text-center font-semibold">Enabled</th>
+                                <th class="px-4 py-3 text-center font-semibold">Popups</th>
+                                <th class="px-4 py-3 text-center font-semibold">Email</th>
+                                <th class="px-4 py-3 text-center font-semibold">Text</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white">
+                            @foreach ($notificationSettings as $notificationSetting)
+                                <tr>
+                                    <td class="px-6 py-4 align-top">
+                                        <p class="font-semibold text-slate-900">{{ $notificationSetting['label'] }}</p>
+                                        <p class="mt-1 text-sm text-slate-500">{{ $notificationSetting['description'] }}</p>
+                                    </td>
+                                    @foreach (['enabled', 'popup', 'email', 'text'] as $channel)
+                                        @php $setting = $notificationSetting['settings'][$channel]; @endphp
+                                        <td class="px-4 py-4 align-top">
+                                            <div
+                                                class="flex justify-center"
+                                                x-data="{
+                                                    value: @js($setting->isEnabled()),
+                                                    busy: false,
+                                                    async save() {
+                                                        this.busy = true;
+
+                                                        try {
+                                                            const response = await fetch(@js(route('admin.settings.update', $setting)), {
+                                                                method: 'PATCH',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json',
+                                                                    'Accept': 'application/json',
+                                                                    'X-Requested-With': 'XMLHttpRequest',
+                                                                    'X-CSRF-TOKEN': @js(csrf_token()),
+                                                                },
+                                                                body: JSON.stringify({ value: this.value }),
+                                                            });
+
+                                                            if (!response.ok) {
+                                                                this.value = ! this.value;
+                                                            }
+                                                        } catch (e) {
+                                                            this.value = ! this.value;
+                                                        } finally {
+                                                            this.busy = false;
+                                                        }
+                                                    },
+                                                }"
+                                            >
+                                                <label class="inline-flex items-center">
+                                                    <input type="checkbox" x-model="value" @change="save()" :disabled="busy" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                                </label>
+                                            </div>
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
+                <div class="border-b border-slate-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-slate-900">Settings</h3>
                     <p class="mt-1 text-sm text-slate-600">Each control is generated from the setting input type.</p>
                 </div>

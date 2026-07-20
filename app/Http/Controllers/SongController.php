@@ -6,6 +6,8 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,6 +58,20 @@ class SongController extends Controller
                 ]);
             }
         }
+
+        $set->loadMissing('session', 'songs.slots');
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SET_UPDATED,
+            app(NotificationService::class)->involvedUsersForSet($set),
+            $request->user(),
+            [
+                'title' => 'Set updated',
+                'body' => $request->user()->name.' added '.$song->artist.' - '.$song->title.' to '.$set->name.'.',
+                'action_url' => route('sessions.show', $set->session).'#song-'.$song->id,
+                'action_label' => 'Open set',
+            ]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -150,8 +166,23 @@ class SongController extends Controller
     public function destroy(Song $song): RedirectResponse
     {
         $this->authorize('delete', $song);
+        $song->loadMissing('set.session', 'set.songs.slots');
+        $set = $song->set;
+        $title = $song->artist.' - '.$song->title;
 
         $song->delete();
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SET_UPDATED,
+            app(NotificationService::class)->involvedUsersForSet($set),
+            request()->user(),
+            [
+                'title' => 'Set updated',
+                'body' => request()->user()->name.' removed '.$title.' from '.$set->name.'.',
+                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_label' => 'Open set',
+            ]
+        );
 
         return back()->with('status', 'Song removed.');
     }

@@ -32,6 +32,8 @@ test('admin can view settings page', function () {
         ->get(route('admin.settings.index'))
         ->assertOk()
         ->assertSee('Application Settings')
+        ->assertSee('Notifications')
+        ->assertSee('Slot request accepted')
         ->assertSee('Enable Social Logins')
         ->assertSee('enable_social_logins');
 });

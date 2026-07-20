@@ -6,6 +6,8 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Song;
 use App\Models\SongRequest;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,6 +50,20 @@ class SongRequestController extends Controller
             'notes' => $validated['notes'] ?? null,
             'status' => SongRequest::STATUS_PENDING,
         ]);
+
+        $set->loadMissing('session');
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SONG_REQUEST_RECEIVED,
+            app(NotificationService::class)->managersForSet($set),
+            $request->user(),
+            [
+                'title' => 'New song request',
+                'body' => $request->user()->name.' requested '.$songRequest->artist.' - '.$songRequest->title.' for '.$set->name.'.',
+                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_label' => 'Review request',
+            ]
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
