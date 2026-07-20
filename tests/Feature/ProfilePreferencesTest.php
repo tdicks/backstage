@@ -50,3 +50,14 @@ test('profile update clears slot coverage when none selected', function () {
 
     expect($user->refresh()->slot_coverage)->toBe([]);
 });
+
+test('profile edit highlights selected slot coverage chips', function () {
+    $user = User::factory()->create(['slot_coverage' => ['vocals', 'bass']]);
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('x-data="{ selected: ', false)
+        ->assertSee('x-bind:class="selected ? \'border-indigo-300 bg-indigo-50 text-indigo-700\'', false)
+        ->assertSee('@change="selected = $event.target.checked"', false);
+});
