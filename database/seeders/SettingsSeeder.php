@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\NotificationSettings;
 use Illuminate\Database\Seeder;
 
 class SettingsSeeder extends Seeder
@@ -12,6 +13,8 @@ class SettingsSeeder extends Seeder
      */
     public function run(): void
     {
+        NotificationSettings::ensureAdminSettingsExist();
+
         Setting::query()->updateOrCreate(
             ['key' => 'enable_social_logins'],
             [

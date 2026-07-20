@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'bio', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage'])]
+#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'bio', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -35,6 +36,7 @@ class User extends Authenticatable
             'hide_from_directory' => 'boolean',
             'hide_from_slot_proposals' => 'boolean',
             'slot_coverage' => 'array',
+            'notification_preferences' => 'array',
             'password' => 'hashed',
         ];
     }
@@ -47,6 +49,11 @@ class User extends Authenticatable
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(SocialAccount::class);
+    }
+
+    public function activeNotifications(): MorphMany
+    {
+        return $this->notifications()->whereNull('dismissed_at');
     }
 
     public function songs()

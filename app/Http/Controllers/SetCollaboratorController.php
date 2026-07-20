@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Set;
 use App\Models\User;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -40,6 +42,7 @@ class SetCollaboratorController extends Controller
     public function update(Request $request, Set $set): JsonResponse
     {
         $this->authorize('update', $set);
+        $existingCollaboratorIds = $set->collaboratorUserIds();
 
         $validated = $request->validate([
             'collaborator_ids' => ['nullable', 'array'],
@@ -52,11 +55,47 @@ class SetCollaboratorController extends Controller
         $collaboratorIds = array_values(array_filter($rawIds, fn (int $id) => $id !== $set->owner_id));
 
         $set->update(['collaborator_ids' => $collaboratorIds ?: null]);
+        $set->loadMissing('session');
 
         $collaborators = User::query()
             ->whereIn('id', $collaboratorIds)
             ->orderBy('name')
             ->get(['id', 'name']);
+
+        $addedCollaboratorIds = array_values(array_diff($collaboratorIds, $existingCollaboratorIds));
+        $removedCollaboratorIds = array_values(array_diff($existingCollaboratorIds, $collaboratorIds));
+
+        $notificationService = app(NotificationService::class);
+        $actor = $request->user();
+        $actionUrl = route('sessions.show', $set->session).'#set-'.$set->id;
+
+        if ($addedCollaboratorIds !== []) {
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::SET_COLLABORATOR_ADDED,
+                User::query()->whereIn('id', $addedCollaboratorIds)->get(),
+                $actor,
+                [
+                    'title' => 'Added as a collaborator',
+                    'body' => $actor->name.' added you as a collaborator on '.$set->name.'.',
+                    'action_url' => $actionUrl,
+                    'action_label' => 'Open set',
+                ]
+            );
+        }
+
+        if ($removedCollaboratorIds !== []) {
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::SET_COLLABORATOR_REMOVED,
+                User::query()->whereIn('id', $removedCollaboratorIds)->get(),
+                $actor,
+                [
+                    'title' => 'Removed as a collaborator',
+                    'body' => $actor->name.' removed you as a collaborator on '.$set->name.'.',
+                    'action_url' => $actionUrl,
+                    'action_label' => 'Open set',
+                ]
+            );
+        }
 
         return response()->json([
             'message' => 'Collaborators updated.',

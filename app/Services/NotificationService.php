@@ -9,7 +9,6 @@ use App\Notifications\AppActivityNotification;
 use App\Support\NotificationSettings;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Collection;
 
 class NotificationService
 {

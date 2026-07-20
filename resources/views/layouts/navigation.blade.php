@@ -5,11 +5,83 @@
 <nav
     x-data="{
         open: false,
+        notificationsOpen: false,
+        notificationObserver: null,
+        notificationTimers: {},
+        toggleNotifications() {
+            this.notificationsOpen = ! this.notificationsOpen;
+
+            if (this.notificationsOpen) {
+                this.$store.notifications.refresh({ showPopups: false });
+                this.syncNotificationObserver();
+            } else {
+                this.teardownNotificationObserver();
+            }
+        },
+        closeNotifications() {
+            this.notificationsOpen = false;
+            this.teardownNotificationObserver();
+        },
+        syncNotificationObserver() {
+            this.$nextTick(() => {
+                this.teardownNotificationObserver();
+
+                if (! this.notificationsOpen || ! this.$refs.notificationList) {
+                    return;
+                }
+
+                this.notificationObserver = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        const id = entry.target.dataset.notificationId;
+
+                        if (! id) {
+                            return;
+                        }
+
+                        if (entry.isIntersecting) {
+                            if (this.notificationTimers[id]) {
+                                return;
+                            }
+
+                            this.notificationTimers[id] = window.setTimeout(() => {
+                                this.$store.notifications.markSeen(id);
+                                delete this.notificationTimers[id];
+                            }, 3000);
+
+                            return;
+                        }
+
+                        if (this.notificationTimers[id]) {
+                            window.clearTimeout(this.notificationTimers[id]);
+                            delete this.notificationTimers[id];
+                        }
+                    });
+                }, {
+                    root: this.$refs.notificationList,
+                    threshold: 0.75,
+                });
+
+                this.$refs.notificationList.querySelectorAll('[data-notification-id]').forEach((element) => {
+                    this.notificationObserver.observe(element);
+                });
+            });
+        },
+        teardownNotificationObserver() {
+            Object.values(this.notificationTimers).forEach((timer) => window.clearTimeout(timer));
+            this.notificationTimers = {};
+
+            if (this.notificationObserver) {
+                this.notificationObserver.disconnect();
+                this.notificationObserver = null;
+            }
+        },
     }"
-    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) })"
-    @visibilitychange.window="$store.approvals.refresh()"
+    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) }); $store.notifications.init({ items: @js($navNotificationFeed['notifications']), unreadCount: @js($navNotificationFeed['unread_count']), indexUrl: @js(route('notifications.index')), seenUrlTemplate: @js(route('notifications.seen', '__NOTIFICATION_ID__')), dismissUrlTemplate: @js(route('notifications.dismiss', '__NOTIFICATION_ID__')) })"
+    @visibilitychange.window="$store.approvals.refresh(); $store.notifications.refresh({ showPopups: false })"
+    @notifications-updated.window="if (notificationsOpen) { syncNotificationObserver() }"
     @target-consent-processed.window="$store.approvals.decrement()"
     @pending-approval-processed.window="$store.approvals.decrement()"
+    @keydown.escape.window="closeNotifications()"
     class="border-b border-slate-800 bg-slate-950"
 >
     <!-- Primary Navigation Menu -->
@@ -83,6 +155,21 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-2">
+                <button
+                    type="button"
+                    @click="toggleNotifications()"
+                    class="relative inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 {{ request()->routeIs('notifications.*') ? 'border-sky-400' : 'border-transparent hover:border-slate-500' }}"
+                    title="Notifications"
+                    aria-label="Notifications"
+                >
+                    <x-heroicon-m-bell class="h-5 w-5" aria-hidden="true" />
+                    <span
+                        class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-950"
+                        x-show="$store.notifications.unreadCount > 0"
+                        x-text="$store.notifications.unreadCount"
+                        x-cloak
+                    >{{ $navNotificationFeed['unread_count'] }}</span>
+                </button>
                 <a
                     href="{{ route('help') }}"
                     class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
@@ -175,6 +262,21 @@
                     x-cloak
                     aria-label="View pending My Sets approvals"
                 >{{ $mySetsApprovalCount }}</a>
+                <a
+                    href="#"
+                    @click.prevent="toggleNotifications()"
+                    class="relative inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400 border-transparent hover:border-slate-500"
+                    title="Notifications"
+                    aria-label="Notifications"
+                >
+                    <x-heroicon-m-bell class="h-5 w-5" aria-hidden="true" />
+                    <span
+                        class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-slate-950"
+                        x-show="$store.notifications.unreadCount > 0"
+                        x-text="$store.notifications.unreadCount"
+                        x-cloak
+                    >{{ $navNotificationFeed['unread_count'] }}</span>
+                </a>
                 <a
                     href="{{ route('help') }}"
                     class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-slate-100 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 {{ request()->routeIs('help') ? 'border-amber-400' : 'border-transparent hover:border-slate-500' }}"
@@ -272,4 +374,93 @@
             </div>
         </div>
     </div>
+
+    <template x-teleport="body">
+        <div
+            x-show="$store.notifications.activeToast"
+            x-cloak
+            x-transition.opacity.duration.200ms
+            class="fixed inset-x-0 top-4 z-[220] flex justify-center px-4"
+            role="status"
+        >
+            <div class="w-full max-w-md rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-2xl">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold" x-text="$store.notifications.activeToast?.title"></p>
+                        <p class="mt-1 text-sky-900" x-text="$store.notifications.activeToast?.body"></p>
+                        <a
+                            x-show="$store.notifications.activeToast?.action_url"
+                            x-bind:href="$store.notifications.activeToast?.action_url"
+                            @click="closeNotifications(); $store.notifications.closeToast()"
+                            class="mt-3 inline-flex text-xs font-semibold uppercase tracking-wide text-sky-700 underline underline-offset-2"
+                            x-text="$store.notifications.activeToast?.action_label || 'Open'"
+                        ></a>
+                    </div>
+                    <button type="button" @click="$store.notifications.closeToast()" class="text-sky-700 transition hover:text-sky-900" aria-label="Dismiss notification popup">
+                        <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template x-teleport="body">
+        <div x-show="notificationsOpen" x-cloak class="fixed inset-0 z-[210]">
+            <div class="absolute inset-0 bg-slate-950/60 sm:bg-transparent" @click="closeNotifications()"></div>
+            <div
+                x-show="notificationsOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-x-6 sm:translate-y-2"
+                x-transition:enter-end="opacity-100 translate-x-0 sm:translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-x-0 sm:translate-y-0"
+                x-transition:leave-end="opacity-0 translate-x-6 sm:translate-y-2"
+                class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-slate-800 bg-slate-950 shadow-2xl sm:right-4 sm:top-20 sm:h-auto sm:max-h-[70vh] sm:w-[26rem] sm:rounded-2xl sm:border sm:border-slate-800"
+            >
+                <div class="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-100">Notifications</h3>
+                        <p class="mt-1 text-xs text-slate-400" x-text="$store.notifications.unreadCount > 0 ? $store.notifications.unreadCount + ' unread' : 'All caught up'"></p>
+                    </div>
+                    <button type="button" @click="closeNotifications()" class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100" aria-label="Close notifications">
+                        <x-heroicon-m-x-mark class="h-5 w-5" aria-hidden="true" />
+                    </button>
+                </div>
+                <div x-ref="notificationList" class="min-h-0 flex-1 overflow-y-auto">
+                    <template x-if="$store.notifications.items.length === 0">
+                        <div class="px-4 py-6 text-sm text-slate-400">
+                            You have no notifications right now.
+                        </div>
+                    </template>
+
+                    <div class="divide-y divide-slate-800" x-show="$store.notifications.items.length > 0">
+                        <template x-for="notification in $store.notifications.items" :key="notification.id">
+                            <div
+                                class="flex gap-3 px-4 py-4"
+                                x-bind:class="notification.seen ? 'bg-slate-950 text-slate-400' : 'bg-sky-500/8 text-slate-100'"
+                                x-bind:data-notification-id="notification.id"
+                            >
+                                <a
+                                    class="min-w-0 flex-1"
+                                    x-bind:href="notification.action_url || '#'"
+                                    @click.prevent="if (notification.action_url) { closeNotifications(); window.location = notification.action_url; }"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="font-semibold" x-text="notification.title"></p>
+                                            <p class="mt-1 text-sm" x-text="notification.body"></p>
+                                            <p class="mt-2 text-xs text-slate-500" x-text="notification.created_at_human"></p>
+                                        </div>
+                                    </div>
+                                </a>
+                                <button type="button" @click.prevent="$store.notifications.dismiss(notification.id)" class="shrink-0 rounded-full p-1 text-slate-500 transition hover:bg-slate-800 hover:text-slate-100" aria-label="Dismiss notification">
+                                    <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
 </nav>

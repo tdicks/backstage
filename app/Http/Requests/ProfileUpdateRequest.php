@@ -17,8 +17,9 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => [
+                'sometimes',
                 'required',
                 'string',
                 'lowercase',
@@ -26,11 +27,16 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'mobile_number' => ['nullable', 'string', 'max:40'],
             'bio' => ['nullable', 'string'],
             'hide_from_directory' => ['nullable', 'boolean'],
             'hide_from_slot_proposals' => ['nullable', 'boolean'],
             'slot_coverage' => ['nullable', 'array'],
             'slot_coverage.*' => ['string'],
+            'notification_preferences' => ['nullable', 'array'],
+            'notification_preferences.*.enabled' => ['nullable', 'boolean'],
+            'notification_preferences.*.popup' => ['nullable', 'boolean'],
+            'notification_preferences.*.email' => ['nullable', 'boolean'],
         ];
     }
 }

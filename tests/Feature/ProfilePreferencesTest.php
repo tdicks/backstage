@@ -50,3 +50,39 @@ test('profile update clears slot coverage when none selected', function () {
 
     expect($user->refresh()->slot_coverage)->toBe([]);
 });
+
+test('profile update stores mobile number and notification preferences', function () {
+    $user = User::factory()->create([
+        'mobile_number' => null,
+        'notification_preferences' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), [
+            'mobile_number' => '+447700900123',
+            'notification_preferences' => [
+                'slot_request_received' => [
+                    'enabled' => '0',
+                    'popup' => '1',
+                    'email' => '0',
+                ],
+            ],
+        ])
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->mobile_number)->toBe('+447700900123');
+    expect($user->notification_preferences['slot_request_received']['enabled'])->toBeFalse();
+    expect($user->notification_preferences['slot_request_received']['popup'])->toBeTrue();
+    expect($user->notification_preferences['slot_request_received']['email'])->toBeFalse();
+});
+
+test('profile page shows notification preferences section', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('Notification Preferences')
+        ->assertSee('Mobile Number')
+        ->assertSee('Slot request accepted');
+});
