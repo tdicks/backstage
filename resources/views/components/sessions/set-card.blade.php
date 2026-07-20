@@ -619,19 +619,21 @@
                                 class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
                                 @click.outside="showTitleSuggestions = false"
                             >
-                                <template x-for="title in titleSuggestions" :key="`title-${title}`">
+                                <template x-for="track in titleSuggestions" :key="`title-${track.title}`">
                                     <li>
                                         <button
                                             type="button"
-                                            @click="selectTitleSuggestion(title)"
+                                            @click="selectTitleSuggestion(track.title, track.duration)"
                                             class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                                            x-text="title"
+                                            x-text="track.title"
                                         ></button>
                                     </li>
                                 </template>
                             </ul>
                         </div>
                     </div>
+                    <input type="hidden" name="duration" :value="deezerTitleSelected && selectedDeezerDuration ? selectedDeezerDuration : ''">
+                    <input type="hidden" name="source" :value="deezerTitleSelected ? 'deezer' : ''">
                     <div>
                         <x-input-label :value="'Notes'" />
                         <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>

@@ -51,6 +51,8 @@
                 {{ $slot }}
             </main>
 
+            @stack('scripts')
+
             <footer class="border-t border-slate-800/70 px-4 py-6 text-xs text-slate-500 sm:px-6 lg:px-8">
                 <div class="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p>&copy; {{ date('Y') }} TJD Tech</p>

@@ -23,6 +23,8 @@ class SongController extends Controller
             'artist' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'duration' => ['nullable', 'integer', 'min:0'],
+            'source' => ['nullable', 'string', 'max:50'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id'],
             'slot_names' => ['nullable', 'array'],
             'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
@@ -34,6 +36,8 @@ class SongController extends Controller
             'artist' => $validated['artist'],
             'title' => $validated['title'],
             'notes' => $validated['notes'] ?? null,
+            'duration' => $validated['duration'] ?? null,
+            'source' => $validated['source'] ?? null,
             'position' => $nextSongPosition,
         ]);
 
