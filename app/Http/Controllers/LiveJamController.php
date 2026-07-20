@@ -136,8 +136,6 @@ class LiveJamController extends Controller
 
     /**
      * Save updated live state to the cache.
-     *
-     * @param  array{sets: array<int, array{set_id: int, status: string, order: int}>}  $validated
      */
     public function update(Request $request, JamSession $jamSession): JsonResponse
     {
