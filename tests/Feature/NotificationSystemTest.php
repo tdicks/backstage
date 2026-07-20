@@ -162,7 +162,7 @@ test('notification popup stacks multiple toasts', function () {
         ->assertSee('$store.notifications.closeToast(notification.id)', false);
 });
 
-test('notification overlay has dismiss all button in footer', function () {
+test('notification overlay has dismiss all button in header', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)

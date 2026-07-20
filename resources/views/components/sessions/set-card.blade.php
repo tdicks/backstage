@@ -754,6 +754,7 @@
                     :set="$set"
                     :users="$users"
                     :slot-options="$slotOptions"
+                    :pending-slot-assignments="$pendingSlotAssignments"
                     :is-set-owner="$isSetOwner"
                     :can-manage-set="$canManageSet"
                     :can-reorder-songs="$isSetOwner && ! $setLocked"
@@ -767,7 +768,7 @@
 
         @if ($pendingSlotAssignments->isNotEmpty())
             <div
-                class="rounded-md border border-amber-200 bg-amber-50/80 p-4 md:hidden"
+                class="rounded-md border border-amber-200 bg-amber-50/80 p-4 hidden md:block"
                 x-data="{ slotActivityCollapsed: false, pendingSlotActivityCount: {{ $pendingSlotAssignments->count() }}, slotActivityKey: 'backstage:u{{ auth()->id() }}:set:{{ $set->id }}:slot-activity' }"
                 x-init="slotActivityCollapsed = localStorage.getItem(slotActivityKey) === '1'"
                 x-effect="localStorage.setItem(slotActivityKey, slotActivityCollapsed ? '1' : '0')"

@@ -154,8 +154,9 @@ export function registerNotificationsStore(Alpine) {
 			this.toasts = this.toasts.filter((toast) => toast.id !== id);
 		},
 
-		dismissAll() {
-			this.items.forEach((item) => this.dismiss(item.id));
+		async dismissAll() {
+			const ids = this.items.map((item) => item.id);
+			await Promise.all(ids.map((id) => this.dismiss(id)));
 		},
 
 		urlFor(template, id) {

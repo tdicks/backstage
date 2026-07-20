@@ -381,7 +381,7 @@
             x-show="$store.notifications.toasts.length > 0"
             x-cloak
             x-transition.opacity.duration.200ms
-            class="fixed inset-x-0 top-4 z-[220] flex justify-center px-4 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-auto sm:justify-end sm:px-0"
+            class="fixed inset-x-0 top-20 z-[220] flex justify-center px-4 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-auto sm:justify-end sm:px-0"
             role="status"
         >
             <div class="flex w-full max-w-md flex-col gap-3 sm:w-96">
@@ -428,9 +428,23 @@
                         <h3 class="text-base font-semibold text-slate-100">Notifications</h3>
                         <p class="mt-1 text-xs text-slate-400" x-text="$store.notifications.unreadCount > 0 ? $store.notifications.unreadCount + ' unread' : 'All caught up'"></p>
                     </div>
-                    <button type="button" @click="closeNotifications()" class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100" aria-label="Close notifications">
-                        <x-heroicon-m-x-mark class="h-5 w-5" aria-hidden="true" />
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="await $store.notifications.dismissAll()"
+                            x-show="$store.notifications.items.length > 0"
+                            x-transition
+                            class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
+                            aria-label="Dismiss all notifications"
+                            title="Dismiss all"
+                        >
+                            <x-heroicon-m-trash class="h-5 w-5" aria-hidden="true" />
+                            <span class="sr-only">Dismiss All</span>
+                        </button>
+                        <button type="button" @click="closeNotifications()" class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100" aria-label="Close notifications">
+                            <x-heroicon-m-x-mark class="h-5 w-5" aria-hidden="true" />
+                        </button>
+                    </div>
                 </div>
                 <div x-ref="notificationList" class="min-h-0 flex-1 overflow-y-auto">
                     <template x-if="$store.notifications.items.length === 0">
@@ -466,19 +480,7 @@
                         </template>
                     </div>
                 </div>
-				<div class="border-t border-slate-800 px-4 py-3">
-					<button
-						type="button"
-						@click="$store.notifications.dismissAll()"
-						x-show="$store.notifications.items.length > 0"
-						x-transition
-						class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 transition hover:text-slate-100"
-						aria-label="Dismiss all notifications"
-					>
-						<x-heroicon-m-trash class="h-4 w-4" aria-hidden="true" />
-						Dismiss All
-					</button>
-				</div>
+				<div class="border-t border-slate-800 px-4 py-3"></div>
 			</div>
 		</div>
 	</template>
