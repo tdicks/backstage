@@ -18,6 +18,8 @@ export function sessionSetCard(config) {
         songArtistQuery: '',
         songTitleQuery: '',
         selectedArtistName: '',
+        selectedDeezerDuration: null,
+        deezerTitleSelected: false,
         artistSuggestions: [],
         titleSuggestions: [],
         artistLookupBusy: false,
@@ -584,6 +586,8 @@ export function sessionSetCard(config) {
             this.songArtistQuery = '';
             this.songTitleQuery = '';
             this.selectedArtistName = '';
+            this.selectedDeezerDuration = null;
+            this.deezerTitleSelected = false;
             this.artistSuggestions = [];
             this.titleSuggestions = [];
             this.artistLookupBusy = false;
@@ -605,6 +609,8 @@ export function sessionSetCard(config) {
             this.artistLookupError = '';
             this.showTitleSuggestions = false;
             this.titleSuggestions = [];
+            this.selectedDeezerDuration = null;
+            this.deezerTitleSelected = false;
 
             if (this.artistLookupTimer) {
                 clearTimeout(this.artistLookupTimer);
@@ -669,6 +675,8 @@ export function sessionSetCard(config) {
         },
         queueTitleLookup() {
             this.titleLookupError = '';
+            this.selectedDeezerDuration = null;
+            this.deezerTitleSelected = false;
 
             if (this.titleLookupTimer) {
                 clearTimeout(this.titleLookupTimer);
@@ -721,8 +729,10 @@ export function sessionSetCard(config) {
                 }
             }
         },
-        selectTitleSuggestion(title) {
+        selectTitleSuggestion(title, duration) {
             this.songTitleQuery = title;
+            this.selectedDeezerDuration = duration ?? null;
+            this.deezerTitleSelected = true;
             this.titleSuggestions = [];
             this.showTitleSuggestions = false;
         },
