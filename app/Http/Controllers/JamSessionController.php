@@ -183,7 +183,7 @@ class JamSessionController extends Controller
                         'users' => $viewData['users'],
                         'slotOptions' => $viewData['slotOptions'],
                         'isSetOwner' => $song->set->owner_id === $request->user()->id,
-                        'canManageSet' => $request->user()->is_admin || $song->set->owner_id === $request->user()->id,
+                        'canManageSet' => $request->user()->is_admin || $song->set->owner_id === $request->user()->id || $song->set->isCollaborator($request->user()),
                     ])->render(),
                 ],
             ]),

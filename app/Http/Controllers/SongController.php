@@ -15,7 +15,7 @@ class SongController extends Controller
 {
     public function store(Request $request, Set $set): JsonResponse|RedirectResponse
     {
-        $this->authorize('update', $set);
+        $this->authorize('create', [Song::class, $set]);
 
         $validated = $request->validate([
             'artist' => ['required', 'string', 'max:255'],

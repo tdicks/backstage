@@ -51,6 +51,16 @@ export function sessionSetCard(config) {
         titleLookupUrl: config.titleLookupUrl,
         songRequestStoreUrl: config.songRequestStoreUrl,
         openSetEdit: false,
+        openCollaborators: false,
+        collaboratorsList: config.initialCollaborators ?? [],
+        collaboratorNames: (config.initialCollaborators ?? []).map((c) => c.name),
+        collaboratorQuery: '',
+        collaboratorSuggestions: [],
+        collaboratorLookupBusy: false,
+        collaboratorLookupTimer: null,
+        showCollaboratorSuggestions: false,
+        collaboratorSaveError: '',
+        collaboratorSaveBusy: false,
         openSummary: false,
         summaryData: null,
         summaryLoading: false,
@@ -136,6 +146,8 @@ export function sessionSetCard(config) {
             this.openSetEdit = false;
             this.openSong = false;
             this.openSongRequest = false;
+            this.openCollaborators = false;
+            this.resetCollaboratorModal();
         },
         closeSessionActionMenus() {
             this.openActionMenu = false;
@@ -369,6 +381,121 @@ export function sessionSetCard(config) {
             this.performedDraft = this.initialSetPerformed;
             this.songRequestsDraft = this.initialSongRequestsEnabled;
             this.openSetEdit = true;
+        },
+        openCollaboratorsModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.collaboratorsList = [...(config.initialCollaborators ?? [])];
+            this.collaboratorSaveError = '';
+            this.resetCollaboratorModal();
+            this.openCollaborators = true;
+        },
+        resetCollaboratorModal() {
+            this.collaboratorQuery = '';
+            this.collaboratorSuggestions = [];
+            this.showCollaboratorSuggestions = false;
+            this.collaboratorLookupBusy = false;
+            this.collaboratorSaveError = '';
+            if (this.collaboratorLookupTimer) {
+                clearTimeout(this.collaboratorLookupTimer);
+                this.collaboratorLookupTimer = null;
+            }
+        },
+        filteredCollaboratorSuggestions() {
+            const existingIds = new Set(this.collaboratorsList.map((c) => c.id));
+            return this.collaboratorSuggestions.filter((u) => !existingIds.has(u.id));
+        },
+        addCollaborator(user) {
+            if (!this.collaboratorsList.find((c) => c.id === user.id)) {
+                this.collaboratorsList.push({ id: user.id, name: user.name });
+            }
+            this.collaboratorQuery = '';
+            this.collaboratorSuggestions = [];
+            this.showCollaboratorSuggestions = false;
+        },
+        removeCollaborator(id) {
+            this.collaboratorsList = this.collaboratorsList.filter((c) => c.id !== id);
+        },
+        queueCollaboratorLookup() {
+            if (this.collaboratorLookupTimer) {
+                clearTimeout(this.collaboratorLookupTimer);
+            }
+
+            const query = this.collaboratorQuery.trim();
+            if (query.length < 1) {
+                this.collaboratorSuggestions = [];
+                this.showCollaboratorSuggestions = false;
+                return;
+            }
+
+            this.collaboratorLookupTimer = setTimeout(() => this.fetchCollaboratorSuggestions(query), 250);
+        },
+        async fetchCollaboratorSuggestions(query) {
+            if (!config.collaboratorsUsersUrl) {
+                return;
+            }
+
+            this.collaboratorLookupBusy = true;
+
+            try {
+                const url = new URL(config.collaboratorsUsersUrl, window.location.origin);
+                url.searchParams.set('q', query);
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+
+                const payload = await response.json();
+                this.collaboratorSuggestions = payload.users ?? [];
+                this.showCollaboratorSuggestions = this.collaboratorSuggestions.length > 0;
+            } catch (e) {
+                this.collaboratorSuggestions = [];
+            } finally {
+                this.collaboratorLookupBusy = false;
+            }
+        },
+        async saveCollaborators() {
+            if (!config.collaboratorsUrl || this.collaboratorSaveBusy) {
+                return;
+            }
+
+            this.collaboratorSaveBusy = true;
+            this.collaboratorSaveError = '';
+
+            try {
+                const response = await fetch(config.collaboratorsUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body: JSON.stringify({ collaborator_ids: this.collaboratorsList.map((c) => c.id) }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not save collaborators. Try again.');
+                }
+
+                const payload = await response.json();
+                const updated = payload.collaborators ?? this.collaboratorsList;
+                config.initialCollaborators = updated;
+                this.collaboratorsList = [...updated];
+                this.collaboratorNames = updated.map((c) => c.name);
+                this.openCollaborators = false;
+                this.resetCollaboratorModal();
+            } catch (e) {
+                this.collaboratorSaveError = e.message || 'Could not save collaborators. Try again.';
+            } finally {
+                this.collaboratorSaveBusy = false;
+            }
         },
         openAddSongModal() {
             if (this.setLocked) {

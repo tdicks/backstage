@@ -32,7 +32,7 @@
             data-session-action-menu
             class="absolute z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
         >
-            @if ($set->signups_open && $isSetOwner && $slotModel->user_id !== auth()->id())
+            @if ($set->signups_open && $canManageSet && $slotModel->user_id !== auth()->id())
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"

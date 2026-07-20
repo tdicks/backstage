@@ -9,6 +9,7 @@ use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SetCollaboratorController;
 use App\Http\Controllers\SetController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SlotAssignmentController;
@@ -70,6 +71,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sets/{set}/summary', [SetController::class, 'summary'])->name('sets.summary');
     Route::patch('/sets/{set}', [SetController::class, 'update'])->name('sets.update');
     Route::delete('/sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
+    Route::get('/sets/{set}/collaborators/users', [SetCollaboratorController::class, 'users'])->name('sets.collaborators.users');
+    Route::put('/sets/{set}/collaborators', [SetCollaboratorController::class, 'update'])->name('sets.collaborators.update');
     Route::post('/sets/{set}/song-requests', [SongRequestController::class, 'store'])->name('song-requests.store');
 
     Route::post('/sets/{set}/songs', [SongController::class, 'store'])->name('songs.store');

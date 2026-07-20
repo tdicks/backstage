@@ -35,7 +35,7 @@ class SlotPolicy
      */
     public function update(User $user, Slot $slot): bool
     {
-        return $user->is_admin || $slot->song->set->owner_id === $user->id;
+        return $user->is_admin || $slot->song->set->owner_id === $user->id || $slot->song->set->isCollaborator($user);
     }
 
     /**
@@ -43,7 +43,7 @@ class SlotPolicy
      */
     public function delete(User $user, Slot $slot): bool
     {
-        return $user->is_admin || $slot->song->set->owner_id === $user->id;
+        return $user->is_admin || $slot->song->set->owner_id === $user->id || $slot->song->set->isCollaborator($user);
     }
 
     /**
@@ -51,7 +51,7 @@ class SlotPolicy
      */
     public function restore(User $user, Slot $slot): bool
     {
-        return $user->is_admin || $slot->song->set->owner_id === $user->id;
+        return $user->is_admin || $slot->song->set->owner_id === $user->id || $slot->song->set->isCollaborator($user);
     }
 
     /**
@@ -59,6 +59,6 @@ class SlotPolicy
      */
     public function forceDelete(User $user, Slot $slot): bool
     {
-        return $user->is_admin || $slot->song->set->owner_id === $user->id;
+        return $user->is_admin || $slot->song->set->owner_id === $user->id || $slot->song->set->isCollaborator($user);
     }
 }
