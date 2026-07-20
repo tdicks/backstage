@@ -150,12 +150,16 @@ class SlotAssignmentController extends Controller
         $canRespond = $user->is_admin;
 
         if ($slotAssignment->type === SlotAssignment::TYPE_REQUEST) {
-            $canRespond = $canRespond || $slotAssignment->slot->song->set->owner_id === $user->id || $slotAssignment->actor_user_id === $user->id;
+            $canRespond = $canRespond
+                || $slotAssignment->slot->song->set->owner_id === $user->id
+                || $slotAssignment->slot->song->set->isCollaborator($user)
+                || $slotAssignment->actor_user_id === $user->id;
         }
 
         if ($slotAssignment->type === SlotAssignment::TYPE_PROPOSAL) {
             $canRespond = $canRespond
                 || $slotAssignment->slot->song->set->owner_id === $user->id
+                || $slotAssignment->slot->song->set->isCollaborator($user)
                 || ($slotAssignment->target_user_id === $user->id && $validated['status'] === SlotAssignment::STATUS_REJECTED);
         }
 

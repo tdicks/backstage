@@ -81,7 +81,7 @@ class SongRequestController extends Controller
         $user = $request->user();
         $songRequest->load('set');
 
-        $isSetManager = $user->is_admin || $songRequest->set->owner_id === $user->id;
+        $isSetManager = $user->is_admin || $songRequest->set->owner_id === $user->id || $songRequest->set->isCollaborator($user);
         $isRequesterRejectingOwn = $songRequest->requester_user_id === $user->id
             && $validated['status'] === SongRequest::STATUS_REJECTED;
 

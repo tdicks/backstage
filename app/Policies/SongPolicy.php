@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Set;
 use App\Models\Song;
 use App\Models\User;
 class SongPolicy
@@ -25,9 +26,9 @@ class SongPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User $user, Set $set): bool
     {
-        return true;
+        return $user->is_admin || $set->owner_id === $user->id || $set->isCollaborator($user);
     }
 
     /**
@@ -35,7 +36,7 @@ class SongPolicy
      */
     public function update(User $user, Song $song): bool
     {
-        return $user->is_admin || $song->set->owner_id === $user->id;
+        return $user->is_admin || $song->set->owner_id === $user->id || $song->set->isCollaborator($user);
     }
 
     /**
@@ -43,7 +44,7 @@ class SongPolicy
      */
     public function delete(User $user, Song $song): bool
     {
-        return $user->is_admin || $song->set->owner_id === $user->id;
+        return $user->is_admin || $song->set->owner_id === $user->id || $song->set->isCollaborator($user);
     }
 
     /**
@@ -51,7 +52,7 @@ class SongPolicy
      */
     public function restore(User $user, Song $song): bool
     {
-        return $user->is_admin || $song->set->owner_id === $user->id;
+        return $user->is_admin || $song->set->owner_id === $user->id || $song->set->isCollaborator($user);
     }
 
     /**
@@ -59,6 +60,6 @@ class SongPolicy
      */
     public function forceDelete(User $user, Song $song): bool
     {
-        return $user->is_admin || $song->set->owner_id === $user->id;
+        return $user->is_admin || $song->set->owner_id === $user->id || $song->set->isCollaborator($user);
     }
 }

@@ -152,7 +152,10 @@ class SlotController extends Controller
             return back()->with('status', 'Sign ups are closed for this set.');
         }
 
-        if ($slot->song->set->owner_id !== $request->user()->id) {
+        $set = $slot->song->set;
+        $user = $request->user();
+
+        if ($set->owner_id !== $user->id && ! $set->isCollaborator($user) && ! $user->is_admin) {
             abort(403);
         }
 

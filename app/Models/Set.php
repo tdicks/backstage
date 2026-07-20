@@ -21,6 +21,7 @@ class Set extends Model
         'is_hidden',
         'song_requests',
         'feature_set',
+        'collaborator_ids',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class Set extends Model
             'is_hidden' => 'boolean',
             'song_requests' => 'boolean',
             'feature_set' => 'boolean',
+            'collaborator_ids' => 'array',
         ];
     }
 
@@ -47,8 +49,27 @@ class Set extends Model
 
         return $query->where(function (Builder $query) use ($user): void {
             $query->where('is_hidden', false)
-                ->orWhere('owner_id', $user->id);
+                ->orWhere('owner_id', $user->id)
+                ->orWhereJsonContains('collaborator_ids', $user->id);
         });
+    }
+
+    /**
+     * Returns the collaborator user IDs for this set.
+     *
+     * @return array<int>
+     */
+    public function collaboratorUserIds(): array
+    {
+        return array_values(array_map('intval', $this->collaborator_ids ?? []));
+    }
+
+    /**
+     * Determines whether the given user is a collaborator on this set.
+     */
+    public function isCollaborator(User $user): bool
+    {
+        return in_array($user->id, $this->collaboratorUserIds(), true);
     }
 
     public function owner(): BelongsTo
