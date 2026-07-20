@@ -78,6 +78,8 @@ test('profile update stores mobile number and notification preferences', functio
 
 test('profile page shows notification preferences section', function () {
     $user = User::factory()->create();
+test('profile edit highlights selected slot coverage chips', function () {
+    $user = User::factory()->create(['slot_coverage' => ['vocals', 'bass']]);
 
     $this->actingAs($user)
         ->get(route('profile.edit'))
@@ -85,4 +87,7 @@ test('profile page shows notification preferences section', function () {
         ->assertSee('Notification Preferences')
         ->assertSee('Mobile Number')
         ->assertSee('Slot request accepted');
+        ->assertSee('x-data="{ selected: ', false)
+        ->assertSee('x-bind:class="selected ? \'border-indigo-300 bg-indigo-50 text-indigo-700\'', false)
+        ->assertSee('@change="selected = $event.target.checked"', false);
 });

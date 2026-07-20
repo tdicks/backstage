@@ -75,12 +75,22 @@
                 <x-input-label :value="__('Slot Coverage')" />
                 <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover.</p>
                 <input type="hidden" name="slot_coverage_present" value="1">
+                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover. This lets others see what you can play.</p>
                 <div class="mt-2 flex flex-wrap gap-2">
                     @foreach ($slotOptions as $key => $name)
                         @php $checked = in_array($key, old('slot_coverage', $user->slot_coverage ?? []), true); @endphp
-                        <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition {{ $checked ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300' }}">
-                            <input type="checkbox" name="slot_coverage[]" value="{{ $key }}" @checked($checked) class="sr-only">
-                            {{ $name }}
+                        <label
+                            x-data="{ selected: @js($checked) }"
+                            x-bind:class="selected ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition"
+                        >
+                            <input type="checkbox" name="slot_coverage[]" value="{{ $key }}" @checked($checked) class="sr-only" @change="selected = $event.target.checked">
+                            <x-heroicon-m-check-circle
+                                class="h-4 w-4 scale-75 text-indigo-600 opacity-0 transition"
+                                x-bind:class="selected ? 'scale-100 opacity-100' : ''"
+                                aria-hidden="true"
+                            />
+                            <span x-bind:class="selected ? 'text-indigo-700' : ''">{{ $name }}</span>
                         </label>
                     @endforeach
                 </div>
