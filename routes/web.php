@@ -7,6 +7,7 @@ use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
+use App\Http\Controllers\LiveJamController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
@@ -27,6 +28,9 @@ Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name
 Route::get('/jam-register/sessions/{jamSession}/users/{user}/status', [JamRegisterController::class, 'status'])->name('jam-register.status');
 Route::post('/jam-register/sessions/{jamSession}/check-in', [JamRegisterController::class, 'signIn'])->name('jam-register.sign-in');
 Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegisterController::class, 'signOut'])->name('jam-register.sign-out');
+
+Route::get('/sessions/{jamSession}/live/dashboard', [LiveJamController::class, 'dashboard'])->name('sessions.live.dashboard');
+Route::get('/sessions/{jamSession}/live/data', [LiveJamController::class, 'data'])->name('sessions.live.data');
 
 Route::get('/share/session/{jamSession}', [ShareController::class, 'session'])->name('share.session');
 Route::get('/share/set/{set}', [ShareController::class, 'set'])->name('share.set');
@@ -71,6 +75,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/sessions/{jamSession}/check-ins/users', [JamRegisterController::class, 'availableUsers'])->name('sessions.check-ins.users');
     Route::post('/sessions/{jamSession}/check-ins/check-in', [JamRegisterController::class, 'manualSignIn'])->name('sessions.check-ins.sign-in');
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
+
+    Route::get('/sessions/{jamSession}/live', [LiveJamController::class, 'manage'])->name('sessions.live.manage');
+    Route::post('/sessions/{jamSession}/live/update', [LiveJamController::class, 'update'])->name('sessions.live.update');
+    Route::delete('/sessions/{jamSession}/live/clear', [LiveJamController::class, 'clear'])->name('sessions.live.clear');
 
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');
     Route::get('/sets/{set}/summary', [SetController::class, 'summary'])->name('sets.summary');

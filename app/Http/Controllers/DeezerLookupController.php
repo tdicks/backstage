@@ -149,7 +149,8 @@ class DeezerLookupController extends Controller
             }
 
             $seen[$title] = true;
-            $titles[] = $title;
+            $duration = isset($track['duration']) ? (int) $track['duration'] : null;
+            $titles[] = ['title' => $title, 'duration' => $duration];
 
             if (count($titles) >= 8) {
                 break;

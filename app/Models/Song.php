@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Model;
 
 class Song extends Model
 {
@@ -12,6 +12,8 @@ class Song extends Model
         'artist',
         'title',
         'notes',
+        'duration',
+        'source',
         'set_id',
         'position',
     ];
@@ -20,6 +22,7 @@ class Song extends Model
     {
         return [
             'position' => 'integer',
+            'duration' => 'integer',
         ];
     }
 
