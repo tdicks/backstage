@@ -228,6 +228,50 @@ test('live data reflects cached state', function () {
     expect($data['sets'][0]['status'])->toBe('playing_now');
 });
 
+test('live set details are persisted in live state cache', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Live Set Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('sessions.live.update', $session), [
+            'sets' => [[
+                'set_id' => 'live_12345_test',
+                'status' => 'coming_up',
+                'order' => 0,
+                'isLiveSet' => true,
+                'liveSetData' => [
+                    'name' => 'Edited Live Set',
+                    'owner' => 'House Band',
+                    'participants' => 'Alex, Sam',
+                    'details' => 'Updated details from the edit modal.',
+                ],
+            ]],
+        ])
+        ->assertOk();
+
+    $cached = Cache::get('live_jam_session:'.$session->id);
+
+    expect($cached['sets'][0]['liveSetData']['name'])->toBe('Edited Live Set')
+        ->and($cached['sets'][0]['liveSetData']['details'])->toBe('Updated details from the edit modal.');
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('sessions.live.data', $session))
+        ->assertOk();
+
+    $liveSet = collect($response->json('sets'))->firstWhere('id', 'live_12345_test');
+
+    expect($liveSet)->not->toBeNull()
+        ->and($liveSet['name'])->toBe('Edited Live Set')
+        ->and($liveSet['owner'])->toBe('House Band')
+        ->and($liveSet['participants'])->toBe('Alex, Sam')
+        ->and($liveSet['details'])->toBe('Updated details from the edit modal.');
+});
+
 test('admin can clear live state cache', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 

@@ -51,7 +51,7 @@ $maxWidth = [
 >
     <div
         x-show="show"
-        class="fixed inset-0 transform transition-all"
+        class="fixed inset-0 z-40 transform transition-all"
         x-on:click="show = false"
         x-transition:enter="ease-out duration-150"
         x-transition:enter-start="opacity-0"
@@ -65,7 +65,7 @@ $maxWidth = [
 
     <div
         x-show="show"
-        class="mb-6 bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full {{ $maxWidth }} sm:mx-auto"
+        class="relative z-50 mb-6 bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full {{ $maxWidth }} sm:mx-auto"
         x-transition:enter="ease-out duration-150"
         x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"

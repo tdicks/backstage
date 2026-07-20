@@ -65,7 +65,13 @@ class LiveJamController extends Controller
         $liveState = $this->getLiveState($jamSession->id);
         $slotOptions = Slot::options();
 
-        $setsData = $sets->map(function ($set) use ($liveState, $slotOptions): array {
+        // Load check-in status for this jam session
+        $checkedInUserIds = $jamSession->signIns()
+            ->whereNotNull('signed_in_at')
+            ->pluck('user_id')
+            ->unique();
+
+        $setsData = $sets->map(function ($set) use ($liveState, $slotOptions, $checkedInUserIds): array {
             $stateEntry = collect($liveState['sets'] ?? [])->firstWhere('set_id', $set->id);
             $status = $stateEntry['status'] ?? 'pending';
             $order = $stateEntry['order'] ?? $set->position;
@@ -123,13 +129,56 @@ class LiveJamController extends Controller
                         'name' => $slotOptions[$slot->name] ?? $slot->name,
                         'user_name' => $slot->user?->name ?? $slot->manual_performer_name,
                         'filled' => $slot->user_id !== null || $slot->manual_performer_name !== null,
+                        'checked_in' => $slot->user_id !== null && $checkedInUserIds->contains($slot->user_id),
                     ])->values()->all(),
                 ])->values()->all(),
             ];
-        });
+        })->values()->all();
+
+        // Add live sets from cache
+        $liveSets = collect($liveState['sets'] ?? [])
+            ->filter(fn ($s) => is_string($s['set_id']) && str_starts_with($s['set_id'], 'live_'))
+            ->map(function ($s) {
+                $liveData = $s['liveSetData'] ?? [];
+
+                return [
+                    'id' => $s['set_id'],
+                    'name' => $liveData['name'] ?? 'Unnamed Set',
+                    'owner' => $liveData['owner'] ?? null,
+                    'status' => $s['status'] ?? 'pending',
+                    'order' => $s['order'] ?? 0,
+                    'health' => 0,
+                    'total_slots' => 0,
+                    'filled_slots' => 0,
+                    'duration_seconds' => 0,
+                    'songs' => [],
+                    'isLiveSet' => true,
+                    'participants' => $liveData['participants'] ?? null,
+                    'details' => $liveData['details'] ?? null,
+                    'liveSetData' => $liveData,
+                ];
+            })
+            ->values()
+            ->all();
+
+        // Merge database sets with live sets
+        $allSets = array_merge($setsData, $liveSets);
+
+        // Only apply status/order from cache if it exists
+        // If there's no cache, all sets default to 'pending' status with order 0
+        $hasCache = ! empty($liveState['sets']);
+
+        if (! $hasCache) {
+            // First load: assign default pending status with incrementing orders
+            foreach ($allSets as $idx => $set) {
+                if ($set['status'] === 'pending') {
+                    $allSets[$idx]['order'] = $idx;
+                }
+            }
+        }
 
         return response()->json([
-            'sets' => $setsData->values()->all(),
+            'sets' => $allSets,
             'updated_at' => $liveState['updated_at'] ?? null,
         ]);
     }
@@ -143,10 +192,35 @@ class LiveJamController extends Controller
 
         $validated = $request->validate([
             'sets' => ['required', 'array'],
-            'sets.*.set_id' => ['required', 'integer', 'exists:sets,id'],
+            'sets.*.set_id' => ['required'],  // Can be int (database) or string (live set)
             'sets.*.status' => ['required', 'string', 'in:'.implode(',', self::STATES)],
-            'sets.*.order' => ['required', 'integer', 'min:0'],
+            'sets.*.order' => ['required', 'integer', 'min:-1'],
+            'sets.*.isLiveSet' => ['nullable', 'boolean'],
+            'sets.*.liveSetData' => ['nullable', 'array'],
+            'sets.*.liveSetData.name' => ['nullable', 'string'],
+            'sets.*.liveSetData.owner' => ['nullable', 'string'],
+            'sets.*.liveSetData.participants' => ['nullable', 'string'],
+            'sets.*.liveSetData.details' => ['nullable', 'string'],
         ]);
+
+        // Validate that database set_ids exist
+        $databaseSetIds = collect($validated['sets'])
+            ->filter(fn ($s) => ! is_string($s['set_id']) || ! str_starts_with((string) $s['set_id'], 'live_'))
+            ->pluck('set_id')
+            ->unique()
+            ->values();
+
+        if ($databaseSetIds->count() > 0) {
+            $existingIds = $jamSession->sets()->whereIn('id', $databaseSetIds)->pluck('id');
+            $missingIds = $databaseSetIds->diff($existingIds);
+
+            if ($missingIds->count() > 0) {
+                return response()->json([
+                    'message' => 'One or more sets do not exist.',
+                    'errors' => ['sets' => ['One or more set IDs are invalid.']],
+                ], 422);
+            }
+        }
 
         $state = [
             'sets' => $validated['sets'],

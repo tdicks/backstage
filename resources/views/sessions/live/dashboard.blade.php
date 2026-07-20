@@ -6,7 +6,7 @@
     <title>Live – {{ $session->name }} – {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased" style="background: #0f172a; color: #f1f5f9; min-height: 100vh;">
+<body class="min-h-screen bg-slate-950 font-sans text-slate-100 antialiased">
     <div
         class="flex min-h-screen flex-col"
         x-data="liveJamDisplay({
@@ -14,25 +14,25 @@
         })"
         x-init="init()"
     >
-        {{-- Header --}}
-        <header class="border-b border-slate-800 bg-slate-950/80 px-6 py-4 backdrop-blur">
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-slate-100">{{ $session->name }}</h1>
-                    <p class="text-sm text-slate-400">{{ $session->date->format('l, F j, Y') }}</p>
+        <header class="border-b border-slate-800 bg-slate-900 px-4 py-3 sm:px-6">
+            <div class="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-4">
+                <div class="flex items-center gap-3 text-amber-400">
+                    <x-application-logo class="h-9 w-9" />
+                    <span class="hidden text-sm font-semibold uppercase tracking-widest text-slate-300 sm:inline">Backstage</span>
                 </div>
-                <div class="text-right text-xs text-slate-500">
-                    <div>Live Display</div>
-                    <div x-show="lastUpdated" x-cloak x-text="`Updated: ${lastUpdated}`"></div>
+                <div class="min-w-0 text-center">
+                    <h1 class="truncate text-xl font-semibold text-slate-100 sm:text-2xl">{{ $session->name }}</h1>
+                    <p class="mt-0.5 text-sm text-slate-400">{{ $session->date->format('l, F j, Y') }}</p>
+                </div>
+                <div class="hidden text-right text-xs uppercase tracking-wide text-slate-500 sm:block">
+                    <div>Live room</div>
+                    <div x-show="lastUpdated" x-cloak x-text="lastUpdated"></div>
                 </div>
             </div>
         </header>
 
-        {{-- Main content --}}
-        <main class="flex-1 px-4 py-8 sm:px-6">
-            <div class="mx-auto max-w-6xl">
-
-                {{-- Loading --}}
+        <main class="flex-1 px-4 py-3 sm:px-5 lg:py-4">
+            <div class="mx-auto max-w-7xl">
                 <div x-show="loading" class="flex items-center justify-center py-24 text-slate-400">
                     <svg class="mr-3 h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -41,43 +41,38 @@
                     Loading live session…
                 </div>
 
-                {{-- No active state --}}
-                <div x-show="!loading && activeSets.length === 0" x-cloak class="flex flex-col items-center justify-center gap-4 py-24 text-center text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                    </svg>
-                    <p class="text-lg">The jam hasn't started yet. Check back soon!</p>
+                <div x-show="!loading && sets.length === 0" x-cloak class="rounded-xl border border-slate-800 bg-slate-900 px-6 py-20 text-center">
+                    <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
+                    <p class="mt-3 text-2xl font-semibold text-slate-200">The jam has not started yet.</p>
                 </div>
 
-                {{-- Sets grid --}}
-                <div x-show="!loading && activeSets.length > 0" x-cloak>
-
-                    {{-- Now Playing --}}
+                <div x-show="!loading && sets.length > 0" x-cloak class="space-y-3">
                     <template x-if="playingNow">
-                        <div class="mb-8">
-                            <div class="mb-3 flex items-center gap-2">
-                                <span class="flex h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span>
-                                <h2 class="text-sm font-semibold uppercase tracking-widest text-emerald-400">Now Playing</h2>
+                        <section>
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <h2 class="text-sm font-semibold uppercase tracking-widest text-emerald-300">Playing Now</h2>
+                                <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span>
                             </div>
-                            <div
-                                class="overflow-hidden rounded-2xl border-2 border-emerald-500 shadow-xl shadow-emerald-900/40"
-                                style="background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(15,23,42,0.6));"
-                            >
-                                <div class="px-6 py-5">
-                                    <div class="mb-1 flex flex-wrap items-baseline gap-3">
-                                        <h3 class="text-2xl font-bold text-slate-100" x-text="playingNow.name"></h3>
-                                        <span class="text-slate-400" x-show="playingNow.owner" x-text="`by ${playingNow.owner}`"></span>
+                            <div class="rounded-xl border border-emerald-700 bg-emerald-950 p-3">
+                                <div class="grid gap-3 lg:grid-cols-[1fr_1.45fr]">
+                                    <div>
+                                        <h3 class="text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl" x-text="playingNow.name"></h3>
+                                        <p class="mt-1.5 text-base text-emerald-100" x-show="playingNow.owner" x-text="playingNow.owner"></p>
+                                        <p class="mt-2 rounded-lg border border-emerald-800 bg-slate-950/50 px-3 py-1.5 text-sm text-slate-200" x-show="playingNow.details" x-text="playingNow.details"></p>
+                                        <p class="mt-1.5 text-xs text-emerald-100" x-show="playingNow.participants" x-text="playingNow.participants"></p>
                                     </div>
-                                    <template x-if="playingNow.duration_seconds > 0">
-                                        <p class="mb-3 text-sm text-emerald-400/80" x-text="`Approx. ${formatDuration(playingNow.duration_seconds)}`"></p>
-                                    </template>
-                                    <div class="flex flex-wrap gap-2">
+                                    <div class="grid content-start gap-2">
                                         <template x-for="song in playingNow.songs" :key="song.id">
-                                            <div class="rounded-lg bg-slate-800/60 px-3 py-2">
-                                                <p class="text-sm font-medium text-slate-200" x-text="`${song.artist} – ${song.title}`"></p>
-                                                <div class="mt-1 flex flex-wrap gap-1">
+                                            <div class="rounded-lg border border-emerald-800 bg-slate-950/60 px-3 py-1.5">
+                                                <p class="text-lg font-semibold text-slate-50" x-text="`${song.artist} – ${song.title}`"></p>
+                                                <div class="mt-1.5 flex flex-wrap gap-1.5">
                                                     <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
-                                                        <span class="rounded bg-emerald-900/60 px-1.5 py-0.5 text-[11px] text-emerald-300" x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                        <span
+                                                            class="rounded-md px-1.5 py-0.5 text-xs"
+                                                            :class="slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100'"
+                                                            :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
+                                                            x-text="`${slot.name}: ${slot.user_name}`"
+                                                        ></span>
                                                     </template>
                                                 </div>
                                             </div>
@@ -85,71 +80,110 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
                     </template>
 
-                    {{-- Coming Up --}}
-                    <template x-if="comingUp">
-                        <div class="mb-8">
-                            <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-amber-400">Coming Up Next</h2>
-                            <div
-                                class="overflow-hidden rounded-xl border border-amber-600/40 bg-amber-950/20"
-                            >
-                                <div class="px-5 py-4">
-                                    <div class="mb-1 flex flex-wrap items-baseline gap-3">
-                                        <h3 class="text-xl font-semibold text-slate-100" x-text="comingUp.name"></h3>
-                                        <span class="text-slate-400" x-show="comingUp.owner" x-text="`by ${comingUp.owner}`"></span>
-                                    </div>
-                                    <template x-if="comingUp.duration_seconds > 0">
-                                        <p class="mb-2 text-sm text-amber-400/70" x-text="`Approx. ${formatDuration(comingUp.duration_seconds)}`"></p>
-                                    </template>
-                                    <div class="flex flex-wrap gap-1.5">
-                                        <template x-for="song in comingUp.songs" :key="song.id">
-                                            <span class="rounded-md bg-slate-800/50 px-2.5 py-1.5 text-sm text-slate-300" x-text="`${song.artist} – ${song.title}`"></span>
-                                        </template>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    {{-- Upcoming queue --}}
-                    <template x-if="upcomingSets.length > 0">
-                        <div class="mb-8">
-                            <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-400">Up Later</h2>
-                            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                <template x-for="set in upcomingSets" :key="set.id">
-                                    <div class="rounded-xl border border-slate-800 bg-slate-800/30 px-4 py-3">
-                                        <p class="font-semibold text-slate-200" x-text="set.name"></p>
-                                        <p class="text-xs text-slate-500" x-show="set.owner" x-text="`by ${set.owner}`"></p>
-                                        <template x-if="set.duration_seconds > 0">
-                                            <p class="mt-1 text-xs text-slate-500" x-text="`~${formatDuration(set.duration_seconds)}`"></p>
+                    <template x-if="comingUpSets.length > 0">
+                        <section>
+                            <h2 class="mb-2 text-sm font-semibold uppercase tracking-widest text-amber-300">Coming Up</h2>
+                            <div class="grid gap-2 lg:grid-cols-2">
+                                <template x-for="set in comingUpSets" :key="set.id">
+                                    <div class="rounded-xl border border-amber-700 bg-amber-950 p-3">
+                                        <h3 class="text-xl font-semibold text-slate-50" x-text="set.name"></h3>
+                                        <p class="mt-1 text-sm text-amber-100" x-show="set.owner" x-text="set.owner"></p>
+                                        <p class="mt-1.5 rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-1.5 text-xs text-slate-200" x-show="set.details" x-text="set.details"></p>
+                                        <p class="mt-1.5 text-xs text-amber-100" x-show="set.participants" x-text="set.participants"></p>
+                                        <template x-if="set.songs.length > 0">
+                                            <div class="mt-2 divide-y divide-amber-900 overflow-hidden rounded-lg border border-amber-800 bg-slate-950/50">
+                                                <template x-for="song in set.songs" :key="song.id">
+                                                    <div class="px-3 py-1.5">
+                                                        <p class="text-base font-semibold text-slate-100" x-text="`${song.artist} – ${song.title}`"></p>
+                                                        <template x-if="song.slots.filter(sl => sl.filled).length > 0">
+                                                            <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                                                <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
+                                                                    <span
+                                                                        class="inline-block rounded-md px-1.5 py-0.5 text-xs"
+                                                                        :class="slot.checked_in ? 'bg-amber-300 text-slate-950' : 'bg-amber-900 text-amber-100'"
+                                                                        :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
+                                                                        x-text="`${slot.name}: ${slot.user_name}`"
+                                                                    ></span>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </template>
                                     </div>
                                 </template>
                             </div>
-                        </div>
+                        </section>
                     </template>
 
-                    {{-- Postponed / Finished --}}
+                    <template x-if="upcomingSets.length > 0">
+                        <section>
+                            <h2 class="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-400">Up Later</h2>
+                            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                <template x-for="set in upcomingSets" :key="set.id">
+                                    <div class="rounded-xl border border-slate-800 bg-slate-900 p-2.5">
+                                        <p class="text-base font-semibold text-slate-100" x-text="set.name"></p>
+                                        <p class="mt-1 text-sm text-slate-400" x-show="set.owner" x-text="set.owner"></p>
+                                        <template x-if="set.details">
+                                            <p class="mt-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300" x-text="set.details"></p>
+                                        </template>
+                                        <template x-if="set.songs.length > 0">
+                                            <div class="mt-1.5 divide-y divide-slate-800 overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+                                                <template x-for="song in set.songs" :key="song.id">
+                                                    <div class="px-2.5 py-1.5">
+                                                        <p class="text-sm font-semibold text-slate-200" x-text="`${song.artist} – ${song.title}`"></p>
+                                                        <template x-if="song.slots.filter(sl => sl.filled).length > 0">
+                                                            <div class="mt-1.5 flex flex-wrap gap-1">
+                                                                <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
+                                                                    <span
+                                                                        class="inline-block rounded-md px-1.5 py-0.5 text-xs"
+                                                                        :class="slot.checked_in ? 'bg-slate-700 text-slate-100' : 'bg-slate-800 text-slate-400'"
+                                                                        :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
+                                                                        x-text="`${slot.name}: ${slot.user_name}`"
+                                                                    ></span>
+                                                                </template>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </section>
+                    </template>
+
                     <template x-if="finishedSets.length > 0 || postponedSets.length > 0">
-                        <div class="opacity-50">
-                            <h2 class="mb-3 text-sm font-semibold uppercase tracking-widest text-slate-500">Completed / Postponed</h2>
-                            <div class="flex flex-wrap gap-2">
+                        <section>
+                            <h2 class="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-500">Finished / Postponed</h2>
+                            <div class="rounded-xl border border-slate-800 bg-slate-900 p-2.5">
+                                <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                                 <template x-for="set in postponedSets" :key="set.id">
-                                    <span class="flex items-center gap-1 rounded-full border border-rose-900 bg-rose-950/40 px-3 py-1 text-sm text-rose-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-                                        <span x-text="set.name"></span>
-                                    </span>
+                                    <div class="rounded-lg border border-rose-900 bg-rose-950/70 px-3 py-2">
+                                        <div class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-rose-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                            Postponed
+                                        </div>
+                                        <p class="mt-1 truncate text-sm font-semibold text-slate-100" x-text="set.name"></p>
+                                    </div>
                                 </template>
                                 <template x-for="set in finishedSets" :key="set.id">
-                                    <span class="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-sm text-slate-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                                        <span x-text="set.name"></span>
-                                    </span>
+                                    <div class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
+                                        <div class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                            Finished
+                                        </div>
+                                        <p class="mt-1 truncate text-sm font-semibold text-slate-100" x-text="set.name"></p>
+                                    </div>
                                 </template>
+                                </div>
                             </div>
-                        </div>
+                        </section>
                     </template>
                 </div>
             </div>
@@ -165,7 +199,7 @@
 
             init() {
                 this.fetchData();
-                setInterval(() => this.fetchData(), 5000);
+                this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
 
             async fetchData() {
@@ -173,14 +207,18 @@
                     const resp = await fetch(config.dataUrl, {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     });
-                    if (!resp.ok) { return; }
+                    if (!resp.ok) {
+                        console.error('Data fetch failed:', resp.status, resp.statusText);
+                        return;
+                    }
                     const payload = await resp.json();
-                    this.sets = payload.sets || [];
+                    // Create new objects to trigger Alpine reactivity
+                    this.sets = (payload.sets || []).map(s => ({ ...s }));
                     if (payload.updated_at) {
                         this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
                     }
                 } catch (e) {
-                    // Silently fail
+                    console.error('Error fetching live data:', e);
                 } finally {
                     this.loading = false;
                 }
@@ -194,8 +232,8 @@
                 return this.sets.find(s => s.status === 'playing_now') ?? null;
             },
 
-            get comingUp() {
-                return this.sets.find(s => s.status === 'coming_up') ?? null;
+            get comingUpSets() {
+                return this.sets.filter(s => s.status === 'coming_up').sort((a, b) => a.order - b.order);
             },
 
             get upcomingSets() {
