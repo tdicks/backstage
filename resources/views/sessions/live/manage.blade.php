@@ -72,43 +72,43 @@
         x-init="init()"
     >
         <div class="mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div class="text-center lg:text-left">
                     <div class="flex items-center justify-center gap-2 text-sm text-slate-300 lg:justify-start">
-                        <x-heroicon-m-microphone class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <x-heroicon-m-microphone
+                            class="h-4 w-4"
+                            aria-hidden="true"
+                            x-bind:class="jamManagerId ? (canManageLiveJam ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-500'"
+                        />
                         <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
-                    </div>
-                    <div class="mt-1 text-sm text-slate-400">
-                        <span x-show="saveSuccess" x-cloak x-transition.opacity class="font-medium text-emerald-300">Saved</span>
-                        <span x-show="saveError" x-cloak x-transition.opacity class="font-medium text-rose-300" x-text="saveError"></span>
-                        <span x-show="!saveSuccess && !saveError && lastUpdated" x-cloak>Last saved <span x-text="lastUpdated"></span></span>
-                        <span x-show="!saveSuccess && !saveError && !lastUpdated" x-cloak>Arrange sets, then update the live display.</span>
+                        <button
+                            type="button"
+                            x-show="canManageLiveJam"
+                            x-cloak
+                            @click="releaseManager()"
+                            :disabled="managerBusy"
+                            class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-800 bg-rose-950/60 text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                        >
+                            <x-heroicon-m-arrow-left-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" />
+                            <span class="sr-only">Exit jam manager mode</span>
+                        </button>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
-                    <button
-                        type="button"
-                        x-show="canManageLiveJam"
-                        x-cloak
-                        @click="releaseManager()"
-                        :disabled="managerBusy"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
-                    >
-                        <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
-                        <span class="sr-only">Exit jam manager mode</span>
-                    </button>
-                    <button
-                        type="button"
-                        x-show="!canManageLiveJam"
-                        x-cloak
-                        @click="claimManager()"
-                        :disabled="managerBusy"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-slate-950 transition disabled:opacity-50"
-                        :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
-                    >
-                        <x-heroicon-m-microphone class="h-4 w-4" aria-hidden="true" />
-                        Manage
-                    </button>
+                <div class="flex flex-col items-center gap-2 lg:items-end">
+                    <div class="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
+                        <button
+                            type="button"
+                            x-show="!canManageLiveJam"
+                            x-cloak
+                            @click="claimManager()"
+                            :disabled="managerBusy"
+                            class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-slate-950 transition disabled:opacity-50"
+                            :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
+                        >
+                            <x-heroicon-m-microphone class="h-4 w-4" aria-hidden="true" />
+                            Manage
+                        </button>
+                    </div>
                     <div
                         x-show="canManageLiveJam"
                         x-cloak
@@ -181,6 +181,12 @@
                                 <x-modal-secondary-button type="button" @click="closeAddSetModal()">Cancel</x-modal-secondary-button>
                                 <x-modal-primary-button type="button" @click="saveNewSet()">Save Set</x-modal-primary-button>
                             </div>
+                        </div>
+                        <div class="text-center text-sm text-slate-400 lg:text-right">
+                            <span x-show="saveSuccess" x-cloak x-transition.opacity class="font-medium text-emerald-300">Saved</span>
+                            <span x-show="saveError" x-cloak x-transition.opacity class="font-medium text-rose-300" x-text="saveError"></span>
+                            <span x-show="!saveSuccess && !saveError && lastUpdated" x-cloak>Last saved <span x-text="lastUpdated"></span></span>
+                            <span x-show="!saveSuccess && !saveError && !lastUpdated" x-cloak>Arrange sets, then update the live display.</span>
                         </div>
                     </div>
                 </div>
@@ -347,7 +353,7 @@
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-sky-800 bg-sky-950/60 text-sky-300 transition hover:border-sky-600 hover:bg-sky-900/70 active:scale-95"
                                 title="Finish"
                             >
-                                <x-heroicon-m-stop class="h-4 w-4" aria-hidden="true" />
+                                <x-heroicon-m-check class="h-4 w-4" aria-hidden="true" />
                             </button>
 
                             {{-- Play --}}

@@ -3,6 +3,7 @@
     'set',
     'users',
     'slotOptions',
+    'currentUserId',
     'jamSessionClosed' => false,
     'isSetOwner' => false,
     'canManageSet' => false,
@@ -25,6 +26,7 @@
         :set="$set"
         :users="$users"
         :slot-options="$slotOptions"
+        :current-user-id="$currentUserId"
         :jam-session-closed="$jamSessionClosed"
         :is-set-owner="$isSetOwner"
         :can-manage-set="$canManageSet"

@@ -62,6 +62,11 @@
     data-set-id="{{ $set->id }}"
     class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-bind:data-set-open="(!setCollapsed).toString()"
+    @click="if (!$event.target.closest('button, a, input, select, textarea, label')) { setCollapsed = !setCollapsed; }"
+    @keydown.enter.prevent="setCollapsed = !setCollapsed"
+    @keydown.space.prevent="setCollapsed = !setCollapsed"
+    role="button"
+    tabindex="0"
     x-data="sessionSetCard(@js([
         'setId' => $set->id,
         'initialSongRequestsPendingCount' => $set->songRequests->where('status', 'pending')->count(),
@@ -97,12 +102,7 @@
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
-        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
-        @click="setCollapsed = !setCollapsed"
-        role="button"
-        tabindex="0"
-        @keydown.enter.prevent="setCollapsed = !setCollapsed"
-        @keydown.space.prevent="setCollapsed = !setCollapsed"
+        class="flex flex-wrap items-center justify-between gap-3"
         x-bind:aria-expanded="(!setCollapsed).toString()"
         x-bind:title="setCollapsed ? 'Click to show set songs and assignments' : 'Click to hide set songs and assignments'"
         aria-label="Toggle set details"

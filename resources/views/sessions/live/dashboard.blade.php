@@ -272,11 +272,11 @@
             slotBadgeClasses(slot) {
                 if (slot.filled) {
                     return slot.checked_in
-                        ? 'border-emerald-200 bg-emerald-50/90 text-emerald-800'
-                        : 'border-amber-200 bg-amber-50/80 text-amber-800';
+                        ? 'border-emerald-800 bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800'
+                        : 'border-amber-800 bg-amber-950/60 text-amber-300 ring-1 ring-amber-800';
                 }
 
-                return 'border-slate-200 bg-slate-50 text-slate-500';
+                return 'border-slate-700 bg-slate-800 text-slate-400';
             },
 
             formatDuration(seconds) {

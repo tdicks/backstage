@@ -3,6 +3,7 @@
     'set',
     'users',
     'slotOptions',
+    'currentUserId',
     'jamSessionClosed' => false,
     'isSetOwner' => false,
     'canManageSet' => false,
@@ -13,9 +14,10 @@
 
 @php
     $setLocked = $set->performed;
+    $canEditSlot = ($canManageSet || ($set->session?->jam_manager_id === $currentUserId)) && ! $setLocked;
     $noProposableUsersMessage = 'No users are currently available for slot proposals.';
     $proposalUsers = $users
-        ->where('id', '!=', auth()->id())
+        ->where('id', '!=', $currentUserId)
         ->where('hide_from_slot_proposals', false);
     $isAdminManagingOtherSet = auth()->user()?->is_admin && ! $isSetOwner;
     $slotManageMenuItemClass = $isAdminManagingOtherSet
@@ -36,7 +38,7 @@
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
     x-data="sessionSlotRow(@js([
-        'assignedUserName' => $slotModel->user_id === auth()->id() ? 'You' : $slotModel->assignedPerformerName(),
+        'assignedUserName' => $slotModel->user_id === $currentUserId ? 'You' : $slotModel->assignedPerformerName(),
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,
         'slotIsOpen' => $slotModel->isOpen(),
         'assignmentIsManual' => ! $slotModel->user_id && filled($slotModel->manual_performer_name),
@@ -44,9 +46,9 @@
         'initialEditAssignedUserName' => $slotModel->user?->name ?? '',
         'initialEditManualPerformerName' => $slotModel->manual_performer_name ?? '',
         'editAssignedUserId' => (string) ($slotModel->user_id ?? ''),
-        'currentUserId' => (string) auth()->id(),
-        'assignedToCurrentUser' => $slotModel->user_id === auth()->id(),
-        'hasPendingOwnRequest' => $slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === auth()->id()),
+        'currentUserId' => (string) $currentUserId,
+        'assignedToCurrentUser' => $slotModel->user_id === $currentUserId,
+        'hasPendingOwnRequest' => $slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === $currentUserId),
         'proposalUserOptions' => $proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
         'users' => $users->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
         'requestSlotUrl' => route('slot-assignments.request', $slotModel),
@@ -70,7 +72,7 @@
 >
     <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
     <td class="px-3 py-3">
-        <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canManageSet && ! $setLocked" />
+        <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canEditSlot" />
     </td>
     <td x-ref="toastAnchor" class="px-3 py-3 text-right">
         <div class="flex flex-wrap justify-end gap-2">
@@ -146,7 +148,7 @@
         />
 
         <x-sessions.slot-edit-modal
-            :can-manage-set="$canManageSet"
+            :can-manage-set="$canEditSlot"
             :set-locked="$setLocked"
             :is-admin-managing-other-set="$isAdminManagingOtherSet"
             :set="$set"
