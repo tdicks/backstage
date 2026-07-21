@@ -72,17 +72,20 @@
         x-init="init()"
     >
         <div class="mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-wide text-slate-400">Run of show</p>
-                    <div class="mt-1 text-sm text-slate-300">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="text-center lg:text-left">
+                    <div class="flex items-center justify-center gap-2 text-sm text-slate-300 lg:justify-start">
+                        <x-heroicon-m-microphone class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
+                    </div>
+                    <div class="mt-1 text-sm text-slate-400">
                         <span x-show="saveSuccess" x-cloak x-transition.opacity class="font-medium text-emerald-300">Saved</span>
                         <span x-show="saveError" x-cloak x-transition.opacity class="font-medium text-rose-300" x-text="saveError"></span>
                         <span x-show="!saveSuccess && !saveError && lastUpdated" x-cloak>Last saved <span x-text="lastUpdated"></span></span>
                         <span x-show="!saveSuccess && !saveError && !lastUpdated" x-cloak>Arrange sets, then update the live display.</span>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
                     <button
                         type="button"
                         x-show="canManageLiveJam"
@@ -106,45 +109,46 @@
                         <x-heroicon-m-microphone class="h-4 w-4" aria-hidden="true" />
                         Manage
                     </button>
-                    <button
-                        type="button"
+                    <div
                         x-show="canManageLiveJam"
                         x-cloak
-                        @click="clearState()"
-                        :disabled="clearBusy"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-x-4"
+                        x-transition:enter-end="opacity-100 translate-x-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-x-0"
+                        x-transition:leave-end="opacity-0 translate-x-4"
+                        class="flex flex-wrap items-center justify-center gap-2"
                     >
-                        <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
-                        Reset
-                    </button>
-                    <div x-show="canManageLiveJam" x-cloak class="h-8 border-r border-slate-700"></div>
-                    <button
-                        type="button"
-                        x-show="canManageLiveJam"
-                        x-cloak
-                        @click="openAddSetModal()"
-                        class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
-                    >
-                        <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                        Add Set
-                    </button>
-                    <button
-                        type="button"
-                        x-show="canManageLiveJam"
-                        x-cloak
-                        @click="saveState()"
-                        :disabled="saveBusy || !hasChanges"
-                        class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-                    >
-                        <x-heroicon-m-arrow-up-tray class="h-4 w-4" aria-hidden="true" />
-                        <span x-show="!saveBusy">Update</span>
-                        <span x-show="saveBusy" x-cloak>Saving…</span>
-                    </button>
+                        <button
+                            type="button"
+                            @click="clearState()"
+                            :disabled="clearBusy"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                        >
+                            <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                            Reset
+                        </button>
+                        <button
+                            type="button"
+                            @click="openAddSetModal()"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
+                        >
+                            <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                            Add Set
+                        </button>
+                        <button
+                            type="button"
+                            @click="saveState()"
+                            :disabled="saveBusy || !hasChanges"
+                            class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                        >
+                            <x-heroicon-m-arrow-up-tray class="h-4 w-4" aria-hidden="true" />
+                            <span x-show="!saveBusy">Update</span>
+                            <span x-show="saveBusy" x-cloak>Saving…</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="mt-4 flex items-center justify-center gap-2 text-sm text-slate-300">
-                <x-heroicon-m-microphone class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
             </div>
         </div>
 
@@ -236,6 +240,8 @@
                     data-live-set-card
                     :data-live-set-id="set.id"
                     :data-live-set-status="set.status"
+                    @mouseenter="markSetBrowsed(set)"
+                    @focusin="markSetBrowsed(set)"
                     x-bind:draggable="canDragSet(set) ? 'true' : 'false'"
                     @dragstart="onSetDragStart($event, set)"
                     @dragover="onSetDragOver($event, set)"
@@ -322,13 +328,22 @@
                         </div>
 
                         {{-- Action buttons --}}
-                        <div class="flex w-14 shrink-0 flex-col items-center gap-1.5 border-l border-slate-700 bg-slate-950/35 px-2 py-3">
+                        <div
+                            x-show="canManageLiveJam"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 translate-x-4"
+                            x-transition:enter-end="opacity-100 translate-x-0"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100 translate-x-0"
+                            x-transition:leave-end="opacity-0 translate-x-4"
+                            class="flex w-14 shrink-0 flex-col items-center gap-1.5 border-l border-slate-700 bg-slate-950/35 px-2 py-3"
+                        >
                             {{-- Finish --}}
                             <button
                                 type="button"
                                 x-show="set.status === 'playing_now'"
                                 @click="finishSet(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-sky-800 bg-sky-950/60 text-sky-300 transition hover:border-sky-600 hover:bg-sky-900/70 active:scale-95"
                                 title="Finish"
                             >
@@ -340,7 +355,6 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'finished'"
                                 @click="startSet(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-emerald-800 bg-emerald-950/60 text-emerald-300 transition hover:border-emerald-600 hover:bg-emerald-900/70 active:scale-95"
                                 title="Play"
                             >
@@ -354,7 +368,6 @@
                                 type="button"
                                 x-show="set.status === 'playing_now' || set.status === 'coming_up'"
                                 @click="pushDown(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Push Down"
                             >
@@ -366,7 +379,7 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'coming_up' && set.status !== 'finished' && set.status !== 'postponed'"
                                 @click="markComingUp(set)"
-                                :disabled="!canManageLiveJam || comingUpSets.length >= 2"
+                                :disabled="comingUpSets.length >= 2"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                 title="Coming Up"
                             >
@@ -378,7 +391,6 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'finished' && set.status !== 'postponed'"
                                 @click="postponeSet(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-rose-800 bg-rose-950/60 text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 active:scale-95"
                                 title="Postpone"
                             >
@@ -390,7 +402,6 @@
                                 type="button"
                                 x-show="set.isLiveSet"
                                 @click="openEditSetModal(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-sky-600 hover:bg-sky-950/60 hover:text-sky-300 active:scale-95"
                                 title="Edit"
                             >
@@ -402,7 +413,6 @@
                                 type="button"
                                 x-show="set.isLiveSet"
                                 @click="deleteSet(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-rose-600 hover:bg-rose-950/60 hover:text-rose-300 active:scale-95"
                                 title="Delete"
                             >
@@ -414,7 +424,6 @@
                                 type="button"
                                 x-show="set.status === 'finished' || set.status === 'postponed'"
                                 @click="restoreSet(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Restore"
                             >
@@ -428,7 +437,6 @@
                                 type="button"
                                 x-show="canMoveUp(set)"
                                 @click="moveUp(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Up"
                             >
@@ -440,7 +448,6 @@
                                 type="button"
                                 x-show="canMoveDown(set)"
                                 @click="moveDown(set)"
-                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Down"
                             >
@@ -493,7 +500,7 @@
                 participants: '',
                 details: '',
             },
-            setHighlights: new Map(),
+            setHighlights: new Set(),
             editSetForm: {
                 organiser: '',
                 name: '',
@@ -562,7 +569,7 @@
                 return new Date(set.created_at) > new Date(this.lastCheckedAt);
             },
 
-            highlightSet(setOrId, createdAt = null) {
+            highlightSet(setOrId) {
                 const set = typeof setOrId === 'object'
                     ? setOrId
                     : this.sets.find(item => String(item.id) === String(setOrId));
@@ -571,20 +578,23 @@
                 }
 
                 set.highlighted = true;
+                this.setHighlights.add(String(set.id));
+            },
 
-                if (this.setHighlights.has(String(set.id))) {
-                    clearTimeout(this.setHighlights.get(String(set.id)));
+            clearSetHighlight(setOrId) {
+                const set = typeof setOrId === 'object'
+                    ? setOrId
+                    : this.sets.find(item => String(item.id) === String(setOrId));
+                if (!set) {
+                    return;
                 }
 
-                const timeout = setTimeout(() => {
-                    const currentSet = this.sets.find(item => String(item.id) === String(set.id));
-                    if (currentSet) {
-                        currentSet.highlighted = false;
-                    }
-                    this.setHighlights.delete(String(set.id));
-                }, createdAt ? 2200 : 1800);
+                set.highlighted = false;
+                this.setHighlights.delete(String(set.id));
+            },
 
-                this.setHighlights.set(String(set.id), timeout);
+            markSetBrowsed(setOrId) {
+                this.clearSetHighlight(setOrId);
             },
 
             stateSnapshot(set) {
@@ -615,24 +625,43 @@
                     if (!resp.ok) { return; }
                     const payload = await resp.json();
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
-                    const serverIds = new Set(serverSets.map(set => String(set.id)));
-                    const localLiveSets = this.sets.filter(set => set.isLiveSet && !serverIds.has(String(set.id)));
+                    const localIds = new Set(this.sets.map(set => String(set.id)));
 
-                    this.sets = serverSets.map(serverSet => {
-                        const localSet = this.sets.find(set => String(set.id) === String(serverSet.id));
-                        const mergedSet = localSet ? { ...localSet, ...serverSet } : { ...serverSet };
+                    if (this.sets.length === 0) {
+                        this.sets = serverSets.map(serverSet => {
+                            const mergedSet = { ...serverSet };
 
-                        if (localSet?.highlighted) {
-                            mergedSet.highlighted = true;
-                        }
+                            if (this.shouldHighlightSet(serverSet)) {
+                                mergedSet.highlighted = true;
+                                this.setHighlights.add(String(mergedSet.id));
+                            }
 
-                        if (!localSet && this.shouldHighlightSet(serverSet)) {
-                            mergedSet.highlighted = true;
-                            this.highlightSet(mergedSet, mergedSet.created_at);
-                        }
+                            return mergedSet;
+                        });
+                    } else {
+                        const nextPendingOrder = this.sets
+                            .filter(set => set.status === 'pending')
+                            .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
 
-                        return mergedSet;
-                    }).concat(localLiveSets);
+                        const newSets = serverSets
+                            .filter(serverSet => !localIds.has(String(serverSet.id)))
+                            .map((serverSet, index) => {
+                                const mergedSet = { ...serverSet };
+
+                                if (mergedSet.status === 'pending') {
+                                    mergedSet.order = nextPendingOrder + index;
+                                }
+
+                                if (this.shouldHighlightSet(serverSet)) {
+                                    mergedSet.highlighted = true;
+                                    this.setHighlights.add(String(mergedSet.id));
+                                }
+
+                                return mergedSet;
+                            });
+
+                        this.sets = [...this.sets, ...newSets];
+                    }
 
                     if (!hadLocalChanges) {
                         this.originalSets = this.sets.map(s => this.stateSnapshot(s));
@@ -724,7 +753,7 @@
                 };
 
                 this.sets.push(newSet);
-                this.highlightSet(newSet.id, newSet.created_at);
+                this.highlightSet(newSet.id);
                 this.closeAddSetModal();
             },
 

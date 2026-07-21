@@ -1010,6 +1010,11 @@ export function sessionSongCard(config) {
                 return;
             }
 
+            if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea, label')) {
+                event.preventDefault();
+                return;
+            }
+
             this.dragSlotId = slotId;
             this.draggingSlotId = slotId;
             this.dropTargetSlotId = null;

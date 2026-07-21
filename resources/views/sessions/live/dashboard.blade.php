@@ -73,8 +73,8 @@
                                                 <div class="mt-1.5 flex flex-wrap gap-1.5">
                                                     <template x-for="slot in song.slots" :key="slot.id">
                                                         <span
-                                                            class="rounded-md px-1.5 py-0.5 text-xs"
-                                                            :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
+                                                            class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition"
+                                                            :class="slotBadgeClasses(slot)"
                                                             :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                         >
                                                             <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
@@ -114,8 +114,8 @@
                                                             <div class="mt-1.5 flex flex-wrap gap-1.5">
                                                                 <template x-for="slot in song.slots" :key="slot.id">
                                                                     <span
-                                                                        class="inline-block rounded-md px-1.5 py-0.5 text-xs"
-                                                                        :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
+                                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition"
+                                                                        :class="slotBadgeClasses(slot)"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                                     >
                                                                         <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
@@ -159,8 +159,8 @@
                                                             <div class="mt-1.5 flex flex-wrap gap-1">
                                                                 <template x-for="slot in song.slots" :key="slot.id">
                                                                     <span
-                                                                        class="inline-block rounded-md px-1.5 py-0.5 text-xs"
-                                                                        :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
+                                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition"
+                                                                        :class="slotBadgeClasses(slot)"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                                     >
                                                                         <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
@@ -267,6 +267,16 @@
 
             get finishedSets() {
                 return this.sets.filter(s => s.status === 'finished');
+            },
+
+            slotBadgeClasses(slot) {
+                if (slot.filled) {
+                    return slot.checked_in
+                        ? 'border-emerald-200 bg-emerald-50/90 text-emerald-800'
+                        : 'border-amber-200 bg-amber-50/80 text-amber-800';
+                }
+
+                return 'border-slate-200 bg-slate-50 text-slate-500';
             },
 
             formatDuration(seconds) {
