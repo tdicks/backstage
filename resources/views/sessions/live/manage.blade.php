@@ -922,7 +922,7 @@
                     return;
                 }
 
-                if (window.isInteractiveDragSource?.(event)) {
+                if (window.isInteractiveDragSource(event)) {
                     event.preventDefault();
                     return;
                 }
