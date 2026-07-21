@@ -500,7 +500,7 @@
                 participants: '',
                 details: '',
             },
-            // Track highlighted set IDs so they stay blue until the user browses past them.
+            // Track highlighted set IDs so they remain highlighted until the user browses past them.
             setHighlights: new Set(),
             editSetForm: {
                 organiser: '',
@@ -637,7 +637,8 @@
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
                     const localIds = new Set(this.sets.map(set => String(set.id)));
 
-                    // Preserve local reordering/editing and only append truly new sets from the poller.
+                    // On initial load, apply highlights to the server snapshot.
+                    // On subsequent polls, preserve local reordering/editing and only append truly new sets.
                     if (this.sets.length === 0) {
                         this.sets = serverSets.map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
                     } else {
@@ -646,6 +647,7 @@
                             .map((serverSet) => this.applyHighlightIfNeeded({ ...serverSet }));
 
                         if (newSets.length > 0) {
+                            // Pending order stays zero-based so newly appended sets always land at the bottom.
                             const nextPendingOrder = this.sets
                                 .filter(set => set.status === 'pending')
                                 .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
