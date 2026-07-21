@@ -125,6 +125,7 @@ test('admin can mark a jam session as live', function () {
 
 test('marking a jam session as not live clears live state cache', function () {
     $admin = User::factory()->create(['is_admin' => true]);
+    $owner = User::factory()->create();
 
     $session = JamSession::create([
         'name' => 'Cache Clear Live Jam',
@@ -134,8 +135,18 @@ test('marking a jam session as not live clears live state cache', function () {
         'is_live' => true,
     ]);
 
+    $finishedSet = Set::create([
+        'name' => 'Finished Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
     Cache::put('live_jam_session:'.$session->id, [
-        'sets' => [['set_id' => 1, 'status' => 'playing_now', 'order' => 0]],
+        'sets' => [['set_id' => $finishedSet->id, 'status' => 'finished', 'order' => 0]],
         'updated_at' => now()->toIso8601String(),
     ], 3600);
 
@@ -150,6 +161,7 @@ test('marking a jam session as not live clears live state cache', function () {
         ->assertRedirect();
 
     expect($session->refresh()->is_live)->toBeFalse()
+        ->and($finishedSet->refresh()->performed)->toBeTrue()
         ->and(Cache::has('live_jam_session:'.$session->id))->toBeFalse();
 });
 
@@ -177,6 +189,22 @@ test('public can access live jam participant dashboard', function () {
     $this->get(route('sessions.live.dashboard', $session))
         ->assertOk()
         ->assertViewIs('sessions.live.dashboard');
+});
+
+test('live jam session page shows a live notice', function () {
+    $user = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Live Notice Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'is_live' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('sessions.show', $session))
+        ->assertOk()
+        ->assertSee('This jam session is now live');
 });
 
 test('short live code redirects to live dashboard', function () {
@@ -208,6 +236,7 @@ test('live data endpoint returns set list with health', function () {
         'position' => 1,
         'performed' => false,
         'signups_open' => true,
+        'feature_set' => true,
     ]);
 
     $response = $this->actingAs($admin)
@@ -220,7 +249,8 @@ test('live data endpoint returns set list with health', function () {
         ->and($data['sets'])->toHaveCount(1)
         ->and($data['sets'][0]['id'])->toBe($set->id)
         ->and($data['sets'][0]['status'])->toBe('pending')
-        ->and($data['sets'][0]['health'])->toBe(0);
+        ->and($data['sets'][0]['health'])->toBe(0)
+        ->and($data['sets'][0]['feature_set'])->toBeTrue();
 });
 
 test('admin can update live state via cache', function () {

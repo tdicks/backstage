@@ -20,7 +20,7 @@ test('set and song cards render dropdown menu controls', function () {
         'allow_checkins' => true,
     ]);
 
-    $set = Set::query()->create([
+    $set = Set::create([
         'name' => 'Menu Set',
         'description' => 'Menu description',
         'owner_id' => $owner->id,
@@ -31,7 +31,7 @@ test('set and song cards render dropdown menu controls', function () {
         'song_requests' => true,
     ]);
 
-    $song = Song::query()->create([
+    $song = Song::create([
         'set_id' => $set->id,
         'artist' => 'Menu Artist',
         'title' => 'Menu Song',
@@ -76,6 +76,47 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertDontSee('aria-label="Add slot"', false);
 });
 
+test('mobile set cards keep the organiser line concise', function () {
+    $owner = User::factory()->create(['name' => 'Set Owner']);
+    $collaboratorOne = User::factory()->create(['name' => 'First Collaborator']);
+    $collaboratorTwo = User::factory()->create(['name' => 'Second Collaborator']);
+
+    $session = JamSession::query()->create([
+        'name' => 'Mobile Line Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Mobile Line Set',
+        'description' => 'Mobile line description',
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+        'collaborator_ids' => [$collaboratorOne->id, $collaboratorTwo->id],
+    ]);
+
+    Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Mobile Artist',
+        'title' => 'Mobile Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets', $session))
+        ->assertOk()
+        ->assertSee('Set Owner')
+        ->assertSee('and collaborators')
+        ->assertSee('hidden md:inline', false);
+});
+
 test('admin sees shield suffix on managed set and song menu items', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $owner = User::factory()->create(['name' => 'Set Owner']);
@@ -88,7 +129,7 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         'allow_checkins' => true,
     ]);
 
-    $set = Set::query()->create([
+    $set = Set::create([
         'name' => 'Admin Menu Set',
         'description' => null,
         'owner_id' => $owner->id,

@@ -273,6 +273,20 @@ class JamSessionController extends Controller
         }
 
         if ($wasLive && ! $jamSession->is_live) {
+            $liveState = Cache::get('live_jam_session:'.$jamSession->id, ['sets' => []]);
+
+            $finishedSetIds = collect($liveState['sets'] ?? [])
+                ->map(fn (array $set): ?int => $this->extractFinishedSetId($set))
+                ->filter()
+                ->values();
+
+            if ($finishedSetIds->isNotEmpty()) {
+                $jamSession->sets()
+                    ->whereIn('id', $finishedSetIds)
+                    ->where('performed', false)
+                    ->update(['performed' => true]);
+            }
+
             Cache::forget('live_jam_session:'.$jamSession->id);
         }
 
@@ -308,6 +322,21 @@ class JamSessionController extends Controller
         }
 
         return back()->with('status', 'Jam session updated.');
+    }
+
+    private function extractFinishedSetId(array $set): ?int
+    {
+        if (($set['status'] ?? null) !== 'finished') {
+            return null;
+        }
+
+        $setId = $set['set_id'] ?? null;
+
+        if (! is_int($setId) || $setId <= 0) {
+            return null;
+        }
+
+        return $setId;
     }
 
     /**
