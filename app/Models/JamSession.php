@@ -50,6 +50,10 @@ class JamSession extends Model
                 $session->is_live = false;
             }
 
+            if (! $session->is_live) {
+                $session->jam_manager_id = null;
+            }
+
             $session->live_code ??= self::makeLiveCode($session->id);
         });
     }

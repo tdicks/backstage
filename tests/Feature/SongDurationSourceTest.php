@@ -160,9 +160,40 @@ test('marking a jam session as not live clears live state cache', function () {
         ])
         ->assertRedirect();
 
-    expect($session->refresh()->is_live)->toBeFalse()
+    $session->refresh();
+
+    expect($session->is_live)->toBeFalse()
         ->and($finishedSet->refresh()->performed)->toBeTrue()
+        ->and($session->jam_manager_id)->toBeNull()
         ->and(Cache::has('live_jam_session:'.$session->id))->toBeFalse();
+});
+
+test('turning off live clears the jam manager assignment', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Manager Clear Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'allow_checkins' => true,
+        'is_live' => true,
+        'jam_manager_id' => $admin->id,
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('sessions.update', $session), [
+            'name' => $session->name,
+            'date' => $session->date->toDateString(),
+            'description' => $session->description,
+            'allow_checkins' => '1',
+            'is_live' => '0',
+        ])
+        ->assertRedirect();
+
+    $session->refresh();
+
+    expect($session->is_live)->toBeFalse()
+        ->and($session->jam_manager_id)->toBeNull();
 });
 
 test('non-admin cannot access live jam management dashboard', function () {
@@ -191,6 +222,19 @@ test('public can access live jam participant dashboard', function () {
         ->assertViewIs('sessions.live.dashboard');
 });
 
+test('non-live jam session live dashboard shows the standby message', function () {
+    $session = JamSession::create([
+        'name' => 'Standby Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'is_live' => false,
+    ]);
+
+    $this->get(route('sessions.live.dashboard', $session))
+        ->assertOk()
+        ->assertSee('This jam session hasn&apos;t started yet or is finished.');
+});
+
 test('live jam session page shows a live notice', function () {
     $user = User::factory()->create();
 
@@ -201,10 +245,12 @@ test('live jam session page shows a live notice', function () {
         'is_live' => true,
     ]);
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->get(route('sessions.show', $session))
         ->assertOk()
         ->assertSee('This jam session is now live');
+
+    expect(substr_count($response->getContent(), 'This jam session is now live'))->toBe(1);
 });
 
 test('short live code redirects to live dashboard', function () {

@@ -14,6 +14,7 @@ beforeEach(function () {
         'name' => 'Test Jam',
         'date' => now()->addDays(1),
         'description' => 'Test session',
+        'is_live' => true,
     ]);
 });
 
@@ -98,4 +99,52 @@ it('persists state to cache and returns it', function () {
     expect($playingNowSet['order'])->toBe(-1);
     expect($comingUpSet['order'])->toBe(1);
     expect($pendingSet['order'])->toBe(2);
+});
+
+test('live data excludes performed sets', function () {
+    $performedSet = Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Performed Set',
+        'owner_id' => $this->user->id,
+        'position' => 0,
+        'performed' => true,
+    ]);
+
+    $upcomingSet = Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Upcoming Set',
+        'owner_id' => $this->user->id,
+        'position' => 1,
+        'performed' => false,
+    ]);
+
+    $response = $this->actingAs($this->user)->getJson("/sessions/{$this->jamSession->routeSlug()}/live/data");
+
+    $response->assertOk();
+
+    $returnedIds = collect($response->json('sets'))->pluck('id');
+
+    expect($returnedIds)->toContain($upcomingSet->id)
+        ->and($returnedIds)->not->toContain($performedSet->id);
+});
+
+test('non-live sessions do not return live sets', function () {
+    $session = JamSession::create([
+        'name' => 'Offline Jam',
+        'date' => now()->addDays(1),
+        'description' => 'Test session',
+        'is_live' => false,
+    ]);
+
+    Set::create([
+        'jam_session_id' => $session->id,
+        'name' => 'Hidden Set',
+        'owner_id' => $this->user->id,
+        'position' => 0,
+        'performed' => false,
+    ]);
+
+    $response = $this->actingAs($this->user)->getJson("/sessions/{$session->routeSlug()}/live/data");
+
+    $response->assertOk()->assertJsonCount(0, 'sets');
 });

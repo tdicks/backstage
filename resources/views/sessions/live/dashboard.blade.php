@@ -11,6 +11,7 @@
         class="flex min-h-screen flex-col"
         x-data="liveJamDisplay({
             dataUrl: @js(route('sessions.live.data', $session)),
+            isLive: @js((bool) $session->is_live),
         })"
         x-init="init()"
     >
@@ -33,20 +34,21 @@
 
         <main class="flex-1 px-4 py-3 sm:px-5 lg:py-4">
             <div class="mx-auto max-w-7xl">
-                <div x-show="loading" class="flex items-center justify-center py-24 text-slate-400">
-                    <svg class="mr-3 h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    Loading live session…
-                </div>
+                @if ($session->is_live)
+                    <div x-show="loading" class="flex items-center justify-center py-24 text-slate-400">
+                            <svg class="mr-3 h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            Loading live session…
+                    </div>
 
-                <div x-show="!loading && sets.length === 0" x-cloak class="rounded-xl border border-slate-800 bg-slate-900 px-6 py-20 text-center">
-                    <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
-                    <p class="mt-3 text-2xl font-semibold text-slate-200">The jam has not started yet.</p>
-                </div>
+                    <div x-show="!loading && sets.length === 0" x-cloak class="rounded-xl border border-slate-800 bg-slate-900 px-6 py-20 text-center">
+                            <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
+                            <p class="mt-3 text-2xl font-semibold text-slate-200">The jam has not started yet.</p>
+                    </div>
 
-                <div x-show="!loading && sets.length > 0" x-cloak class="space-y-3">
+                    <div x-show="!loading && sets.length > 0" x-cloak class="space-y-3">
                     <template x-if="playingNow">
                         <section>
                             <div class="mb-2 flex items-center justify-between gap-3">
@@ -206,7 +208,16 @@
                             </div>
                         </section>
                     </template>
-                </div>
+                    </div>
+                @else
+                    <div class="flex items-center justify-center py-16 sm:py-24">
+                        <div class="max-w-xl rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center shadow-xl">
+                            <x-heroicon-m-clock class="mx-auto h-14 w-14 text-amber-400" aria-hidden="true" />
+                            <p class="mt-5 text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
+                            <p class="mt-3 text-3xl font-semibold text-slate-100">This jam session hasn&#39;t started yet or is finished.</p>
+                        </div>
+                    </div>
+                @endif
             </div>
         </main>
     </div>
@@ -219,6 +230,11 @@
             lastUpdated: '',
 
             init() {
+                if (!config.isLive) {
+                    this.loading = false;
+                    return;
+                }
+
                 this.fetchData();
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
