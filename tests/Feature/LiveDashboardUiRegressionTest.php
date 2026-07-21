@@ -1,15 +1,20 @@
 <?php
 
-test('live management dashboard preserves local changes and highlights new sets until browsed', function () {
+test('management dashboard preserves local changes when polling', function () {
     $view = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain('const localIds = new Set(this.sets.map(set => String(set.id)));');
     expect($view)->toContain('this.sets = [...this.sets, ...newSets];');
+});
+
+test('management dashboard highlights new sets until browsed and keeps the updated status panel', function () {
+    $view = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
+
     expect($view)->toContain('@mouseenter="markSetBrowsed(set)"');
     expect($view)->toContain('x-transition:enter-start="opacity-0 translate-x-4"');
     expect($view)->toContain('x-text="jamManagerName || \'No jam manager assigned yet\'"');
     expect($view)->toContain('Last saved <span x-text="lastUpdated"></span>');
-    expect($view)->toContain('x-show="canManageLiveJam"');
+    expect($view)->toContain('Arrange sets, then update the live display.');
     expect($view)->not->toContain('Run of show');
 });
 

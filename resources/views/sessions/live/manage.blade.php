@@ -500,6 +500,7 @@
                 participants: '',
                 details: '',
             },
+            // Track highlighted set IDs so they stay blue until the user browses past them.
             setHighlights: new Set(),
             editSetForm: {
                 organiser: '',
@@ -577,7 +578,6 @@
                     return;
                 }
 
-                // Keep new-set highlights active until the user browses over the card.
                 set.highlighted = true;
                 this.setHighlights.add(String(set.id));
             },
@@ -596,6 +596,15 @@
 
             markSetBrowsed(setOrId) {
                 this.clearSetHighlight(setOrId);
+            },
+
+            applyHighlightIfNeeded(set) {
+                if (this.shouldHighlightSet(set)) {
+                    set.highlighted = true;
+                    this.setHighlights.add(String(set.id));
+                }
+
+                return set;
             },
 
             stateSnapshot(set) {
@@ -630,29 +639,11 @@
 
                     // Preserve local reordering/editing and only append truly new sets from the poller.
                     if (this.sets.length === 0) {
-                        this.sets = serverSets.map(serverSet => {
-                            const mergedSet = { ...serverSet };
-
-                            if (this.shouldHighlightSet(serverSet)) {
-                                mergedSet.highlighted = true;
-                                this.setHighlights.add(String(mergedSet.id));
-                            }
-
-                            return mergedSet;
-                        });
+                        this.sets = serverSets.map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
                     } else {
                         const newSets = serverSets
                             .filter(serverSet => !localIds.has(String(serverSet.id)))
-                            .map((serverSet, index) => {
-                                const mergedSet = { ...serverSet };
-
-                                if (this.shouldHighlightSet(serverSet)) {
-                                    mergedSet.highlighted = true;
-                                    this.setHighlights.add(String(mergedSet.id));
-                                }
-
-                                return mergedSet;
-                            });
+                            .map((serverSet) => this.applyHighlightIfNeeded({ ...serverSet }));
 
                         if (newSets.length > 0) {
                             const nextPendingOrder = this.sets
