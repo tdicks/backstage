@@ -283,6 +283,7 @@
                     :set="$set"
                     :users="$users"
                     :slot-options="$slotOptions"
+                    :current-user-id="auth()->id()"
                     :jam-session-closed="$jamSessionClosed"
                     :is-set-owner="$isSetOwner"
                     :can-manage-set="$canManageSet"

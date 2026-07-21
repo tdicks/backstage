@@ -54,6 +54,7 @@ class SessionController extends Controller
                 ->visibleTo(request()->user())
                 ->with([
                     'owner',
+                    'session',
                     'songs.slots.user',
                     'songs.slots.assignments.actor',
                     'songs.slots.assignments.target',
