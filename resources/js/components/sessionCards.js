@@ -13,10 +13,29 @@ function baseDragState() {
     };
 }
 
+function viewportActionMenuStyle(button) {
+    const buttonRect = button.getBoundingClientRect();
+    const viewportPadding = 8;
+    const menuWidth = Math.min(288, window.innerWidth - (viewportPadding * 2));
+    const spaceRight = window.innerWidth - buttonRect.left;
+    const spaceLeft = buttonRect.right;
+    const openToLeft = spaceRight < menuWidth && spaceLeft > spaceRight;
+    const left = openToLeft
+        ? Math.max(viewportPadding, buttonRect.right - menuWidth)
+        : Math.min(buttonRect.left, window.innerWidth - menuWidth - viewportPadding);
+    const top = Math.min(
+        window.innerHeight - viewportPadding - 12,
+        Math.max(viewportPadding, buttonRect.bottom + viewportPadding)
+    );
+
+    return `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; max-height: calc(100vh - ${viewportPadding * 2}px); overflow-y: auto;`;
+}
+
 export function sessionSetCard(config) {
     return {
         openSong: false,
         openSongRequest: false,
+        actionMenuStyle: '',
         songArtistQuery: '',
         songTitleQuery: '',
         selectedArtistName: '',
@@ -158,9 +177,21 @@ export function sessionSetCard(config) {
         closeSessionActionMenus() {
             this.openActionMenu = false;
         },
+        repositionActionMenu() {
+            if (this.openActionMenu) {
+                this.positionActionMenu();
+            }
+        },
+        positionActionMenu() {
+            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
+        },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
+            if (shouldOpen) {
+                this.positionActionMenu();
+            }
+
             this.openActionMenu = shouldOpen;
         },
         async copySetShareLink() {
@@ -498,6 +529,7 @@ export function sessionSetCard(config) {
                 this.collaboratorNames = updated.map((c) => c.name);
                 this.openCollaborators = false;
                 this.resetCollaboratorModal();
+                this.refreshSessionSets();
             } catch (e) {
                 this.collaboratorSaveError = e.message || 'Could not save collaborators. Try again.';
             } finally {
@@ -893,6 +925,7 @@ export function sessionSongCard(config) {
         openEditSong: false,
         openAddSlot: false,
         openActionMenu: false,
+        actionMenuStyle: '',
         directLinkCopied: false,
         songCollapsed: false,
         songKey: config.songKey,
@@ -904,6 +937,8 @@ export function sessionSongCard(config) {
         toast: { visible: false, type: 'error', message: '' },
         toastTimer: null,
         canReorderSlots: config.canReorderSlots,
+        isAdminUser: config.isAdminUser,
+        jamSessionClosed: config.jamSessionClosed,
         ...baseDragState(),
         dragSlotId: null,
         draggingSlotId: null,
@@ -985,9 +1020,21 @@ export function sessionSongCard(config) {
         toggleSongCollapsed() {
             this.setSongCollapsed(!this.songCollapsed);
         },
+        repositionActionMenu() {
+            if (this.openActionMenu) {
+                this.positionActionMenu();
+            }
+        },
+        positionActionMenu() {
+            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
+        },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
+            if (shouldOpen) {
+                this.positionActionMenu();
+            }
+
             this.openActionMenu = shouldOpen;
         },
         openEditSongModal() {
@@ -1251,6 +1298,10 @@ export function sessionSlotRow(config) {
         busyAction: false,
         actionError: '',
         actionFeedback: '',
+        assignmentConflictMessage: '',
+        assignmentConflictPending: false,
+        assignmentConflictCooldown: false,
+        assignmentConflictTimer: null,
         toast: { visible: false, type: 'error', message: '' },
         toastStyle: '',
         toastTimer: null,
@@ -1276,12 +1327,31 @@ export function sessionSlotRow(config) {
         updateEditUserQuery() {
             this.editAssignedUserId = '';
             this.showEditUserSuggestions = true;
+            this.resetAssignmentConflict();
         },
         selectEditUser(user) {
             this.editAssignedUserId = String(user.id);
             this.editAssignedUserQuery = user.name;
             this.editAssignedUserName = user.name;
             this.showEditUserSuggestions = false;
+            this.resetAssignmentConflict();
+        },
+        resetAssignmentConflict() {
+            this.assignmentConflictMessage = '';
+            this.assignmentConflictPending = false;
+            this.assignmentConflictCooldown = false;
+            clearTimeout(this.assignmentConflictTimer);
+            this.assignmentConflictTimer = null;
+        },
+        showAssignmentConflict(message) {
+            this.assignmentConflictMessage = `${message} Click Save to move the assignment.`;
+            this.assignmentConflictPending = true;
+            this.assignmentConflictCooldown = true;
+            clearTimeout(this.assignmentConflictTimer);
+            this.assignmentConflictTimer = setTimeout(() => {
+                this.assignmentConflictCooldown = false;
+                this.assignmentConflictTimer = null;
+            }, 2500);
         },
         filteredProposalUsers() {
             const query = this.proposeTargetUserQuery.trim().toLowerCase();
@@ -1371,17 +1441,13 @@ export function sessionSlotRow(config) {
         closeSessionActionMenus() {
             this.openActionMenu = false;
         },
+        repositionActionMenu() {
+            if (this.openActionMenu) {
+                this.positionActionMenu();
+            }
+        },
         positionActionMenu() {
-            const buttonRect = this.$refs.actionMenuButton.getBoundingClientRect();
-            const viewportPadding = 8;
-            const menuWidth = Math.min(288, window.innerWidth - (viewportPadding * 2));
-            const left = window.scrollX + Math.max(
-                viewportPadding,
-                Math.min(window.innerWidth - menuWidth - viewportPadding, buttonRect.right - menuWidth)
-            );
-            const top = window.scrollY + buttonRect.bottom + viewportPadding;
-
-            this.actionMenuStyle = `left: ${left}px; top: ${top}px; width: ${menuWidth}px;`;
+            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
         },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
@@ -1619,7 +1685,10 @@ export function sessionSlotRow(config) {
                 const formData = new FormData(event.target);
                 formData.set('user_id', assignment.user_id);
                 formData.set('manual_performer_name', assignment.manual_performer_name);
-                const response = await fetch(config.updateSlotUrl, {
+                if (this.assignmentConflictPending) {
+                    formData.set('replace_conflicting_assignment', '1');
+                }
+                let response = await fetch(config.updateSlotUrl, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -1628,6 +1697,12 @@ export function sessionSlotRow(config) {
                     },
                     body: formData,
                 });
+
+                if (response.status === 409) {
+                    const conflict = await response.json();
+                    this.showAssignmentConflict(conflict.message);
+                    return;
+                }
 
                 if (!response.ok) {
                     const message = await this.failedResponseMessage(response, 'Could not save slot. Try again.');

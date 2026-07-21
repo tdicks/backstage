@@ -2,6 +2,8 @@
 
 use App\Models\JamSession;
 use App\Models\Set;
+use App\Models\Slot;
+use App\Models\Song;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -26,14 +28,14 @@ it('persists state to cache and returns it', function () {
         'owner_id' => $this->user->id,
         'position' => 0,
     ]);
-    
+
     $set2 = Set::create([
         'jam_session_id' => $this->jamSession->id,
         'name' => 'Set 2',
         'owner_id' => $this->user->id,
         'position' => 1,
     ]);
-    
+
     $set3 = Set::create([
         'jam_session_id' => $this->jamSession->id,
         'name' => 'Set 3',
@@ -87,13 +89,13 @@ it('persists state to cache and returns it', function () {
 
     // Verify the statuses match what we saved
     $playingNowSet = collect($cachedSets)->firstWhere('id', $returnedSets[0]['id']);
-    expect($playingNowSet['status'])->toBe('playing_now', 'First set should be playing_now from cache. Got: ' . $playingNowSet['status']);
+    expect($playingNowSet['status'])->toBe('playing_now', 'First set should be playing_now from cache. Got: '.$playingNowSet['status']);
 
     $comingUpSet = collect($cachedSets)->firstWhere('id', $returnedSets[1]['id']);
-    expect($comingUpSet['status'])->toBe('coming_up', 'Second set should be coming_up from cache. Got: ' . $comingUpSet['status']);
+    expect($comingUpSet['status'])->toBe('coming_up', 'Second set should be coming_up from cache. Got: '.$comingUpSet['status']);
 
     $pendingSet = collect($cachedSets)->firstWhere('id', $returnedSets[2]['id']);
-    expect($pendingSet['status'])->toBe('pending', 'Third set should be pending from cache. Got: ' . $pendingSet['status']);
+    expect($pendingSet['status'])->toBe('pending', 'Third set should be pending from cache. Got: '.$pendingSet['status']);
 
     // Verify order is also preserved
     expect($playingNowSet['order'])->toBe(-1);
@@ -126,6 +128,88 @@ test('live data excludes performed sets', function () {
 
     expect($returnedIds)->toContain($upcomingSet->id)
         ->and($returnedIds)->not->toContain($performedSet->id);
+});
+
+test('saving live state normalizes each status stack to contiguous unique orders', function () {
+    $sets = collect(range(1, 5))->map(fn (int $position) => Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => "Set {$position}",
+        'owner_id' => $this->user->id,
+        'position' => $position,
+    ]));
+
+    $this->jamSession->update(['jam_manager_id' => $this->user->id]);
+
+    $this->actingAs($this->user)
+        ->postJson(route('sessions.live.update', $this->jamSession), [
+            'sets' => [
+                ['set_id' => $sets[0]->id, 'status' => 'pending', 'order' => 0],
+                ['set_id' => $sets[1]->id, 'status' => 'pending', 'order' => 1],
+                ['set_id' => $sets[2]->id, 'status' => 'pending', 'order' => 2],
+                ['set_id' => $sets[3]->id, 'status' => 'coming_up', 'order' => 0],
+                ['set_id' => $sets[4]->id, 'status' => 'pending', 'order' => 4],
+            ],
+        ])
+        ->assertOk();
+
+    $this->actingAs($this->user)
+        ->postJson(route('sessions.live.update', $this->jamSession), [
+            'sets' => [
+                ['set_id' => $sets[3]->id, 'status' => 'pending', 'order' => 0],
+                ['set_id' => $sets[0]->id, 'status' => 'pending', 'order' => 0],
+                ['set_id' => $sets[1]->id, 'status' => 'pending', 'order' => 1],
+                ['set_id' => $sets[2]->id, 'status' => 'pending', 'order' => 2],
+                ['set_id' => $sets[4]->id, 'status' => 'pending', 'order' => 4],
+            ],
+        ])
+        ->assertOk();
+
+    $cachedPendingOrders = collect(Cache::get("live_jam_session:{$this->jamSession->id}")['sets'])
+        ->where('status', 'pending')
+        ->pluck('order')
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($cachedPendingOrders)->toBe([0, 1, 2, 3, 4]);
+});
+
+test('jam manager can update a live slot assignment and receives assignment edit data', function () {
+    $setOwner = User::factory()->create();
+    $jamManager = User::factory()->create();
+    $this->jamSession->update(['jam_manager_id' => $jamManager->id]);
+
+    $set = Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Managed Set',
+        'owner_id' => $setOwner->id,
+        'position' => 0,
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'The Artist',
+        'title' => 'The Song',
+        'position' => 0,
+    ]);
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($jamManager)
+        ->patchJson(route('slots.update', $slot), [
+            'name' => 'vocals',
+            'manual_performer_name' => 'Guest Vocalist',
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot.manual_performer_name', 'Guest Vocalist');
+
+    $this->actingAs($jamManager)
+        ->getJson(route('sessions.live.data', $this->jamSession))
+        ->assertOk()
+        ->assertJsonPath('sets.0.songs.0.slots.0.slot_key', 'vocals')
+        ->assertJsonPath('sets.0.songs.0.slots.0.manual_performer_name', 'Guest Vocalist');
 });
 
 test('non-live sessions do not return live sets', function () {

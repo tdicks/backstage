@@ -42,6 +42,7 @@ class LiveJamController extends Controller
             'sets' => $sets,
             'liveState' => $liveState,
             'slotOptions' => Slot::options(),
+            'assignmentUsers' => User::query()->orderBy('name')->get(['id', 'name']),
             'currentUserId' => $request->user()->id,
             'jamManager' => $jamSession->jamManager,
         ]);
@@ -155,7 +156,10 @@ class LiveJamController extends Controller
                     'slots' => $song->slots->map(fn ($slot) => [
                         'id' => $slot->id,
                         'name' => $slotOptions[$slot->name] ?? $slot->name,
+                        'slot_key' => $slot->name,
+                        'user_id' => $slot->user_id,
                         'user_name' => $slot->user?->name ?? $slot->manual_performer_name,
+                        'manual_performer_name' => $slot->manual_performer_name,
                         'filled' => $slot->user_id !== null || $slot->manual_performer_name !== null,
                         'checked_in' => $slot->user_id !== null && $checkedInUserIds->contains($slot->user_id),
                     ])->values()->all(),
@@ -285,7 +289,7 @@ class LiveJamController extends Controller
         }
 
         $state = [
-            'sets' => $validated['sets'],
+            'sets' => $this->normalizeSetOrders($validated['sets']),
             'updated_at' => now()->toIso8601String(),
         ];
 
@@ -320,6 +324,31 @@ class LiveJamController extends Controller
     private function cacheKey(int $sessionId): string
     {
         return 'live_jam_session:'.$sessionId;
+    }
+
+    /**
+     * @param  array<int, array{set_id: int|string, status: string, order: int}>  $sets
+     * @return array<int, array{set_id: int|string, status: string, order: int}>
+     */
+    private function normalizeSetOrders(array $sets): array
+    {
+        return collect($sets)
+            ->groupBy('status')
+            ->flatMap(function ($statusSets): array {
+                return $statusSets
+                    ->sortBy([
+                        ['order', 'asc'],
+                        ['set_id', 'asc'],
+                    ])
+                    ->values()
+                    ->map(fn (array $set, int $index): array => [
+                        ...$set,
+                        'order' => $index,
+                    ])
+                    ->all();
+            })
+            ->values()
+            ->all();
     }
 
     private function ensureJamManager(User $user, JamSession $jamSession): void

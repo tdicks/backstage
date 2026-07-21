@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Slot;
 use App\Models\User;
+
 class SlotPolicy
 {
     /**
@@ -35,7 +36,12 @@ class SlotPolicy
      */
     public function update(User $user, Slot $slot): bool
     {
-        return $user->is_admin || $slot->song->set->owner_id === $user->id || $slot->song->set->isCollaborator($user);
+        $slot->loadMissing('song.set.session');
+
+        return $user->is_admin
+            || $slot->song->set->owner_id === $user->id
+            || $slot->song->set->isCollaborator($user)
+            || $slot->song->set->session->jam_manager_id === $user->id;
     }
 
     /**

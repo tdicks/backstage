@@ -146,10 +146,6 @@ export function lazySessionSets(url, activityUrl = null) {
 				const payload = await activityResponse.json();
 				this.patchOpenSongSlots(payload.songs || {});
 
-				if (this.canBackgroundRefreshSets()) {
-					await this.refresh({ source: 'provider', background: true });
-				}
-
 				return {
 					count: payload.approval_count,
 				};

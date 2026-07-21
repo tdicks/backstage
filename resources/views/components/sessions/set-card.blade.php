@@ -62,11 +62,6 @@
     data-set-id="{{ $set->id }}"
     class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
     x-bind:data-set-open="(!setCollapsed).toString()"
-    @click="if (!$event.target.closest('button, a, input, select, textarea, label')) { setCollapsed = !setCollapsed; }"
-    @keydown.enter.prevent="setCollapsed = !setCollapsed"
-    @keydown.space.prevent="setCollapsed = !setCollapsed"
-    role="button"
-    tabindex="0"
     x-data="sessionSetCard(@js([
         'setId' => $set->id,
         'initialSongRequestsPendingCount' => $set->songRequests->where('status', 'pending')->count(),
@@ -99,13 +94,20 @@
     x-on:session-song-request-processed.window="onSongRequestProcessed($event.detail)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
+    @scroll.window="repositionActionMenu()"
+    @resize.window="repositionActionMenu()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
-        class="flex flex-wrap items-center justify-between gap-3"
+        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
         x-bind:aria-expanded="(!setCollapsed).toString()"
         x-bind:title="setCollapsed ? 'Click to show set songs and assignments' : 'Click to hide set songs and assignments'"
         aria-label="Toggle set details"
+        role="button"
+        tabindex="0"
+        @click.stop="setCollapsed = !setCollapsed"
+        @keydown.enter.prevent="setCollapsed = !setCollapsed"
+        @keydown.space.prevent="setCollapsed = !setCollapsed"
     >
         <div>
             <h3 class="flex items-center gap-2 text-lg font-semibold {{ $setTitleTextClass }}">
@@ -182,6 +184,7 @@
             <div class="relative">
                 <button
                     type="button"
+                    x-ref="actionMenuButton"
                     @click="toggleActionMenu()"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-bind:aria-expanded="openActionMenu.toString()"
@@ -191,14 +194,16 @@
                     <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Set actions</span>
                 </button>
-                <div
-                    x-show="openActionMenu"
-                    x-cloak
-                    x-transition.origin.top.right
-                    @click.outside="openActionMenu = false"
-                    data-session-action-menu
-                    class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
-                >
+                <template x-teleport="body">
+                    <div
+                        x-show="openActionMenu"
+                        x-cloak
+                        x-transition.origin.top.right
+                        @click.outside="openActionMenu = false"
+                        x-bind:style="actionMenuStyle"
+                        data-session-action-menu
+                        class="z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                    >
                     @if ($canManageSet && ! $setLocked && ! $isAdminManagingOtherSet)
                         <button
                             type="button"
@@ -285,7 +290,8 @@
                         <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
                         <span>Copy Direct Link</span>
                     </button>
-                </div>
+                    </div>
+                </template>
                 <div
                     x-show="shareCopied || directLinkCopied"
                     x-transition.opacity.duration.150ms
@@ -302,7 +308,7 @@
 
     <div x-show="openSummary" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="closeSummaryModal()"></div>
     <div x-show="openSummary" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center p-2 sm:items-center sm:p-4">
-        <div class="flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+            <div class="flex w-full max-w-6xl max-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-2rem)]" @click.stop>
             <div class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
                 <div>
                     <h4 class="text-lg font-semibold text-slate-900">Set Summary: {{ $set->name }}</h4>
@@ -439,11 +445,14 @@
     @if ($canEditSet)
         <div x-show="openSetEdit" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSetEdit = false"></div>
         <div x-show="openSetEdit" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
-            <div class="flex w-full max-w-lg max-h-[calc(100dvh-2rem)] flex-col overflow-y-auto rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-4rem)]">
-                <h4 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
-                    {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Set' : 'Edit Set' }}
-                </h4>
-                <form id="edit_set_form_{{ $set->id }}" method="POST" action="{{ route('sets.update', $set) }}" class="mt-4 space-y-4">
+                <div class="flex w-full max-w-lg max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-4rem)]" @click.stop>
+                    <div class="px-6 pt-6">
+                        <h4 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
+                            {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Set' : 'Edit Set' }}
+                        </h4>
+                    </div>
+                    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                        <form id="edit_set_form_{{ $set->id }}" method="POST" action="{{ route('sets.update', $set) }}" class="space-y-4">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -529,8 +538,9 @@
                             Feature set (pinned to top of session).
                         </label>
                     @endif
-                </form>
-                <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                        </form>
+                    </div>
+                <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
                     <form method="POST" action="{{ route('sets.destroy', $set) }}">
                         @csrf
                         @method('DELETE')
@@ -554,7 +564,7 @@
     @if ($canManageSet)
         <div x-show="openSong" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSong = false; resetSongAutocomplete()"></div>
         <div x-show="openSong" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
-            <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
+                <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]" @click.stop>
                 <div class="px-6 pt-6">
                     <h4 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
                         {{ $isAdminManagingOtherSet ? 'Add Song to '.$set->owner->name.'\'s Set' : 'Add Song to '.$set->name }}
@@ -675,7 +685,7 @@
     @else
         <div x-show="openSongRequest" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSongRequest = false; resetSongRequestAutocomplete()"></div>
         <div x-show="openSongRequest" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl">
+                <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-2xl" @click.stop>
                 <h4 class="text-lg font-semibold text-slate-900">Request a Song for {{ $set->name }}</h4>
                 <form method="POST" action="{{ route('song-requests.store', $set) }}" class="mt-4 space-y-4" @submit.prevent="submitSongRequest($event)">
                     @csrf
@@ -767,7 +777,7 @@
         <x-sessions.manage-collaborators-modal :set="$set" />
     @endif
 
-    <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition>
+    <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition.opacity.duration.150ms>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         @if ($isSetOwner && ! $setLocked)
             <p class="text-xs text-slate-500">Tip: drag songs and slots to reorder them.</p>

@@ -65,6 +65,8 @@
         'canReorderSlots' => $canReorderSlots,
         'csrfToken' => csrf_token(),
     ]))"
+    @scroll.window="repositionActionMenu()"
+    @resize.window="repositionActionMenu()"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     x-on:slot-conflict-toast.window="if ($event.detail.slotId === {{ $slotModel->id }}) showToast('error', $event.detail.message)"

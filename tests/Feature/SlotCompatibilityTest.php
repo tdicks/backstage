@@ -132,25 +132,51 @@ test('vocals do not conflict with instrument slots', function () {
     expect($vocalsSlot->refresh()->user_id)->toBe($owner->id);
 });
 
-test('set owner cannot manually assign a player to incompatible slot types on the same song', function () {
+test('set owner is advised before moving a player to an incompatible slot on the same song', function () {
     $owner = User::factory()->create();
     $player = User::factory()->create();
     $set = createSlotCompatibilitySet($owner);
     $song = createSongForSet($set);
 
-    createSlotCompatibilitySlot($set, 'bass', $player, song: $song);
+    $bassSlot = createSlotCompatibilitySlot($set, 'bass', $player, song: $song);
     $guitarSlot = createSlotCompatibilitySlot($set, 'lead_guitar', null, song: $song);
 
     $this->actingAs($owner)
+        ->withHeaders([
+            'Accept' => 'application/json',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
         ->patch(route('slots.update', $guitarSlot), [
             'name' => 'lead_guitar',
             'user_id' => $player->id,
             'manual_performer_name' => null,
             'position' => $guitarSlot->position,
         ])
-        ->assertSessionHasErrors('user_id');
+        ->assertConflict()
+        ->assertJsonPath('conflict.slot_id', $bassSlot->id)
+        ->assertJsonPath('conflict.slot_label', 'Bass')
+        ->assertJsonPath('message', $player->name.' is already assigned to Bass on this song. Moving them to Lead Guitar will clear that assignment.');
 
+    expect($bassSlot->refresh()->user_id)->toBe($player->id);
     expect($guitarSlot->refresh()->user_id)->toBeNull();
+
+    $this->actingAs($owner)
+        ->withHeaders([
+            'Accept' => 'application/json',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->patch(route('slots.update', $guitarSlot), [
+            'name' => 'lead_guitar',
+            'user_id' => $player->id,
+            'manual_performer_name' => null,
+            'position' => $guitarSlot->position,
+            'replace_conflicting_assignment' => true,
+        ])
+        ->assertOk();
+
+    expect($bassSlot->refresh()->user_id)->toBeNull();
+    expect($bassSlot->manual_performer_name)->toBeNull();
+    expect($guitarSlot->refresh()->user_id)->toBe($player->id);
 });
 
 test('set owner can assign a player to conflicting slot types on different songs', function () {

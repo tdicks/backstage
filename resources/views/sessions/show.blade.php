@@ -20,6 +20,15 @@
                 <p class="text-sm text-gray-500">{{ $session->date->format('l, F j, Y') }}</p>
             </div>
 
+            @if ($session->is_live && ! auth()->user()?->is_admin)
+                <div class="w-full text-center sm:flex-1">
+                    <span class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
+                        <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
+                        This jam session is now live
+                    </span>
+                </div>
+            @endif
+
             <div class="ml-auto flex items-center gap-2">
                 <span class="relative inline-flex">
                     <button
@@ -233,13 +242,6 @@
             x-on:refresh-session-activity.window="$store.approvals.refresh()"
             x-on:session-song-opened.window="$store.approvals.refresh()"
         >
-            @if ($session->is_live)
-                <div class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
-                    <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
-                    This jam session is now live
-                </div>
-            @endif
-
             @if ($session->sets_count > 0)
                 <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 shadow-sm" x-cloak></p>
             @endif

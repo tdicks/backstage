@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
+use App\Models\User;
 use App\Services\NotificationService;
-use App\Support\NotificationTypeCatalog;
 use App\Services\SlotCompatibility;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,10 +55,32 @@ class SlotController extends Controller
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'manual_performer_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
+            'replace_conflicting_assignment' => ['nullable', 'boolean'],
         ]);
 
+        $conflictingSlot = null;
         if (! empty($validated['user_id'])) {
-            SlotCompatibility::ensureUserCanPerformSlot((int) $validated['user_id'], $slot, $validated['name']);
+            $conflictingSlot = SlotCompatibility::conflictingSlotForSlot((int) $validated['user_id'], $slot, $validated['name']);
+
+            if ($conflictingSlot && ! ($validated['replace_conflicting_assignment'] ?? false)) {
+                $slotOptions = Slot::options();
+                $conflictingLabel = $slotOptions[$conflictingSlot->name] ?? $conflictingSlot->name;
+                $targetLabel = $slotOptions[$validated['name']] ?? $validated['name'];
+                $playerName = User::query()->find($validated['user_id'])?->name ?? 'This player';
+                $message = "$playerName is already assigned to $conflictingLabel on this song. Moving them to $targetLabel will clear that assignment.";
+
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $message,
+                        'conflict' => [
+                            'slot_id' => $conflictingSlot->id,
+                            'slot_label' => $conflictingLabel,
+                        ],
+                    ], 409);
+                }
+
+                return back()->withErrors(['user_id' => $message]);
+            }
         }
 
         $manualPerformerName = trim((string) ($validated['manual_performer_name'] ?? ''));
@@ -67,7 +90,14 @@ class SlotController extends Controller
 
         $previousUserId = $slot->user_id;
 
-        DB::transaction(function () use ($slot, $validated, $manualPerformerName): void {
+        DB::transaction(function () use ($slot, $validated, $manualPerformerName, $conflictingSlot): void {
+            if ($conflictingSlot) {
+                $conflictingSlot->update([
+                    'user_id' => null,
+                    'manual_performer_name' => null,
+                ]);
+            }
+
             $slot->update([
                 'name' => $validated['name'],
                 'user_id' => $validated['user_id'] ?? null,
@@ -304,6 +334,7 @@ class SlotController extends Controller
             'label' => Slot::options()[$slot->name] ?? $slot->name,
             'user_id' => $slot->user_id,
             'user_name' => $slot->assignedPerformerName(),
+            'manual_performer_name' => $slot->manual_performer_name,
             'is_open' => $slot->isOpen(),
         ];
     }

@@ -12,6 +12,38 @@
     display: none !important;
 }
 
+@keyframes live-set-unseen-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 16px rgb(56 189 248 / 0.26);
+    }
+
+    50% {
+        box-shadow: 0 0 24px rgb(56 189 248 / 0.44);
+    }
+}
+
+.live-set-unseen {
+    animation: live-set-unseen-pulse 1.6s ease-in-out infinite;
+    border-color: rgb(56 189 248 / 0.8) !important;
+}
+
+@keyframes live-set-unseen-exit {
+    from {
+        border-color: rgb(56 189 248 / 0.8);
+        box-shadow: 0 0 18px rgb(56 189 248 / 0.32);
+    }
+
+    to {
+        border-color: rgb(56 189 248 / 0);
+        box-shadow: 0 0 0 rgb(56 189 248 / 0);
+    }
+}
+
+.live-set-unseen-exit {
+    animation: live-set-unseen-exit 450ms ease-out forwards;
+}
+
 @keyframes session-fragment-highlight {
     0% {
         outline-color: rgb(37 99 235 / 0);

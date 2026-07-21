@@ -10,7 +10,7 @@
 @if (! $setLocked)
 <div x-show="openPropose" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openPropose = false"></div>
 <div x-show="openPropose" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-lg bg-white p-6 text-left text-slate-900 shadow-xl">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 text-left text-slate-900 shadow-xl" @click.stop>
         <h6 class="text-base font-semibold text-slate-900">Recommend {{ $slotOptions[$slotModel->name] ?? $slotModel->name }} to someone</h6>
         <form @submit.prevent="submitProposal()" class="mt-4 space-y-4">
             @if ($proposalUsers->isNotEmpty())

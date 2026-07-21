@@ -65,11 +65,12 @@
             releaseManagerUrl: @js(route('sessions.live.manager.release', $session)),
             updateUrl: @js(route('sessions.live.update', $session)),
             clearUrl: @js(route('sessions.live.clear', $session)),
+            assignmentUsers: @js($assignmentUsers),
+            slotUpdateUrlTemplate: @js(route('slots.update', ['slot' => '__slot__'])),
             currentUserId: @js($currentUserId),
             initialJamManager: @js($jamManager?->only(['id', 'name'])),
             csrfToken: @js(csrf_token()),
         })"
-        x-init="init()"
     >
         <div class="mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -112,12 +113,6 @@
                     <div
                         x-show="canManageLiveJam"
                         x-cloak
-                        x-transition:enter="transition ease-out duration-200"
-                        x-transition:enter-start="opacity-0 translate-x-4"
-                        x-transition:enter-end="opacity-100 translate-x-0"
-                        x-transition:leave="transition ease-in duration-150"
-                        x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 translate-x-4"
                         class="flex flex-wrap items-center justify-center gap-2"
                     >
                         <button
@@ -157,8 +152,8 @@
             <div x-show="addSetModalOpen" x-cloak @keydown.escape.window="closeAddSetModal()">
                 <div x-show="addSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
-                        <h3 class="text-lg font-semibold">Add Live Set</h3>
+                    <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
+                        <h3 class="text-lg font-semibold text-slate-900">Add Live Set</h3>
                         <p class="mt-1 text-sm text-slate-600">Add a one-off set for tonight; it will disappear after the jam.</p>
                         <div class="mt-4 space-y-4">
                             <div>
@@ -181,12 +176,6 @@
                                 <x-modal-secondary-button type="button" @click="closeAddSetModal()">Cancel</x-modal-secondary-button>
                                 <x-modal-primary-button type="button" @click="saveNewSet()">Save Set</x-modal-primary-button>
                             </div>
-                        </div>
-                        <div class="text-center text-sm text-slate-400 lg:text-right">
-                            <span x-show="saveSuccess" x-cloak x-transition.opacity class="font-medium text-emerald-300">Saved</span>
-                            <span x-show="saveError" x-cloak x-transition.opacity class="font-medium text-rose-300" x-text="saveError"></span>
-                            <span x-show="!saveSuccess && !saveError && lastUpdated" x-cloak>Last saved <span x-text="lastUpdated"></span></span>
-                            <span x-show="!saveSuccess && !saveError && !lastUpdated" x-cloak>Arrange sets, then update the live display.</span>
                         </div>
                     </div>
                 </div>
@@ -228,6 +217,8 @@
             </div>
         </template>
 
+        <x-sessions.slot-edit-modal :slot-options="$slotOptions" :users="$assignmentUsers" live-dashboard />
+
         {{-- Loading state --}}
         <div x-show="loading" x-cloak class="flex items-center justify-center py-16 text-slate-400">
             <svg class="mr-2 h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -242,12 +233,11 @@
             <template x-for="set in orderedSets" :key="set.id">
                 <div
                     class="overflow-hidden rounded-xl border shadow-sm"
-                    :class="[setCardClasses(set), { 'opacity-70': draggingSetId === set.id, 'ring-2 ring-sky-400 shadow-[0_0_28px_rgba(56,189,248,0.45)]': set.highlighted }]"
+                    :class="setCardClasses(set)"
                     data-live-set-card
                     :data-live-set-id="set.id"
                     :data-live-set-status="set.status"
-                    @mouseenter="markSetBrowsed(set)"
-                    @focusin="markSetBrowsed(set)"
+                    x-init="observeSetCard($el, set)"
                     x-bind:draggable="canDragSet(set) ? 'true' : 'false'"
                     @dragstart.self="onSetDragStart($event, set)"
                     @dragover="onSetDragOver($event, set)"
@@ -267,7 +257,20 @@
                                     </h3>
                                     <p class="mt-1 truncate text-sm text-slate-400" x-show="set.owner" x-text="`by ${set.owner}`"></p>
                                 </div>
-                                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadgeClasses(set)" x-text="statusLabel(set.status)"></span>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        x-show="set.songs.length > 0"
+                                        @click="toggleSetSongs(set)"
+                                        x-bind:aria-expanded="(!set.songsCollapsed).toString()"
+                                        x-bind:title="set.songsCollapsed ? 'Show songs' : 'Hide songs'"
+                                        class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100"
+                                    >
+                                        <x-heroicon-m-chevron-down class="h-4 w-4 transition-transform" x-bind:class="set.songsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
+                                        <span class="sr-only">Toggle songs</span>
+                                    </button>
+                                    <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadgeClasses(set)" x-text="statusLabel(set.status)"></span>
+                                </div>
                             </div>
 
                             {{-- Live set details --}}
@@ -305,7 +308,7 @@
                             </div>
 
                             {{-- Songs list --}}
-                            <ul x-show="set.songs.length > 0" class="mt-4 divide-y divide-slate-700 overflow-hidden rounded-lg border border-slate-700 bg-slate-950/40">
+                            <ul x-show="set.songs.length > 0 && !set.songsCollapsed" x-transition.opacity.duration.150ms class="mt-4 divide-y divide-slate-700 overflow-hidden rounded-lg border border-slate-700 bg-slate-950/40">
                                 <template x-for="song in set.songs" :key="song.id">
                                     <li class="px-3 py-2 text-sm">
                                         <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -314,18 +317,22 @@
                                         </div>
                                         <span class="mt-1.5 flex flex-wrap gap-1">
                                             <template x-for="slot in song.slots" :key="slot.id">
-                                                <span
-                                                    class="inline-block rounded-md px-2 py-1 text-xs transition"
+                                                <button
+                                                    type="button"
+                                                    @click="openEditSlotModal(set, song, slot)"
+                                                    x-bind:disabled="!canManageLiveJam"
+                                                    class="inline-block rounded-md px-2 py-1 text-left text-xs transition disabled:cursor-default"
                                                     :class="{
                                                         'bg-emerald-900/80 text-emerald-50 ring-1 ring-emerald-400/80': slot.filled && slot.checked_in,
                                                         'bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800': slot.filled && !slot.checked_in,
-                                                        'bg-slate-800 text-slate-500': !slot.filled
+                                                        'bg-slate-800 text-slate-500': !slot.filled,
+                                                        'hover:ring-2 hover:ring-amber-400': canManageLiveJam
                                                     }"
-                                                    :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
+                                                    :title="canManageLiveJam ? 'Edit assignment' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
                                                 >
                                                     <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
                                                     <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
-                                                </span>
+                                                </button>
                                             </template>
                                         </span>
                                     </li>
@@ -491,10 +498,30 @@
             jamManagerId: config.initialJamManager?.id ?? null,
             jamManagerName: config.initialJamManager?.name ?? '',
             currentUserId: config.currentUserId,
-            lastCheckedAt: null,
+            seenSetIds: new Set(),
+            collapsedSetSongIds: new Set(),
+            seenObserver: null,
+            seenDwellTimers: new Map(),
             pollTimer: null,
             addSetModalOpen: false,
             editSetModalOpen: false,
+            openEditSlot: false,
+            assignmentSaveBusy: false,
+            assignmentSaveError: '',
+            assignmentConflictMessage: '',
+            assignmentConflictPending: false,
+            assignmentConflictCooldown: false,
+            assignmentConflictTimer: null,
+            editingAssignment: null,
+            assignmentUsers: config.assignmentUsers ?? [],
+            assignmentForm: {
+                slotKey: '',
+            },
+            editAssignedUserId: '',
+            editAssignedUserQuery: '',
+            initialEditAssignedUserName: '',
+            initialEditManualPerformerName: '',
+            showEditUserSuggestions: false,
             editingSetId: null,
             dragSetId: null,
             draggingSetId: null,
@@ -506,8 +533,6 @@
                 participants: '',
                 details: '',
             },
-            // Track highlighted set IDs so they remain highlighted until the user hovers over or focuses on them.
-            setHighlights: new Set(),
             editSetForm: {
                 organiser: '',
                 name: '',
@@ -523,17 +548,76 @@
                 return this.jamManagerId !== null && String(this.jamManagerId) === String(this.currentUserId);
             },
 
-            persistLastCheckedAt(timestamp) {
-                if (!timestamp) {
+            seenSetIdsKey() {
+                return `live-jam-seen-sets:${config.dataUrl}`;
+            },
+
+            collapsedSetSongsKey() {
+                return `live-jam-collapsed-set-songs:${config.dataUrl}`;
+            },
+
+            persistSeenSetIds() {
+                localStorage.setItem(this.seenSetIdsKey(), JSON.stringify([...this.seenSetIds]));
+            },
+
+            markSetSeen(setOrId) {
+                const setId = typeof setOrId === 'object' ? setOrId.id : setOrId;
+
+                this.seenSetIds.add(String(setId));
+                this.persistSeenSetIds();
+            },
+
+            persistCollapsedSetSongs() {
+                localStorage.setItem(this.collapsedSetSongsKey(), JSON.stringify([...this.collapsedSetSongIds]));
+            },
+
+            toggleSetSongs(set) {
+                set.songsCollapsed = !set.songsCollapsed;
+
+                if (set.songsCollapsed) {
+                    this.collapsedSetSongIds.add(String(set.id));
+                } else {
+                    this.collapsedSetSongIds.delete(String(set.id));
+                }
+
+                this.persistCollapsedSetSongs();
+            },
+
+            observeSetCard(element, set) {
+                if (!this.seenObserver || !set.highlighted) {
                     return;
                 }
 
-                this.lastCheckedAt = timestamp;
-                localStorage.setItem(this.lastCheckedKey(), timestamp);
+                this.seenObserver.observe(element);
             },
 
-            lastCheckedKey() {
-                return `live-jam-last-checked:${config.dataUrl}`;
+            clearSeenDwellTimer(setId) {
+                const timer = this.seenDwellTimers.get(String(setId));
+                if (timer) {
+                    clearTimeout(timer);
+                    this.seenDwellTimers.delete(String(setId));
+                }
+            },
+
+            handleSetVisibility(entries) {
+                entries.forEach((entry) => {
+                    const setId = String(entry.target.dataset.liveSetId);
+                    const set = this.sets.find(item => String(item.id) === setId);
+
+                    if (!entry.isIntersecting || entry.intersectionRatio < 0.6 || !set?.highlighted) {
+                        this.clearSeenDwellTimer(setId);
+                        return;
+                    }
+
+                    if (this.seenDwellTimers.has(setId)) {
+                        return;
+                    }
+
+                    this.seenDwellTimers.set(setId, setTimeout(() => {
+                        this.fadeSetHighlight(set);
+                        this.seenObserver?.unobserve(entry.target);
+                    }, 1200));
+                });
             },
 
             applyJamManager(payload) {
@@ -568,26 +652,6 @@
                 };
             },
 
-            shouldHighlightSet(set) {
-                if (!set.created_at || !this.lastCheckedAt) {
-                    return false;
-                }
-
-                return new Date(set.created_at) > new Date(this.lastCheckedAt);
-            },
-
-            highlightSet(setOrId) {
-                const set = typeof setOrId === 'object'
-                    ? setOrId
-                    : this.sets.find(item => String(item.id) === String(setOrId));
-                if (!set) {
-                    return;
-                }
-
-                set.highlighted = true;
-                this.setHighlights.add(String(set.id));
-            },
-
             clearSetHighlight(setOrId) {
                 const set = typeof setOrId === 'object'
                     ? setOrId
@@ -597,18 +661,30 @@
                 }
 
                 set.highlighted = false;
-                this.setHighlights.delete(String(set.id));
+                this.markSetSeen(set);
             },
 
-            markSetBrowsed(setOrId) {
-                this.clearSetHighlight(setOrId);
+            fadeSetHighlight(setOrId) {
+                const set = typeof setOrId === 'object'
+                    ? setOrId
+                    : this.sets.find(item => String(item.id) === String(setOrId));
+                if (!set) {
+                    return;
+                }
+
+                set.highlighted = false;
+                set.highlightFading = true;
+                this.markSetSeen(set);
+
+                setTimeout(() => {
+                    set.highlightFading = false;
+                }, 450);
             },
 
             applyHighlightIfNeeded(set) {
-                if (this.shouldHighlightSet(set)) {
-                    set.highlighted = true;
-                    this.setHighlights.add(String(set.id));
-                }
+                set.highlighted = !this.seenSetIds.has(String(set.id));
+                set.highlightFading = false;
+                set.songsCollapsed = this.collapsedSetSongIds.has(String(set.id));
 
                 return set;
             },
@@ -627,7 +703,20 @@
             },
 
             init() {
-                this.lastCheckedAt = localStorage.getItem(this.lastCheckedKey());
+                try {
+                    this.seenSetIds = new Set(JSON.parse(localStorage.getItem(this.seenSetIdsKey()) || '[]'));
+                } catch (error) {
+                    this.seenSetIds = new Set();
+                }
+                try {
+                    this.collapsedSetSongIds = new Set(JSON.parse(localStorage.getItem(this.collapsedSetSongsKey()) || '[]'));
+                } catch (error) {
+                    this.collapsedSetSongIds = new Set();
+                }
+                this.seenObserver = new IntersectionObserver(
+                    (entries) => this.handleSetVisibility(entries),
+                    { threshold: 0.6 },
+                );
                 this.fetchData();
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
@@ -641,17 +730,16 @@
                     if (!resp.ok) { return; }
                     const payload = await resp.json();
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
-                    const localIds = new Set(this.sets.map(set => String(set.id)));
                     const isInitialLoad = this.sets.length === 0;
 
-                    // On initial load, apply highlights to the server snapshot.
-                    // On subsequent polls, preserve local reordering/editing and only append truly new sets.
+                    // On initial load, preserve unseen cards so they can be highlighted.
+                    // On subsequent polls, refresh server-owned set details while retaining unsaved manager edits.
                     if (isInitialLoad) {
                         this.sets = serverSets.map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
                     } else {
-                        const newSets = serverSets
-                            .filter(serverSet => !localIds.has(String(serverSet.id)))
-                            .map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
+                        const localSetsById = new Map(this.sets.map(set => [String(set.id), set]));
+                        const serverSetIds = new Set(serverSets.map(set => String(set.id)));
+                        const newSets = serverSets.filter(serverSet => !localSetsById.has(String(serverSet.id)));
 
                         if (newSets.length > 0) {
                             // Start from -1 so the first pending set becomes order 0, then append any new pending sets after
@@ -667,7 +755,33 @@
                             });
                         }
 
-                        this.sets = [...this.sets, ...newSets];
+                        const refreshedSets = serverSets.map((serverSet) => {
+                            const localSet = localSetsById.get(String(serverSet.id));
+
+                            if (!localSet) {
+                                return this.applyHighlightIfNeeded({ ...serverSet });
+                            }
+
+                            return {
+                                ...serverSet,
+                                ...(hadLocalChanges ? {
+                                    status: localSet.status,
+                                    order: localSet.order,
+                                } : {}),
+                                ...(hadLocalChanges && localSet.isLiveSet ? {
+                                    name: localSet.name,
+                                    owner: localSet.owner,
+                                    participants: localSet.participants,
+                                    details: localSet.details,
+                                } : {}),
+                                highlighted: !this.seenSetIds.has(String(serverSet.id)),
+                                highlightFading: localSet.highlightFading ?? false,
+                                songsCollapsed: localSet.songsCollapsed ?? this.collapsedSetSongIds.has(String(serverSet.id)),
+                            };
+                        });
+                        const localOnlySets = this.sets.filter(set => !serverSetIds.has(String(set.id)));
+
+                        this.sets = [...refreshedSets, ...localOnlySets];
                     }
 
                     if (!hadLocalChanges) {
@@ -676,12 +790,7 @@
 
                     this.lastCacheUpdate = payload.updated_at || this.lastCacheUpdate;
                     if (payload.updated_at) {
-                        this.persistLastCheckedAt(payload.updated_at);
                         this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
-                    }
-
-                    if (!this.lastCheckedAt) {
-                        this.persistLastCheckedAt(new Date().toISOString());
                     }
 
                     this.applyJamManager(payload.jam_manager);
@@ -760,7 +869,6 @@
                 };
 
                 this.sets.push(newSet);
-                this.highlightSet(newSet.id);
                 this.closeAddSetModal();
             },
 
@@ -787,6 +895,162 @@
                 this.editSetModalOpen = false;
                 this.editingSetId = null;
                 this.resetEditSetForm();
+            },
+
+            filteredEditUsers() {
+                const query = this.editAssignedUserQuery.trim().toLowerCase();
+
+                if (query === '') {
+                    return this.assignmentUsers.slice(0, 8);
+                }
+
+                return this.assignmentUsers
+                    .filter((user) => user.name.toLowerCase().includes(query))
+                    .slice(0, 8);
+            },
+
+            updateEditUserQuery() {
+                this.editAssignedUserId = '';
+                this.showEditUserSuggestions = true;
+                this.resetAssignmentConflict();
+            },
+
+            selectEditUser(user) {
+                this.editAssignedUserId = String(user.id);
+                this.editAssignedUserQuery = user.name;
+                this.showEditUserSuggestions = false;
+                this.resetAssignmentConflict();
+            },
+
+            resetAssignmentConflict() {
+                this.assignmentConflictMessage = '';
+                this.assignmentConflictPending = false;
+                this.assignmentConflictCooldown = false;
+                clearTimeout(this.assignmentConflictTimer);
+                this.assignmentConflictTimer = null;
+            },
+
+            showAssignmentConflict(message) {
+                this.assignmentConflictMessage = `${message} Click Save to move the assignment.`;
+                this.assignmentConflictPending = true;
+                this.assignmentConflictCooldown = true;
+                clearTimeout(this.assignmentConflictTimer);
+                this.assignmentConflictTimer = setTimeout(() => {
+                    this.assignmentConflictCooldown = false;
+                    this.assignmentConflictTimer = null;
+                }, 2500);
+            },
+
+            shouldShowAssigneeWarning() {
+                const query = this.editAssignedUserQuery.trim();
+
+                return query !== '' && query !== this.initialEditAssignedUserName && query !== this.initialEditManualPerformerName;
+            },
+
+            resolveEditedSlotAssignment() {
+                const selectedUser = this.assignmentUsers.find((user) => String(user.id) === String(this.editAssignedUserId));
+
+                if (selectedUser) {
+                    return { user_id: String(selectedUser.id), manual_performer_name: '' };
+                }
+
+                return { user_id: '', manual_performer_name: this.editAssignedUserQuery.trim() };
+            },
+
+            openEditSlotModal(set, song, slot) {
+                if (!this.canManageLiveJam || set.isLiveSet) {
+                    return;
+                }
+
+                this.editingAssignment = { set, song, slot };
+                this.assignmentForm = { slotKey: slot.slot_key };
+                this.editAssignedUserId = slot.user_id ? String(slot.user_id) : '';
+                this.initialEditAssignedUserName = slot.user_id ? slot.user_name || '' : '';
+                this.initialEditManualPerformerName = slot.manual_performer_name || '';
+                this.editAssignedUserQuery = this.initialEditAssignedUserName || this.initialEditManualPerformerName;
+                this.showEditUserSuggestions = false;
+                this.assignmentSaveError = '';
+                this.resetAssignmentConflict();
+                this.openEditSlot = true;
+            },
+
+            closeEditSlotModal() {
+                this.openEditSlot = false;
+                this.assignmentSaveBusy = false;
+                this.assignmentSaveError = '';
+                this.resetAssignmentConflict();
+                this.editingAssignment = null;
+                this.assignmentForm = { slotKey: '' };
+                this.editAssignedUserId = '';
+                this.editAssignedUserQuery = '';
+                this.initialEditAssignedUserName = '';
+                this.initialEditManualPerformerName = '';
+                this.showEditUserSuggestions = false;
+            },
+
+            async submitLiveSlotEdit() {
+                if (!this.editingAssignment || this.assignmentSaveBusy) {
+                    return;
+                }
+
+                this.assignmentSaveBusy = true;
+                this.assignmentSaveError = '';
+
+                try {
+                    const { slot } = this.editingAssignment;
+                    const assignment = this.resolveEditedSlotAssignment();
+                    let response = await fetch(config.slotUpdateUrlTemplate.replace('__slot__', slot.id), {
+                        method: 'PATCH',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': config.csrfToken,
+                        },
+                        body: JSON.stringify({
+                            name: this.assignmentForm.slotKey,
+                            user_id: assignment.user_id || null,
+                            manual_performer_name: assignment.manual_performer_name,
+                            replace_conflicting_assignment: this.assignmentConflictPending,
+                        }),
+                    });
+
+                    if (response.status === 409) {
+                        const conflict = await response.json();
+                        this.showAssignmentConflict(conflict.message);
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        const payload = await response.json().catch(() => ({}));
+                        throw new Error(payload.message || 'Could not save this assignment.');
+                    }
+
+                    const payload = await response.json();
+                    const updatedSlot = payload.slot;
+                    slot.slot_key = updatedSlot.name;
+                    slot.name = updatedSlot.label;
+                    slot.user_id = updatedSlot.user_id;
+                    slot.user_name = updatedSlot.is_open ? null : updatedSlot.user_name;
+                    slot.manual_performer_name = updatedSlot.manual_performer_name;
+                    slot.filled = Boolean(updatedSlot.user_id || updatedSlot.manual_performer_name);
+                    this.closeEditSlotModal();
+                    await this.fetchData();
+                } catch (error) {
+                    this.assignmentSaveError = error.message || 'Could not save this assignment.';
+                } finally {
+                    this.assignmentSaveBusy = false;
+                }
+            },
+
+            async clearLiveSlot() {
+                if (!this.editingAssignment || this.assignmentSaveBusy) {
+                    return;
+                }
+
+                this.editAssignedUserId = '';
+                this.editAssignedUserQuery = '';
+                await this.submitLiveSlotEdit();
             },
 
             saveEditSet() {
@@ -868,6 +1132,19 @@
                 this.replaceSetOrders(orderById);
             },
 
+            normalizeSetOrders() {
+                const orderById = new Map();
+
+                ['playing_now', 'coming_up', 'pending', 'postponed', 'finished'].forEach(status => {
+                    this.sets
+                        .filter(set => set.status === status)
+                        .sort((firstSet, secondSet) => Number(firstSet.order) - Number(secondSet.order) || String(firstSet.id).localeCompare(String(secondSet.id)))
+                        .forEach((set, index) => orderById.set(String(set.id), index));
+                });
+
+                this.replaceSetOrders(orderById);
+            },
+
             refreshSetOrderView() {
                 this.sets = [...this.sets];
             },
@@ -890,6 +1167,7 @@
                 this.sets = this.sets.map(set => String(set.id) === String(setId)
                     ? { ...set, ...changes }
                     : set);
+                this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
             },
 
@@ -1015,6 +1293,7 @@
                     .map(el => el.dataset.liveSetId);
 
                 this.applyOrderedIdsForStatus(draggedSet.status, orderedIds);
+                this.normalizeSetOrders();
             },
 
             movableSetsForStatus(status) {
@@ -1068,6 +1347,7 @@
                     [String(set.id), prev.order],
                     [String(prev.id), set.order],
                 ]));
+                this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
             },
 
@@ -1091,6 +1371,7 @@
                     [String(set.id), next.order],
                     [String(next.id), set.order],
                 ]));
+                this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
             },
 
@@ -1100,17 +1381,19 @@
                 }
 
                 const previousRects = this.captureSetPositions();
+                const nextPendingOrder = this.nextOrderForStatus('pending', set.id);
                 this.sets = this.sets.map(currentSet => {
                     if (String(currentSet.id) === String(set.id)) {
                         return { ...currentSet, status: 'playing_now', order: 0 };
                     }
 
                     if (currentSet.status === 'playing_now') {
-                        return { ...currentSet, status: 'pending' };
+                        return { ...currentSet, status: 'pending', order: nextPendingOrder };
                     }
 
                     return currentSet;
                 });
+                this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
             },
 
@@ -1188,6 +1471,7 @@
                     return;
                 }
 
+                this.normalizeSetOrders();
                 this.saveBusy = true;
                 this.saveSuccess = false;
                 this.saveError = '';
@@ -1319,19 +1603,33 @@
             },
 
             setCardClasses(set) {
+                const stateClasses = [];
+
+                if (this.draggingSetId === set.id) {
+                    stateClasses.push('opacity-70');
+                }
+
+                if (set.highlighted) {
+                    stateClasses.push('live-set-unseen');
+                }
+
+                if (set.highlightFading) {
+                    stateClasses.push('live-set-unseen-exit');
+                }
+
                 if (set.status === 'finished') {
-                    return 'border-slate-700 bg-slate-900/75 opacity-75';
+                    return ['border-slate-700 bg-slate-900/75 opacity-75', ...stateClasses].join(' ');
                 }
                 if (set.status === 'postponed') {
-                    return 'border-rose-900 bg-rose-950/70';
+                    return ['border-rose-900 bg-rose-950/70', ...stateClasses].join(' ');
                 }
                 if (set.status === 'playing_now') {
-                    return 'border-emerald-600 bg-emerald-950/70 shadow-[0_0_24px_rgba(16,185,129,0.18)]';
+                    return ['border-emerald-600 bg-emerald-950/70 shadow-[0_0_24px_rgba(16,185,129,0.18)]', ...stateClasses].join(' ');
                 }
                 if (set.status === 'coming_up') {
-                    return 'border-amber-700 bg-amber-950/70 shadow-[0_0_20px_rgba(245,158,11,0.14)]';
+                    return ['border-amber-700 bg-amber-950/70 shadow-[0_0_20px_rgba(245,158,11,0.14)]', ...stateClasses].join(' ');
                 }
-                return 'border-slate-700 bg-slate-900/85';
+                return ['border-slate-700 bg-slate-900/85', ...stateClasses].join(' ');
             },
 
             statusLabel(status) {

@@ -40,6 +40,7 @@
         'songKey' => 'backstage:u'.auth()->id().':song:'.$song->id,
         'canReorderSlots' => $canManageSet && ! $setLocked && ! ($jamSessionClosed && !auth()->user()?->is_admin),
         'isAdminUser' => auth()->user()?->is_admin ?? false,
+        'jamSessionClosed' => $jamSessionClosed,
         'setLocked' => $setLocked,
         'songDirectUrl' => route('sessions.show', $set->session).'#song-'.$song->id,
         'songsReorderUrl' => route('songs.reorder', $set),
@@ -52,6 +53,8 @@
     x-on:mobile-slot-move.window="if ($event.detail.songId === {{ $song->id }}) moveSlot($event.detail.slotId, $event.detail.direction)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
+    @scroll.window="repositionActionMenu()"
+    @resize.window="repositionActionMenu()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <template x-teleport="body">
@@ -120,6 +123,7 @@
             <div class="relative">
                 <button
                     type="button"
+                    x-ref="actionMenuButton"
                     @click="toggleActionMenu()"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-bind:aria-expanded="openActionMenu.toString()"
@@ -129,14 +133,16 @@
                     <x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" />
                     <span class="sr-only">Song actions</span>
                 </button>
-                <div
-                    x-show="openActionMenu"
-                    x-cloak
-                    x-transition.origin.top.right
-                    @click.outside="openActionMenu = false"
-                    data-session-action-menu
-                    class="absolute right-0 top-full z-[80] mt-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
-                >
+                <template x-teleport="body">
+                    <div
+                        x-show="openActionMenu"
+                        x-cloak
+                        x-transition.origin.top.right
+                        @click.outside="openActionMenu = false"
+                        x-bind:style="actionMenuStyle"
+                        data-session-action-menu
+                        class="z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+                    >
                     @if ($canManageSet)
                         <button
                             type="button"
@@ -177,7 +183,8 @@
                         <x-heroicon-m-link class="h-4 w-4 text-slate-500" aria-hidden="true" />
                         <span>Copy Direct Link</span>
                     </button>
-                </div>
+                    </div>
+                </template>
                 <div
                     x-show="directLinkCopied"
                     x-transition.opacity.duration.150ms
@@ -195,7 +202,7 @@
     @if ($canManageSet && ! $setLocked)
         <div x-show="openEditSong" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSong = false"></div>
         <div x-show="openEditSong" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
+            <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl" @click.stop>
                 <h5 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
                     {{ $isAdminManagingOtherSet ? 'Edit '.$set->owner->name.'\'s Song' : 'Edit Song' }}
                 </h5>
@@ -239,7 +246,7 @@
 
         <div x-show="openAddSlot" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openAddSlot = false"></div>
         <div x-show="openAddSlot" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+            <div class="w-full max-w-md rounded-lg bg-white p-6 text-slate-900 shadow-xl" @click.stop>
                 <h5 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
                     {{ $isAdminManagingOtherSet ? 'Add Slot to '.$set->owner->name.'\'s Song' : 'Add Slot' }}
                 </h5>

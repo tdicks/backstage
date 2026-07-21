@@ -13,7 +13,6 @@
             dataUrl: @js(route('sessions.live.data', $session)),
             isLive: @js((bool) $session->is_live),
         })"
-        x-init="init()"
     >
         <header class="border-b border-slate-800 bg-slate-900 px-4 py-3 sm:px-6">
             <div class="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-4">
@@ -288,11 +287,11 @@
             slotBadgeClasses(slot) {
                 if (slot.filled) {
                     return slot.checked_in
-                        ? 'border-emerald-800 bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800'
-                        : 'border-amber-800 bg-amber-950/60 text-amber-300 ring-1 ring-amber-800';
+                        ? 'border-emerald-300 bg-emerald-900/80 text-emerald-50'
+                        : 'bg-emerald-950/60 text-emerald-300';
                 }
 
-                return 'border-slate-700 bg-slate-800 text-slate-400';
+                return 'bg-slate-800 text-slate-500';
             },
 
             formatDuration(seconds) {
