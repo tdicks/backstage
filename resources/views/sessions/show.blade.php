@@ -66,12 +66,6 @@
                                 <div class="px-6 pt-6">
                                 <h3 class="text-lg font-semibold text-slate-900">Edit Jam Session</h3>
                                 </div>
-                                @if ($session->is_live)
-                                    <div class="mx-6 mt-4 inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
-                                        <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
-                                        This jam session is now live
-                                    </div>
-                                @endif
                                 <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
                                 <form id="edit_session_form_{{ $session->id }}" method="POST" action="{{ route('sessions.update', $session) }}" class="space-y-4">
                                     @csrf
@@ -239,6 +233,13 @@
             x-on:refresh-session-activity.window="$store.approvals.refresh()"
             x-on:session-song-opened.window="$store.approvals.refresh()"
         >
+            @if ($session->is_live)
+                <div class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
+                    <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
+                    This jam session is now live
+                </div>
+            @endif
+
             @if ($session->sets_count > 0)
                 <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 shadow-sm" x-cloak></p>
             @endif

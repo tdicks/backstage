@@ -245,10 +245,12 @@ test('live jam session page shows a live notice', function () {
         'is_live' => true,
     ]);
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->get(route('sessions.show', $session))
         ->assertOk()
         ->assertSee('This jam session is now live');
+
+    expect(substr_count($response->getContent(), 'This jam session is now live'))->toBe(1);
 });
 
 test('short live code redirects to live dashboard', function () {
