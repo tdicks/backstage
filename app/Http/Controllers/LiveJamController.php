@@ -73,8 +73,17 @@ class LiveJamController extends Controller
      */
     public function data(Request $request, JamSession $jamSession): JsonResponse
     {
+        if (! $jamSession->is_live) {
+            return response()->json([
+                'sets' => [],
+                'updated_at' => null,
+                'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
+            ]);
+        }
+
         $sets = $jamSession->sets()
             ->visibleTo($request->user())
+            ->where('performed', false)
             ->with(['owner', 'songs' => fn ($q) => $q->with(['slots.user'])])
             ->get();
 
