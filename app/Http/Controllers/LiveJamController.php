@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JamSession;
 use App\Models\Slot;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +27,7 @@ class LiveJamController extends Controller
     public function manage(Request $request, JamSession $jamSession): View
     {
         $this->authorize('update', $jamSession);
+        $jamSession->load('jamManager');
 
         $sets = $jamSession->sets()
             ->visibleTo($request->user())
@@ -39,6 +41,8 @@ class LiveJamController extends Controller
             'sets' => $sets,
             'liveState' => $liveState,
             'slotOptions' => Slot::options(),
+            'currentUserId' => $request->user()->id,
+            'jamManager' => $jamSession->jamManager,
         ]);
     }
 
@@ -125,6 +129,7 @@ class LiveJamController extends Controller
                 'name' => $set->name,
                 'owner' => $set->owner?->name,
                 'feature_set' => $set->feature_set,
+                'created_at' => $set->created_at?->toIso8601String(),
                 'status' => $status,
                 'order' => $order,
                 'health' => $health,
@@ -159,6 +164,7 @@ class LiveJamController extends Controller
                     'name' => $liveData['name'] ?? 'Unnamed Set',
                     'owner' => $liveData['owner'] ?? null,
                     'feature_set' => (bool) ($liveData['feature_set'] ?? false),
+                    'created_at' => $liveData['created_at'] ?? null,
                     'status' => $s['status'] ?? 'pending',
                     'order' => $s['order'] ?? 0,
                     'health' => 0,
@@ -183,7 +189,6 @@ class LiveJamController extends Controller
         $hasCache = ! empty($liveState['sets']);
 
         if (! $hasCache) {
-            // First load: assign default pending status with incrementing orders
             foreach ($allSets as $idx => $set) {
                 if ($set['status'] === 'pending') {
                     $allSets[$idx]['order'] = $idx;
@@ -194,6 +199,37 @@ class LiveJamController extends Controller
         return response()->json([
             'sets' => $allSets,
             'updated_at' => $liveState['updated_at'] ?? null,
+            'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
+        ]);
+    }
+
+    public function claimManager(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        $jamSession->forceFill([
+            'jam_manager_id' => $request->user()->id,
+        ])->save();
+
+        return response()->json([
+            'message' => 'You are now managing this jam session.',
+            'jam_manager' => $request->user()->only(['id', 'name']),
+        ]);
+    }
+
+    public function releaseManager(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        abort_unless((int) $jamSession->jam_manager_id === (int) $request->user()->id, 403);
+
+        $jamSession->forceFill([
+            'jam_manager_id' => null,
+        ])->save();
+
+        return response()->json([
+            'message' => 'You are no longer managing this jam session.',
+            'jam_manager' => null,
         ]);
     }
 
@@ -203,6 +239,7 @@ class LiveJamController extends Controller
     public function update(Request $request, JamSession $jamSession): JsonResponse
     {
         $this->authorize('update', $jamSession);
+        $this->ensureJamManager($request->user(), $jamSession);
 
         $validated = $request->validate([
             'sets' => ['required', 'array'],
@@ -215,6 +252,7 @@ class LiveJamController extends Controller
             'sets.*.liveSetData.owner' => ['nullable', 'string'],
             'sets.*.liveSetData.participants' => ['nullable', 'string'],
             'sets.*.liveSetData.details' => ['nullable', 'string'],
+            'sets.*.liveSetData.created_at' => ['nullable', 'date'],
         ]);
 
         // Validate that database set_ids exist
@@ -252,6 +290,7 @@ class LiveJamController extends Controller
     public function clear(Request $request, JamSession $jamSession): JsonResponse
     {
         $this->authorize('update', $jamSession);
+        $this->ensureJamManager($request->user(), $jamSession);
 
         Cache::forget($this->cacheKey($jamSession->id));
 
@@ -271,5 +310,10 @@ class LiveJamController extends Controller
     private function cacheKey(int $sessionId): string
     {
         return 'live_jam_session:'.$sessionId;
+    }
+
+    private function ensureJamManager(User $user, JamSession $jamSession): void
+    {
+        abort_unless((int) $jamSession->jam_manager_id === (int) $user->id, 403);
     }
 }

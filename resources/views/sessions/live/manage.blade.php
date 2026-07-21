@@ -61,8 +61,12 @@
         class="mx-auto max-w-5xl px-4 py-8 sm:px-6"
         x-data="liveJamManage({
             dataUrl: @js(route('sessions.live.data', $session)),
+            claimManagerUrl: @js(route('sessions.live.manager.claim', $session)),
+            releaseManagerUrl: @js(route('sessions.live.manager.release', $session)),
             updateUrl: @js(route('sessions.live.update', $session)),
             clearUrl: @js(route('sessions.live.clear', $session)),
+            currentUserId: @js($currentUserId),
+            initialJamManager: @js($jamManager?->only(['id', 'name'])),
             csrfToken: @js(csrf_token()),
         })"
         x-init="init()"
@@ -79,44 +83,77 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
-                <button
-                    type="button"
-                    @click="clearState()"
-                    :disabled="clearBusy"
-                    class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
-                >
-                    <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
-                    Reset
-                </button>
-                <div class="h-8 border-r border-slate-700"></div>
-                <button
-                    type="button"
-                    @click="openAddSetModal()"
-                    class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
-                >
-                    <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                    Add Set
-                </button>
-                <button
-                    type="button"
-                    @click="saveState()"
-                    :disabled="saveBusy || !hasChanges"
-                    class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-                >
-                    <x-heroicon-m-arrow-up-tray class="h-4 w-4" aria-hidden="true" />
-                    <span x-show="!saveBusy">Update</span>
-                    <span x-show="saveBusy" x-cloak>Saving…</span>
-                </button>
+                    <button
+                        type="button"
+                        x-show="canManageLiveJam"
+                        x-cloak
+                        @click="releaseManager()"
+                        :disabled="managerBusy"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                    >
+                        <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
+                        <span class="sr-only">Exit jam manager mode</span>
+                    </button>
+                    <button
+                        type="button"
+                        x-show="!canManageLiveJam"
+                        x-cloak
+                        @click="claimManager()"
+                        :disabled="managerBusy"
+                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-slate-950 transition disabled:opacity-50"
+                        :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
+                    >
+                        <x-heroicon-m-microphone class="h-4 w-4" aria-hidden="true" />
+                        Manage
+                    </button>
+                    <button
+                        type="button"
+                        x-show="canManageLiveJam"
+                        x-cloak
+                        @click="clearState()"
+                        :disabled="clearBusy"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                    >
+                        <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                        Reset
+                    </button>
+                    <div x-show="canManageLiveJam" x-cloak class="h-8 border-r border-slate-700"></div>
+                    <button
+                        type="button"
+                        x-show="canManageLiveJam"
+                        x-cloak
+                        @click="openAddSetModal()"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
+                    >
+                        <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                        Add Set
+                    </button>
+                    <button
+                        type="button"
+                        x-show="canManageLiveJam"
+                        x-cloak
+                        @click="saveState()"
+                        :disabled="saveBusy || !hasChanges"
+                        class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                    >
+                        <x-heroicon-m-arrow-up-tray class="h-4 w-4" aria-hidden="true" />
+                        <span x-show="!saveBusy">Update</span>
+                        <span x-show="saveBusy" x-cloak>Saving…</span>
+                    </button>
                 </div>
+            </div>
+            <div class="mt-4 flex items-center justify-center gap-2 text-sm text-slate-300">
+                <x-heroicon-m-microphone class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
             </div>
         </div>
 
         {{-- Add Set Modal --}}
         <template x-teleport="body">
             <div x-show="addSetModalOpen" x-cloak @keydown.escape.window="closeAddSetModal()">
-                <div class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
+                <div x-show="addSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+                    <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                         <h3 class="text-lg font-semibold">Add Live Set</h3>
                         <p class="mt-1 text-sm text-slate-600">Add a one-off set for tonight; it will disappear after the jam.</p>
                         <div class="mt-4 space-y-4">
@@ -149,9 +186,9 @@
         {{-- Edit Set Modal --}}
         <template x-teleport="body">
             <div x-show="editSetModalOpen" x-cloak @keydown.escape.window="closeEditSetModal()">
-                <div class="fixed inset-0 z-40 bg-black/40" @click="closeEditSetModal()"></div>
+                <div x-show="editSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeEditSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
+                    <div x-show="editSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                         <h3 class="text-lg font-semibold">Edit Live Set</h3>
                         <p class="mt-1 text-sm text-slate-600">This one-off set is only for tonight and will not persist after the jam.</p>
                         <div class="mt-4 space-y-4">
@@ -195,7 +232,7 @@
             <template x-for="set in orderedSets" :key="set.id">
                 <div
                     class="overflow-hidden rounded-xl border shadow-sm"
-                    :class="[setCardClasses(set), { 'opacity-70': draggingSetId === set.id }]"
+                    :class="[setCardClasses(set), { 'opacity-70': draggingSetId === set.id, 'ring-2 ring-sky-400 shadow-[0_0_28px_rgba(56,189,248,0.45)]': set.highlighted }]"
                     data-live-set-card
                     :data-live-set-id="set.id"
                     :data-live-set-status="set.status"
@@ -291,6 +328,7 @@
                                 type="button"
                                 x-show="set.status === 'playing_now'"
                                 @click="finishSet(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-sky-800 bg-sky-950/60 text-sky-300 transition hover:border-sky-600 hover:bg-sky-900/70 active:scale-95"
                                 title="Finish"
                             >
@@ -302,6 +340,7 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'finished'"
                                 @click="startSet(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-emerald-800 bg-emerald-950/60 text-emerald-300 transition hover:border-emerald-600 hover:bg-emerald-900/70 active:scale-95"
                                 title="Play"
                             >
@@ -315,6 +354,7 @@
                                 type="button"
                                 x-show="set.status === 'playing_now' || set.status === 'coming_up'"
                                 @click="pushDown(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Push Down"
                             >
@@ -326,7 +366,7 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'coming_up' && set.status !== 'finished' && set.status !== 'postponed'"
                                 @click="markComingUp(set)"
-                                :disabled="comingUpSets.length >= 2"
+                                :disabled="!canManageLiveJam || comingUpSets.length >= 2"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                 title="Coming Up"
                             >
@@ -338,6 +378,7 @@
                                 type="button"
                                 x-show="set.status !== 'playing_now' && set.status !== 'finished' && set.status !== 'postponed'"
                                 @click="postponeSet(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-rose-800 bg-rose-950/60 text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 active:scale-95"
                                 title="Postpone"
                             >
@@ -349,6 +390,7 @@
                                 type="button"
                                 x-show="set.isLiveSet"
                                 @click="openEditSetModal(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-sky-600 hover:bg-sky-950/60 hover:text-sky-300 active:scale-95"
                                 title="Edit"
                             >
@@ -360,6 +402,7 @@
                                 type="button"
                                 x-show="set.isLiveSet"
                                 @click="deleteSet(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-rose-600 hover:bg-rose-950/60 hover:text-rose-300 active:scale-95"
                                 title="Delete"
                             >
@@ -371,6 +414,7 @@
                                 type="button"
                                 x-show="set.status === 'finished' || set.status === 'postponed'"
                                 @click="restoreSet(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Restore"
                             >
@@ -384,6 +428,7 @@
                                 type="button"
                                 x-show="canMoveUp(set)"
                                 @click="moveUp(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Up"
                             >
@@ -395,6 +440,7 @@
                                 type="button"
                                 x-show="canMoveDown(set)"
                                 @click="moveDown(set)"
+                                :disabled="!canManageLiveJam"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100 active:scale-95"
                                 title="Down"
                             >
@@ -426,8 +472,13 @@
             saveSuccess: false,
             saveError: '',
             clearBusy: false,
+            managerBusy: false,
             lastUpdated: '',
             lastCacheUpdate: null,
+            jamManagerId: config.initialJamManager?.id ?? null,
+            jamManagerName: config.initialJamManager?.name ?? '',
+            currentUserId: config.currentUserId,
+            lastCheckedAt: null,
             pollTimer: null,
             addSetModalOpen: false,
             editSetModalOpen: false,
@@ -442,6 +493,7 @@
                 participants: '',
                 details: '',
             },
+            setHighlights: new Map(),
             editSetForm: {
                 organiser: '',
                 name: '',
@@ -451,6 +503,88 @@
 
             get hasChanges() {
                 return JSON.stringify(this.sets.map(s => this.stateSnapshot(s))) !== JSON.stringify(this.originalSets);
+            },
+
+            get canManageLiveJam() {
+                return this.jamManagerId !== null && String(this.jamManagerId) === String(this.currentUserId);
+            },
+
+            persistLastCheckedAt(timestamp) {
+                if (!timestamp) {
+                    return;
+                }
+
+                this.lastCheckedAt = timestamp;
+                localStorage.setItem(this.lastCheckedKey(), timestamp);
+            },
+
+            lastCheckedKey() {
+                return `live-jam-last-checked:${config.dataUrl}`;
+            },
+
+            applyJamManager(payload) {
+                this.jamManagerId = payload?.id ?? null;
+                this.jamManagerName = payload?.name ?? '';
+            },
+
+            normalizeServerSet(serverSet) {
+                if (serverSet.isLiveSet && serverSet.liveSetData) {
+                    return {
+                        id: serverSet.set_id ?? serverSet.id,
+                        name: serverSet.liveSetData.name,
+                        owner: serverSet.liveSetData.owner,
+                        feature_set: serverSet.feature_set ?? false,
+                        participants: serverSet.liveSetData.participants,
+                        details: serverSet.liveSetData.details,
+                        created_at: serverSet.liveSetData.created_at ?? serverSet.created_at ?? null,
+                        isLiveSet: true,
+                        status: serverSet.status,
+                        order: serverSet.order,
+                        songs: [],
+                        health: 0,
+                        total_slots: 0,
+                        filled_slots: 0,
+                        duration_seconds: 0,
+                    };
+                }
+
+                return {
+                    ...serverSet,
+                    created_at: serverSet.created_at ?? null,
+                };
+            },
+
+            shouldHighlightSet(set) {
+                if (!set.created_at || !this.lastCheckedAt) {
+                    return false;
+                }
+
+                return new Date(set.created_at) > new Date(this.lastCheckedAt);
+            },
+
+            highlightSet(setOrId, createdAt = null) {
+                const set = typeof setOrId === 'object'
+                    ? setOrId
+                    : this.sets.find(item => String(item.id) === String(setOrId));
+                if (!set) {
+                    return;
+                }
+
+                set.highlighted = true;
+
+                if (this.setHighlights.has(String(set.id))) {
+                    clearTimeout(this.setHighlights.get(String(set.id)));
+                }
+
+                const timeout = setTimeout(() => {
+                    const currentSet = this.sets.find(item => String(item.id) === String(set.id));
+                    if (currentSet) {
+                        currentSet.highlighted = false;
+                    }
+                    this.setHighlights.delete(String(set.id));
+                }, createdAt ? 2200 : 1800);
+
+                this.setHighlights.set(String(set.id), timeout);
             },
 
             stateSnapshot(set) {
@@ -467,92 +601,54 @@
             },
 
             init() {
+                this.lastCheckedAt = localStorage.getItem(this.lastCheckedKey());
                 this.fetchData();
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
 
             async fetchData() {
                 try {
+                    const hadLocalChanges = this.originalSets.length > 0 && this.hasChanges;
                     const resp = await fetch(config.dataUrl, {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     });
                     if (!resp.ok) { return; }
                     const payload = await resp.json();
+                    const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
+                    const serverIds = new Set(serverSets.map(set => String(set.id)));
+                    const localLiveSets = this.sets.filter(set => set.isLiveSet && !serverIds.has(String(set.id)));
 
-                    // First load: always initialize from server (which includes database state)
-                    if (this.sets.length === 0) {
-                        this.sets = (payload.sets || []).map(s => {
-                            // Reconstruct live sets from cache data
-                            if (s.isLiveSet && s.liveSetData) {
-                                return {
-                                    id: s.set_id ?? s.id,
-                                    name: s.liveSetData.name,
-                                    owner: s.liveSetData.owner,
-                                feature_set: s.feature_set ?? false,
-                                    participants: s.liveSetData.participants,
-                                    details: s.liveSetData.details,
-                                    isLiveSet: true,
-                                    status: s.status,
-                                    order: s.order,
-                                    songs: [],
-                                    health: 0,
-                                    total_slots: 0,
-                                    filled_slots: 0,
-                                    duration_seconds: 0,
-                                };
-                            }
-                            return { ...s };
-                        });
+                    this.sets = serverSets.map(serverSet => {
+                        const localSet = this.sets.find(set => String(set.id) === String(serverSet.id));
+                        const mergedSet = localSet ? { ...localSet, ...serverSet } : { ...serverSet };
+
+                        if (localSet?.highlighted) {
+                            mergedSet.highlighted = true;
+                        }
+
+                        if (!localSet && this.shouldHighlightSet(serverSet)) {
+                            mergedSet.highlighted = true;
+                            this.highlightSet(mergedSet, mergedSet.created_at);
+                        }
+
+                        return mergedSet;
+                    }).concat(localLiveSets);
+
+                    if (!hadLocalChanges) {
                         this.originalSets = this.sets.map(s => this.stateSnapshot(s));
-                        this.lastCacheUpdate = payload.updated_at || null;
-                        if (payload.updated_at) {
-                            this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
-                        }
-                    } else if (payload.updated_at) {
-                        // Subsequent loads: detect if cache has been updated by another source
-                        if (!this.lastCacheUpdate || new Date(payload.updated_at) > new Date(this.lastCacheUpdate)) {
-                            // Cache was updated - reload full state
-                            this.sets = (payload.sets || []).map(s => {
-                                // Reconstruct live sets from cache data
-                                if (s.isLiveSet && s.liveSetData) {
-                                    return {
-                                        id: s.set_id ?? s.id,
-                                        name: s.liveSetData.name,
-                                        owner: s.liveSetData.owner,
-                                        feature_set: s.feature_set ?? false,
-                                        participants: s.liveSetData.participants,
-                                        details: s.liveSetData.details,
-                                        isLiveSet: true,
-                                        status: s.status,
-                                        order: s.order,
-                                        songs: [],
-                                        health: 0,
-                                        total_slots: 0,
-                                        filled_slots: 0,
-                                        duration_seconds: 0,
-                                    };
-                                }
-                                return { ...s };
-                            });
-                            this.originalSets = this.sets.map(s => this.stateSnapshot(s));
-                            this.lastCacheUpdate = payload.updated_at;
-                            this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
-                        } else {
-                            // Cache unchanged - just merge fresh health/slot data (skip live sets)
-                            (payload.sets || []).forEach(serverSet => {
-                                if (!serverSet.isLiveSet) {
-                                    const local = this.sets.find(s => s.id === serverSet.set_id || s.id === serverSet.id);
-                                    if (local && !local.isLiveSet) {
-                                        local.health = serverSet.health;
-                                        local.total_slots = serverSet.total_slots;
-                                        local.filled_slots = serverSet.filled_slots;
-                                        local.duration_seconds = serverSet.duration_seconds;
-                                        local.songs = serverSet.songs;
-                                    }
-                                }
-                            });
-                        }
                     }
+
+                    this.lastCacheUpdate = payload.updated_at || this.lastCacheUpdate;
+                    if (payload.updated_at) {
+                        this.persistLastCheckedAt(payload.updated_at);
+                        this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
+                    }
+
+                    if (!this.lastCheckedAt) {
+                        this.persistLastCheckedAt(new Date().toISOString());
+                    }
+
+                    this.applyJamManager(payload.jam_manager);
                 } catch (e) {
                     // Silently fail polling
                 } finally {
@@ -576,6 +672,10 @@
             },
 
             openAddSetModal() {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.addSetForm = { organiser: '', name: '', participants: '', details: '' };
                 this.addSetModalOpen = true;
             },
@@ -586,6 +686,10 @@
             },
 
             saveNewSet() {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 if (!this.addSetForm.name.trim()) {
                     alert('Please enter a set name');
                     return;
@@ -607,6 +711,7 @@
                     owner: this.addSetForm.organiser.trim(),
                     participants: this.addSetForm.participants.trim(),
                     details: this.addSetForm.details.trim(),
+                    created_at: new Date().toISOString(),
                     isLiveSet: true,
                     status: 'pending',
                     order: newOrder,
@@ -615,9 +720,11 @@
                     total_slots: 0,
                     filled_slots: 0,
                     duration_seconds: 0,
+                    highlighted: true,
                 };
 
                 this.sets.push(newSet);
+                this.highlightSet(newSet.id, newSet.created_at);
                 this.closeAddSetModal();
             },
 
@@ -626,6 +733,10 @@
             },
 
             openEditSetModal(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.editingSetId = set.id;
                 this.editSetForm = {
                     organiser: set.owner || '',
@@ -643,6 +754,10 @@
             },
 
             saveEditSet() {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 const set = this.sets.find(s => s.id === this.editingSetId);
                 if (!set) { return; }
 
@@ -743,7 +858,7 @@
             },
 
             canDragSet(set) {
-                return this.movableSetsForStatus(set.status).some(s => s.id === set.id);
+                return this.canManageLiveJam && this.movableSetsForStatus(set.status).some(s => s.id === set.id);
             },
 
             ensureSetDropPlaceholder(draggedEl) {
@@ -862,18 +977,30 @@
             },
 
             movableSetsForStatus(status) {
+                if (!this.canManageLiveJam) {
+                    return [];
+                }
+
                 return this.sets
                     .filter(s => s.status === status && status !== 'playing_now' && status !== 'finished' && status !== 'postponed')
                     .sort((a, b) => a.order - b.order);
             },
 
             canMoveUp(set) {
+                if (!this.canManageLiveJam) {
+                    return false;
+                }
+
                 const sameStatus = this.movableSetsForStatus(set.status);
 
                 return sameStatus.findIndex(s => s.id === set.id) > 0;
             },
 
             canMoveDown(set) {
+                if (!this.canManageLiveJam) {
+                    return false;
+                }
+
                 const sameStatus = this.movableSetsForStatus(set.status);
                 const idx = sameStatus.findIndex(s => s.id === set.id);
 
@@ -881,6 +1008,10 @@
             },
 
             moveUp(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 // Filter sets with the same status, sorted by order
                 const sameStatus = this.sets
                     .filter(s => s.status === set.status)
@@ -900,6 +1031,10 @@
             },
 
             moveDown(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 // Filter sets with the same status, sorted by order
                 const sameStatus = this.sets
                     .filter(s => s.status === set.status)
@@ -919,6 +1054,10 @@
             },
 
             startSet(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 const previousRects = this.captureSetPositions();
                 this.sets = this.sets.map(currentSet => {
                     if (String(currentSet.id) === String(set.id)) {
@@ -935,6 +1074,10 @@
             },
 
             finishSet(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.replaceSetWithAnimation(set.id, {
                     status: 'finished',
                     order: this.nextOrderForStatus('finished', set.id),
@@ -942,6 +1085,10 @@
             },
 
             postponeSet(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.replaceSetWithAnimation(set.id, {
                     status: 'postponed',
                     order: this.nextOrderForStatus('postponed', set.id),
@@ -949,6 +1096,10 @@
             },
 
             restoreSet(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.replaceSetWithAnimation(set.id, {
                     status: 'pending',
                     order: this.nextOrderForStatus('pending', set.id),
@@ -956,6 +1107,10 @@
             },
 
             deleteSet(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 if (set.isLiveSet) {
                     if (!confirm(`Delete "${set.name}"? This will remove the live set from the run of show.`)) { return; }
 
@@ -964,6 +1119,10 @@
             },
 
             markComingUp(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 if (this.comingUpSets.length >= 2) { return; }
 
                 this.replaceSetWithAnimation(set.id, {
@@ -973,6 +1132,10 @@
             },
 
             pushDown(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.replaceSetWithAnimation(set.id, {
                     status: 'pending',
                     order: this.nextOrderForStatus('pending', set.id),
@@ -980,6 +1143,10 @@
             },
 
             async saveState() {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 this.saveBusy = true;
                 this.saveSuccess = false;
                 this.saveError = '';
@@ -997,6 +1164,7 @@
                                 owner: s.owner,
                                 participants: s.participants,
                                 details: s.details,
+                                created_at: s.created_at || new Date().toISOString(),
                             } : null,
                         })),
                     };
@@ -1027,6 +1195,10 @@
             },
 
             async clearState() {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
                 if (!confirm('Reset the live state? This cannot be undone.')) { return; }
                 this.clearBusy = true;
                 try {
@@ -1039,11 +1211,69 @@
                         },
                     });
                     this.sets = [];
+                    this.originalSets = [];
                     this.lastCacheUpdate = null;
                     this.loading = true;
                     await this.fetchData();
                 } finally {
                     this.clearBusy = false;
+                }
+            },
+
+            async claimManager() {
+                if (this.managerBusy || this.canManageLiveJam) {
+                    return;
+                }
+
+                if (this.jamManagerId && !confirm(`Take over from ${this.jamManagerName}?`)) {
+                    return;
+                }
+
+                this.managerBusy = true;
+                try {
+                    const response = await fetch(config.claimManagerUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': config.csrfToken,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Claim failed');
+                    }
+
+                    const payload = await response.json();
+                    this.applyJamManager(payload.jam_manager);
+                } finally {
+                    this.managerBusy = false;
+                }
+            },
+
+            async releaseManager() {
+                if (this.managerBusy || !this.canManageLiveJam) {
+                    return;
+                }
+
+                this.managerBusy = true;
+                try {
+                    const response = await fetch(config.releaseManagerUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': config.csrfToken,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Release failed');
+                    }
+
+                    this.applyJamManager(null);
+                } finally {
+                    this.managerBusy = false;
                 }
             },
 

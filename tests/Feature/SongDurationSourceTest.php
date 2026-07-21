@@ -250,7 +250,9 @@ test('live data endpoint returns set list with health', function () {
         ->and($data['sets'][0]['id'])->toBe($set->id)
         ->and($data['sets'][0]['status'])->toBe('pending')
         ->and($data['sets'][0]['health'])->toBe(0)
-        ->and($data['sets'][0]['feature_set'])->toBeTrue();
+        ->and($data['sets'][0]['feature_set'])->toBeTrue()
+        ->and($data['sets'][0]['created_at'])->not->toBeNull()
+        ->and($data['jam_manager'])->toBeNull();
 });
 
 test('admin can update live state via cache', function () {
@@ -261,6 +263,10 @@ test('admin can update live state via cache', function () {
         'date' => now()->addDay(),
         'description' => null,
     ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('sessions.live.manager.claim', $session))
+        ->assertOk();
 
     $set = Set::create([
         'name' => 'Cache Set',
@@ -286,6 +292,62 @@ test('admin can update live state via cache', function () {
     expect($cached)->not->toBeNull()
         ->and($cached['sets'][0]['set_id'])->toBe($set->id)
         ->and($cached['sets'][0]['status'])->toBe('playing_now');
+});
+
+test('live manager can release and reclaim control', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $session = JamSession::create([
+        'name' => 'Manager Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('sessions.live.manager.claim', $session))
+        ->assertOk()
+        ->assertJsonPath('jam_manager.id', $admin->id);
+
+    expect($session->refresh()->jam_manager_id)->toBe($admin->id);
+
+    $this->actingAs($admin)
+        ->deleteJson(route('sessions.live.manager.release', $session))
+        ->assertOk()
+        ->assertJson(['jam_manager' => null]);
+
+    expect($session->refresh()->jam_manager_id)->toBeNull();
+});
+
+test('live updates require the current jam manager', function () {
+    $manager = User::factory()->create(['is_admin' => true]);
+    $otherAdmin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Restricted Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson(route('sessions.live.manager.claim', $session))
+        ->assertOk();
+
+    $set = Set::create([
+        'name' => 'Restricted Set',
+        'description' => null,
+        'owner_id' => $manager->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($otherAdmin)
+        ->postJson(route('sessions.live.update', $session), [
+            'sets' => [
+                ['set_id' => $set->id, 'status' => 'playing_now', 'order' => 0],
+            ],
+        ])
+        ->assertForbidden();
 });
 
 test('live data reflects cached state', function () {
@@ -375,6 +437,10 @@ test('admin can clear live state cache', function () {
         'date' => now()->addDay(),
         'description' => null,
     ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('sessions.live.manager.claim', $session))
+        ->assertOk();
 
     Cache::put('live_jam_session:'.$session->id, ['sets' => [], 'updated_at' => null], 3600);
 

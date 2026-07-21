@@ -1234,7 +1234,10 @@ export function sessionSlotRow(config) {
         slotIsOpen: config.slotIsOpen,
         assignmentIsManual: config.assignmentIsManual,
         initialEditAssignedUserId: config.initialEditAssignedUserId,
+        initialEditAssignedUserName: config.initialEditAssignedUserName,
+        initialEditManualPerformerName: config.initialEditManualPerformerName,
         editAssignedUserId: config.editAssignedUserId,
+        editAssignedUserName: config.initialEditAssignedUserName || config.initialEditManualPerformerName || '',
         currentUserId: config.currentUserId,
         assignedToCurrentUser: config.assignedToCurrentUser,
         hasPendingOwnRequest: config.hasPendingOwnRequest,
@@ -1245,11 +1248,34 @@ export function sessionSlotRow(config) {
         toastStyle: '',
         toastTimer: null,
         proposalUserOptions: config.proposalUserOptions,
+        users: config.users,
         ...baseDragState(),
         proposeTargetUserId: '',
         proposeTargetUserQuery: '',
+        editAssignedUserQuery: config.initialEditAssignedUserName || config.initialEditManualPerformerName || '',
+        showEditUserSuggestions: false,
         showProposalUserSuggestions: false,
         proposeMessage: '',
+        filteredEditUsers() {
+            const query = this.editAssignedUserQuery.trim().toLowerCase();
+            if (query === '') {
+                return this.users.slice(0, 8);
+            }
+
+            return this.users
+                .filter((user) => user.name.toLowerCase().includes(query))
+                .slice(0, 8);
+        },
+        updateEditUserQuery() {
+            this.editAssignedUserId = '';
+            this.showEditUserSuggestions = true;
+        },
+        selectEditUser(user) {
+            this.editAssignedUserId = String(user.id);
+            this.editAssignedUserQuery = user.name;
+            this.editAssignedUserName = user.name;
+            this.showEditUserSuggestions = false;
+        },
         filteredProposalUsers() {
             const query = this.proposeTargetUserQuery.trim().toLowerCase();
             if (query === '') {
@@ -1276,11 +1302,24 @@ export function sessionSlotRow(config) {
             this.showProposalUserSuggestions = false;
         },
         shouldShowAssigneeWarning() {
-            const selectedUserId = String(this.editAssignedUserId ?? '');
-            const initialUserId = String(this.initialEditAssignedUserId ?? '');
-            const currentUserId = String(this.currentUserId ?? '');
+            const query = this.editAssignedUserQuery.trim();
+            return query !== '' && query !== this.initialEditAssignedUserName && query !== this.initialEditManualPerformerName;
+        },
+        resolveEditedSlotAssignment() {
+            const query = this.editAssignedUserQuery.trim();
+            const selectedUser = this.users.find((user) => String(user.id) === String(this.editAssignedUserId));
 
-            return selectedUserId !== initialUserId && selectedUserId !== '' && selectedUserId !== currentUserId;
+            if (selectedUser) {
+                return {
+                    user_id: String(selectedUser.id),
+                    manual_performer_name: '',
+                };
+            }
+
+            return {
+                user_id: '',
+                manual_performer_name: query,
+            };
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
@@ -1356,6 +1395,9 @@ export function sessionSlotRow(config) {
         openEditSlotModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
             this.editAssignedUserId = this.initialEditAssignedUserId;
+            this.editAssignedUserQuery = this.initialEditAssignedUserName || this.initialEditManualPerformerName || '';
+            this.editAssignedUserName = this.editAssignedUserQuery;
+            this.showEditUserSuggestions = false;
             this.openEditSlot = true;
         },
         async requestSlot() {
@@ -1509,6 +1551,10 @@ export function sessionSlotRow(config) {
                 return;
             }
 
+            if (!window.confirm('Clear this slot assignment?')) {
+                return;
+            }
+
             this.busyAction = true;
             this.actionError = '';
             this.actionFeedback = '';
@@ -1535,6 +1581,7 @@ export function sessionSlotRow(config) {
                     throw new Error('Request failed');
                 }
 
+                this.openEditSlot = false;
                 this.refreshSessionSets();
             } catch (e) {
                 this.actionError = 'Could not clear slot. Try again.';
@@ -1561,6 +1608,10 @@ export function sessionSlotRow(config) {
             this.actionFeedback = '';
 
             try {
+                const assignment = this.resolveEditedSlotAssignment();
+                const formData = new FormData(event.target);
+                formData.set('user_id', assignment.user_id);
+                formData.set('manual_performer_name', assignment.manual_performer_name);
                 const response = await fetch(config.updateSlotUrl, {
                     method: 'POST',
                     headers: {
@@ -1568,7 +1619,7 @@ export function sessionSlotRow(config) {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': config.csrfToken,
                     },
-                    body: new FormData(event.target),
+                    body: formData,
                 });
 
                 if (!response.ok) {
