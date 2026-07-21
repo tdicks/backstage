@@ -37,20 +37,26 @@ test('slot editing remains clickable while drag reordering ignores interactive c
     $slotRowView = file_get_contents(resource_path('views/components/sessions/slot-assignee-pill.blade.php'));
     $songSlotsView = file_get_contents(resource_path('views/components/sessions/song-slots.blade.php'));
     $slotRowComponent = file_get_contents(resource_path('views/components/sessions/slot-row.blade.php'));
-    $sessionCardsJs = file_get_contents(resource_path('js/components/sessionCards.js'));
+    $dragUtility = file_get_contents(resource_path('js/utils/drag.js'));
+    $appJs = file_get_contents(resource_path('js/app.js'));
 
     expect($slotRowView)->toContain('@click.stop="openEditSlotModal()"');
     expect($songSlotsView)->toContain(':current-user-id="$currentUserId"');
     expect($slotRowComponent)->toContain(':current-user-id="$currentUserId"');
     expect($slotRowComponent)->toContain('jam_manager_id === $currentUserId');
     expect($slotRowComponent)->toContain(':can-edit-slot="$canEditSlot"');
-    expect($sessionCardsJs)->toContain("closest('button, a, input, select, textarea, label')");
+    expect($slotRowComponent)->toContain('@dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"');
+    expect($slotRowComponent)->toContain('@dragend.self="onSlotDragEnd()"');
+    expect($dragUtility)->toContain('export function isInteractiveDragSource(event) {');
+    expect($appJs)->toContain('window.isInteractiveDragSource = isInteractiveDragSource;');
 });
 
 test('management set cards collapse from the full card surface', function () {
     $view = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+    $manageView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain("@click=\"if (!\$event.target.closest('button, a, input, select, textarea, label')) { setCollapsed = !setCollapsed; }\"");
     expect($view)->toContain('role="button"');
     expect($view)->toContain('x-show="!setCollapsed" x-transition');
+    expect($manageView)->toContain('@dragstart.self="onSetDragStart($event, set)"');
 });

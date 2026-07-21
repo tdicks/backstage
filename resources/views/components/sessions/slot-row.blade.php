@@ -30,10 +30,10 @@
     class="border-t border-slate-100 align-top transition hover:bg-slate-50/70"
     data-slot-id="{{ $slotModel->id }}"
     x-bind:draggable="isDesktopReorderEnabled && canReorderSlots && !jamSessionClosed ? 'true' : 'false'"
-    @dragstart.stop="onSlotDragStart($event, {{ $slotModel->id }})"
+    @dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"
     @dragover.stop="onSlotDragOver($event, {{ $slotModel->id }})"
     @drop.stop="onSlotDrop($event)"
-    @dragend.stop="onSlotDragEnd()"
+    @dragend.self="onSlotDragEnd()"
     x-bind:class="{
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
