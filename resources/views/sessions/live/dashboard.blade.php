@@ -214,7 +214,7 @@
                         <div class="max-w-xl rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center shadow-xl">
                             <x-heroicon-m-clock class="mx-auto h-14 w-14 text-amber-400" aria-hidden="true" />
                             <p class="mt-5 text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
-                            <p class="mt-3 text-3xl font-semibold text-slate-100">This jam session hasn&apos;t started yet or is finished.</p>
+                            <p class="mt-3 text-3xl font-semibold text-slate-100">This jam session hasn&#39;t started yet or is finished.</p>
                         </div>
                     </div>
                 @endif

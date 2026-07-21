@@ -14,6 +14,7 @@ beforeEach(function () {
         'name' => 'Test Jam',
         'date' => now()->addDays(1),
         'description' => 'Test session',
+        'is_live' => true,
     ]);
 });
 

@@ -259,13 +259,15 @@ class JamSessionController extends Controller
         $wasLive = $jamSession->is_live;
         $previousDate = $jamSession->date?->toDateString();
 
+        $isLive = $isClosed ? false : (bool) ($validated['is_live'] ?? false);
+
         $jamSession->update([
             ...$validated,
             'is_closed' => $isClosed,
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'is_archived' => (bool) ($validated['is_archived'] ?? $jamSession->is_archived),
             'allow_checkins' => $allowCheckins,
-            'is_live' => $isClosed ? false : (bool) ($validated['is_live'] ?? false),
+            'is_live' => $isLive,
         ]);
 
         if ($wasAllowingCheckins && ! $jamSession->allow_checkins) {

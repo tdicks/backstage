@@ -31,6 +31,7 @@ class LiveJamController extends Controller
 
         $sets = $jamSession->sets()
             ->visibleTo($request->user())
+            ->where('performed', false)
             ->with(['owner', 'songs.slots.user'])
             ->get();
 
