@@ -51,12 +51,17 @@
                         <section>
                             <div class="mb-2 flex items-center justify-between gap-3">
                                 <h2 class="text-sm font-semibold uppercase tracking-widest text-emerald-300">Playing Now</h2>
-                                <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span>
+                                <x-live-status-icon size="h-5 w-5" title="Jam session is live" />
                             </div>
                             <div class="rounded-xl border border-emerald-700 bg-emerald-950 p-3">
                                 <div class="grid gap-3 lg:grid-cols-[1fr_1.45fr]">
                                     <div>
-                                        <h3 class="text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl" x-text="playingNow.name"></h3>
+                                        <h3 class="flex flex-wrap items-center gap-2 text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl">
+                                            <span x-text="playingNow.name"></span>
+                                            <template x-if="playingNow.feature_set">
+                                                <x-feature-set-icon />
+                                            </template>
+                                        </h3>
                                         <p class="mt-1.5 text-base text-emerald-100" x-show="playingNow.owner" x-text="playingNow.owner"></p>
                                         <p class="mt-2 whitespace-pre-line rounded-lg border border-emerald-800 bg-slate-950/50 px-3 py-1.5 text-sm text-slate-200" x-show="playingNow.details" x-text="playingNow.details"></p>
                                         <p class="mt-1.5 text-xs text-emerald-100" x-show="playingNow.participants" x-text="playingNow.participants"></p>
@@ -71,8 +76,10 @@
                                                             class="rounded-md px-1.5 py-0.5 text-xs"
                                                             :class="slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100'"
                                                             :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
-                                                            x-text="`${slot.name}: ${slot.user_name}`"
-                                                        ></span>
+                                                        >
+                                                            <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                            <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
+                                                        </span>
                                                     </template>
                                                 </div>
                                             </div>
@@ -89,7 +96,12 @@
                             <div class="grid gap-2 lg:grid-cols-2">
                                 <template x-for="set in comingUpSets" :key="set.id">
                                     <div class="rounded-xl border border-amber-700 bg-amber-950 p-3">
-                                        <h3 class="text-xl font-semibold text-slate-50" x-text="set.name"></h3>
+                                        <h3 class="flex flex-wrap items-center gap-2 text-xl font-semibold text-slate-50">
+                                            <span x-text="set.name"></span>
+                                            <template x-if="set.feature_set">
+                                                <x-feature-set-icon />
+                                            </template>
+                                        </h3>
                                         <p class="mt-1 text-sm text-amber-100" x-show="set.owner" x-text="set.owner"></p>
                                         <p class="mt-1.5 whitespace-pre-line rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-1.5 text-xs text-slate-200" x-show="set.details" x-text="set.details"></p>
                                         <p class="mt-1.5 text-xs text-amber-100" x-show="set.participants" x-text="set.participants"></p>
@@ -105,8 +117,10 @@
                                                                         class="inline-block rounded-md px-1.5 py-0.5 text-xs"
                                                                         :class="slot.checked_in ? 'bg-amber-300 text-slate-950' : 'bg-amber-900 text-amber-100'"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
-                                                                        x-text="`${slot.name}: ${slot.user_name}`"
-                                                                    ></span>
+                                                                    >
+                                                                        <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                                        <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
+                                                                    </span>
                                                                 </template>
                                                             </div>
                                                         </template>
@@ -126,7 +140,12 @@
                             <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                                 <template x-for="set in upcomingSets" :key="set.id">
                                     <div class="rounded-xl border border-slate-800 bg-slate-900 p-2.5">
-                                        <p class="text-base font-semibold text-slate-100" x-text="set.name"></p>
+                                        <p class="flex flex-wrap items-center gap-2 text-base font-semibold text-slate-100">
+                                            <span x-text="set.name"></span>
+                                            <template x-if="set.feature_set">
+                                                <x-feature-set-icon />
+                                            </template>
+                                        </p>
                                         <p class="mt-1 text-sm text-slate-400" x-show="set.owner" x-text="set.owner"></p>
                                         <template x-if="set.details">
                                             <p class="mt-1.5 whitespace-pre-line rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300" x-text="set.details"></p>
@@ -143,8 +162,10 @@
                                                                         class="inline-block rounded-md px-1.5 py-0.5 text-xs"
                                                                         :class="slot.checked_in ? 'bg-slate-700 text-slate-100' : 'bg-slate-800 text-slate-400'"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
-                                                                        x-text="`${slot.name}: ${slot.user_name}`"
-                                                                    ></span>
+                                                                    >
+                                                                        <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                                        <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
+                                                                    </span>
                                                                 </template>
                                                             </div>
                                                         </template>

@@ -122,7 +122,7 @@
                     <x-heroicon-m-user class="h-4 w-4 {{ $setOwnerIconClass }}" aria-hidden="true" />
                     <span class="sr-only">Set owner</span>
                     <span>
-                       {{ $set->owner->name }}<span x-show="collaboratorNames.length > 0" x-text="', ' + collaboratorNames.slice(0, 2).join(', ')" x-cloak></span>
+                       {{ $set->owner->name }}@if ($set->collaboratorUserIds())<span class="md:hidden" x-show="collaboratorNames.length > 0" x-cloak> and collaborators</span><span class="hidden md:inline" x-show="collaboratorNames.length > 0" x-text="', ' + collaboratorNames.slice(0, 2).join(', ')" x-cloak></span>@endif
                     </span>
                 </span>
 

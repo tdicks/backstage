@@ -210,7 +210,12 @@
                         <div class="min-w-0 flex-1 p-5 text-slate-100">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <h3 class="truncate text-xl font-semibold text-slate-100" x-text="set.name"></h3>
+                                    <h3 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
+                                        <span class="min-w-0 truncate" x-text="set.name"></span>
+                                        <template x-if="set.feature_set">
+                                            <x-feature-set-icon />
+                                        </template>
+                                    </h3>
                                     <p class="mt-1 truncate text-sm text-slate-400" x-show="set.owner" x-text="`by ${set.owner}`"></p>
                                 </div>
                                 <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadgeClasses(set)" x-text="statusLabel(set.status)"></span>
@@ -268,8 +273,10 @@
                                                         'bg-slate-800 text-slate-500': !slot.filled
                                                     }"
                                                     :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
-                                                    x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"
-                                                ></span>
+                                                >
+                                                    <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
+                                                    <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
+                                                </span>
                                             </template>
                                         </span>
                                     </li>
@@ -481,6 +488,7 @@
                                     id: s.set_id ?? s.id,
                                     name: s.liveSetData.name,
                                     owner: s.liveSetData.owner,
+                                feature_set: s.feature_set ?? false,
                                     participants: s.liveSetData.participants,
                                     details: s.liveSetData.details,
                                     isLiveSet: true,
@@ -511,6 +519,7 @@
                                         id: s.set_id ?? s.id,
                                         name: s.liveSetData.name,
                                         owner: s.liveSetData.owner,
+                                        feature_set: s.feature_set ?? false,
                                         participants: s.liveSetData.participants,
                                         details: s.liveSetData.details,
                                         isLiveSet: true,

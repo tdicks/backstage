@@ -174,6 +174,14 @@
                                         <x-modal-primary-button type="submit" form="edit_session_form_{{ $session->id }}">Save</x-modal-primary-button>
                                     </div>
                                 </div>
+                                @if ($session->is_live)
+                                    <div class="mx-auto mt-4 max-w-7xl px-4 sm:px-6">
+                                        <div class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
+                                            <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
+                                            This jam session is now live
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
