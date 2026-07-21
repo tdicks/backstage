@@ -1,3 +1,5 @@
+import { isInteractiveDragSource } from '../utils/drag';
+
 export function registerSessionCards(Alpine) {
     Alpine.data('sessionSetCard', sessionSetCard);
     Alpine.data('sessionSongCard', sessionSongCard);
@@ -1010,10 +1012,7 @@ export function sessionSongCard(config) {
                 return;
             }
 
-            const isInteractiveControl = typeof event.composedPath === 'function'
-                && event.composedPath().some((element) => element instanceof Element && element.matches('button, a, input, select, textarea, label'));
-
-            if (isInteractiveControl) {
+            if (isInteractiveDragSource(event)) {
                 event.preventDefault();
                 return;
             }

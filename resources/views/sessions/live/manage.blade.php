@@ -922,10 +922,7 @@
                     return;
                 }
 
-                const isInteractiveControl = typeof event.composedPath === 'function'
-                    && event.composedPath().some((element) => element instanceof Element && element.matches('button, a, input, select, textarea, label'));
-
-                if (isInteractiveControl) {
+                if (window.isInteractiveDragSource?.(event)) {
                     event.preventDefault();
                     return;
                 }

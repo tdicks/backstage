@@ -37,7 +37,8 @@ test('slot editing remains clickable while drag reordering ignores interactive c
     $slotRowView = file_get_contents(resource_path('views/components/sessions/slot-assignee-pill.blade.php'));
     $songSlotsView = file_get_contents(resource_path('views/components/sessions/song-slots.blade.php'));
     $slotRowComponent = file_get_contents(resource_path('views/components/sessions/slot-row.blade.php'));
-    $sessionCardsJs = file_get_contents(resource_path('js/components/sessionCards.js'));
+    $dragUtility = file_get_contents(resource_path('js/utils/drag.js'));
+    $appJs = file_get_contents(resource_path('js/app.js'));
 
     expect($slotRowView)->toContain('@click.stop="openEditSlotModal()"');
     expect($songSlotsView)->toContain(':current-user-id="$currentUserId"');
@@ -45,7 +46,9 @@ test('slot editing remains clickable while drag reordering ignores interactive c
     expect($slotRowComponent)->toContain('jam_manager_id === $currentUserId');
     expect($slotRowComponent)->toContain(':can-edit-slot="$canEditSlot"');
     expect($slotRowComponent)->toContain('@dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"');
-    expect($sessionCardsJs)->toContain('event.composedPath().some((element) => element instanceof Element && element.matches(\'button, a, input, select, textarea, label\'))');
+    expect($slotRowComponent)->toContain('@dragend.self="onSlotDragEnd()"');
+    expect($dragUtility)->toContain('export function isInteractiveDragSource(event) {');
+    expect($appJs)->toContain('window.isInteractiveDragSource = isInteractiveDragSource;');
 });
 
 test('management set cards collapse from the full card surface', function () {
