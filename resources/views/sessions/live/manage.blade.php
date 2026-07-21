@@ -500,7 +500,7 @@
                 participants: '',
                 details: '',
             },
-            // Track highlighted set IDs so they remain highlighted until the user browses past them.
+            // Track highlighted set IDs so they remain highlighted until the user hovers over or focuses on them.
             setHighlights: new Set(),
             editSetForm: {
                 organiser: '',
@@ -644,10 +644,10 @@
                     } else {
                         const newSets = serverSets
                             .filter(serverSet => !localIds.has(String(serverSet.id)))
-                            .map((serverSet) => this.applyHighlightIfNeeded({ ...serverSet }));
+                            .map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
 
                         if (newSets.length > 0) {
-                            // Pending order stays zero-based so newly appended sets always land at the bottom.
+                            // Start from -1 so the first pending set becomes order 0 and newly appended sets land at the bottom.
                             const nextPendingOrder = this.sets
                                 .filter(set => set.status === 'pending')
                                 .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
