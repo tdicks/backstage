@@ -636,10 +636,11 @@
                     const payload = await resp.json();
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
                     const localIds = new Set(this.sets.map(set => String(set.id)));
+                    const isInitialLoad = this.sets.length === 0;
 
                     // On initial load, apply highlights to the server snapshot.
                     // On subsequent polls, preserve local reordering/editing and only append truly new sets.
-                    if (this.sets.length === 0) {
+                    if (isInitialLoad) {
                         this.sets = serverSets.map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
                     } else {
                         const newSets = serverSets
@@ -647,7 +648,8 @@
                             .map(serverSet => this.applyHighlightIfNeeded({ ...serverSet }));
 
                         if (newSets.length > 0) {
-                            // Start from -1 so the first pending set becomes order 0 and newly appended sets land at the bottom.
+                            // Start from -1 so the first pending set becomes order 0, then append any new pending sets after
+                            // the current pending stack. If there are no pending sets yet, the first new one still lands at 0.
                             const nextPendingOrder = this.sets
                                 .filter(set => set.status === 'pending')
                                 .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
