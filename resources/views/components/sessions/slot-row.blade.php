@@ -41,11 +41,14 @@
         'slotIsOpen' => $slotModel->isOpen(),
         'assignmentIsManual' => ! $slotModel->user_id && filled($slotModel->manual_performer_name),
         'initialEditAssignedUserId' => (string) ($slotModel->user_id ?? ''),
+        'initialEditAssignedUserName' => $slotModel->user?->name ?? '',
+        'initialEditManualPerformerName' => $slotModel->manual_performer_name ?? '',
         'editAssignedUserId' => (string) ($slotModel->user_id ?? ''),
         'currentUserId' => (string) auth()->id(),
         'assignedToCurrentUser' => $slotModel->user_id === auth()->id(),
         'hasPendingOwnRequest' => $slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === auth()->id()),
         'proposalUserOptions' => $proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
+        'users' => $users->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
         'requestSlotUrl' => route('slot-assignments.request', $slotModel),
         'takeSlotUrl' => route('slots.take', $slotModel),
         'proposeSlotUrl' => route('slot-assignments.propose', $slotModel),
@@ -67,7 +70,7 @@
 >
     <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
     <td class="px-3 py-3">
-        <x-sessions.slot-assignee-pill :slot-model="$slotModel" />
+        <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canManageSet && ! $setLocked" />
     </td>
     <td x-ref="toastAnchor" class="px-3 py-3 text-right">
         <div class="flex flex-wrap justify-end gap-2">

@@ -71,13 +71,13 @@
                                             <div class="rounded-lg border border-emerald-800 bg-slate-950/60 px-3 py-1.5">
                                                 <p class="text-lg font-semibold text-slate-50" x-text="`${song.artist} – ${song.title}`"></p>
                                                 <div class="mt-1.5 flex flex-wrap gap-1.5">
-                                                    <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
+                                                    <template x-for="slot in song.slots" :key="slot.id">
                                                         <span
                                                             class="rounded-md px-1.5 py-0.5 text-xs"
-                                                            :class="slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100'"
+                                                            :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
                                                             :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                         >
-                                                            <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                            <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
                                                             <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
                                                         </span>
                                                     </template>
@@ -112,13 +112,13 @@
                                                         <p class="text-base font-semibold text-slate-100" x-text="`${song.artist} – ${song.title}`"></p>
                                                         <template x-if="song.slots.filter(sl => sl.filled).length > 0">
                                                             <div class="mt-1.5 flex flex-wrap gap-1.5">
-                                                                <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
+                                                                <template x-for="slot in song.slots" :key="slot.id">
                                                                     <span
                                                                         class="inline-block rounded-md px-1.5 py-0.5 text-xs"
-                                                                        :class="slot.checked_in ? 'bg-amber-300 text-slate-950' : 'bg-amber-900 text-amber-100'"
+                                                                        :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                                     >
-                                                                        <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                                        <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
                                                                         <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
                                                                     </span>
                                                                 </template>
@@ -157,13 +157,13 @@
                                                         <p class="text-sm font-semibold text-slate-200" x-text="`${song.artist} – ${song.title}`"></p>
                                                         <template x-if="song.slots.filter(sl => sl.filled).length > 0">
                                                             <div class="mt-1.5 flex flex-wrap gap-1">
-                                                                <template x-for="slot in song.slots.filter(sl => sl.filled)" :key="slot.id">
+                                                                <template x-for="slot in song.slots" :key="slot.id">
                                                                     <span
                                                                         class="inline-block rounded-md px-1.5 py-0.5 text-xs"
-                                                                        :class="slot.checked_in ? 'bg-slate-700 text-slate-100' : 'bg-slate-800 text-slate-400'"
+                                                                        :class="slot.filled ? (slot.checked_in ? 'bg-emerald-400 text-slate-950' : 'bg-emerald-900 text-emerald-100') : 'bg-slate-800 text-slate-500'"
                                                                         :title="slot.checked_in ? 'Checked in' : 'Not checked in'"
                                                                     >
-                                                                        <span x-text="`${slot.name}: ${slot.user_name}`"></span>
+                                                                        <span x-text="slot.filled ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
                                                                         <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
                                                                     </span>
                                                                 </template>

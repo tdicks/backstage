@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -21,6 +22,7 @@ class JamSession extends Model
         'allow_checkins',
         'is_live',
         'live_code',
+        'jam_manager_id',
     ];
 
     protected function casts(): array
@@ -32,6 +34,7 @@ class JamSession extends Model
             'is_archived' => 'boolean',
             'allow_checkins' => 'boolean',
             'is_live' => 'boolean',
+            'jam_manager_id' => 'integer',
         ];
     }
 
@@ -106,5 +109,10 @@ class JamSession extends Model
     public function signIns(): HasMany
     {
         return $this->hasMany(JamSessionSignIn::class)->latest('signed_in_at');
+    }
+
+    public function jamManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'jam_manager_id');
     }
 }

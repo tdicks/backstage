@@ -78,6 +78,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
     Route::get('/sessions/{jamSession}/live', [LiveJamController::class, 'manage'])->name('sessions.live.manage');
+    Route::post('/sessions/{jamSession}/live/manager', [LiveJamController::class, 'claimManager'])->name('sessions.live.manager.claim');
+    Route::delete('/sessions/{jamSession}/live/manager', [LiveJamController::class, 'releaseManager'])->name('sessions.live.manager.release');
     Route::post('/sessions/{jamSession}/live/update', [LiveJamController::class, 'update'])->name('sessions.live.update');
     Route::delete('/sessions/{jamSession}/live/clear', [LiveJamController::class, 'clear'])->name('sessions.live.clear');
 
