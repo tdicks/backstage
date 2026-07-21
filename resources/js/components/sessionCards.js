@@ -1010,7 +1010,10 @@ export function sessionSongCard(config) {
                 return;
             }
 
-            if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea, label')) {
+            const isInteractiveControl = typeof event.composedPath === 'function'
+                && event.composedPath().some((element) => element instanceof Element && element.matches('button, a, input, select, textarea, label'));
+
+            if (isInteractiveControl) {
                 event.preventDefault();
                 return;
             }

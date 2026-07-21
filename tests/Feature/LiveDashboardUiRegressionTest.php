@@ -44,13 +44,16 @@ test('slot editing remains clickable while drag reordering ignores interactive c
     expect($slotRowComponent)->toContain(':current-user-id="$currentUserId"');
     expect($slotRowComponent)->toContain('jam_manager_id === $currentUserId');
     expect($slotRowComponent)->toContain(':can-edit-slot="$canEditSlot"');
-    expect($sessionCardsJs)->toContain("closest('button, a, input, select, textarea, label')");
+    expect($slotRowComponent)->toContain('@dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"');
+    expect($sessionCardsJs)->toContain('event.composedPath().some((element) => element instanceof Element && element.matches(\'button, a, input, select, textarea, label\'))');
 });
 
 test('management set cards collapse from the full card surface', function () {
     $view = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+    $manageView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain("@click=\"if (!\$event.target.closest('button, a, input, select, textarea, label')) { setCollapsed = !setCollapsed; }\"");
     expect($view)->toContain('role="button"');
     expect($view)->toContain('x-show="!setCollapsed" x-transition');
+    expect($manageView)->toContain('@dragstart.self="onSetDragStart($event, set)"');
 });

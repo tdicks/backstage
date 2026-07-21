@@ -249,10 +249,10 @@
                     @mouseenter="markSetBrowsed(set)"
                     @focusin="markSetBrowsed(set)"
                     x-bind:draggable="canDragSet(set) ? 'true' : 'false'"
-                    @dragstart="onSetDragStart($event, set)"
+                    @dragstart.self="onSetDragStart($event, set)"
                     @dragover="onSetDragOver($event, set)"
                     @drop="onSetDrop($event)"
-                    @dragend="onSetDragEnd()"
+                    @dragend.self="onSetDragEnd()"
                 >
                     <div class="flex min-h-40">
                         {{-- Main content --}}
@@ -918,6 +918,14 @@
 
             onSetDragStart(event, set) {
                 if (!this.canDragSet(set)) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const isInteractiveControl = typeof event.composedPath === 'function'
+                    && event.composedPath().some((element) => element instanceof Element && element.matches('button, a, input, select, textarea, label'));
+
+                if (isInteractiveControl) {
                     event.preventDefault();
                     return;
                 }
