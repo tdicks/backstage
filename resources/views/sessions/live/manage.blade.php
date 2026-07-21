@@ -577,6 +577,7 @@
                     return;
                 }
 
+                // Keep new-set highlights active until the user browses over the card.
                 set.highlighted = true;
                 this.setHighlights.add(String(set.id));
             },
@@ -627,6 +628,7 @@
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
                     const localIds = new Set(this.sets.map(set => String(set.id)));
 
+                    // Preserve local reordering/editing and only append truly new sets from the poller.
                     if (this.sets.length === 0) {
                         this.sets = serverSets.map(serverSet => {
                             const mergedSet = { ...serverSet };
@@ -639,18 +641,10 @@
                             return mergedSet;
                         });
                     } else {
-                        const nextPendingOrder = this.sets
-                            .filter(set => set.status === 'pending')
-                            .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
-
                         const newSets = serverSets
                             .filter(serverSet => !localIds.has(String(serverSet.id)))
                             .map((serverSet, index) => {
                                 const mergedSet = { ...serverSet };
-
-                                if (mergedSet.status === 'pending') {
-                                    mergedSet.order = nextPendingOrder + index;
-                                }
 
                                 if (this.shouldHighlightSet(serverSet)) {
                                     mergedSet.highlighted = true;
@@ -659,6 +653,18 @@
 
                                 return mergedSet;
                             });
+
+                        if (newSets.length > 0) {
+                            const nextPendingOrder = this.sets
+                                .filter(set => set.status === 'pending')
+                                .reduce((max, set) => Math.max(max, Number(set.order) || 0), -1) + 1;
+
+                            newSets.forEach((set, index) => {
+                                if (set.status === 'pending') {
+                                    set.order = nextPendingOrder + index;
+                                }
+                            });
+                        }
 
                         this.sets = [...this.sets, ...newSets];
                     }

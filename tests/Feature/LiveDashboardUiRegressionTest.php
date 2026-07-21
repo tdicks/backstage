@@ -7,6 +7,7 @@ test('live management dashboard preserves local changes and highlights new sets 
     expect($view)->toContain('this.sets = [...this.sets, ...newSets];');
     expect($view)->toContain('@mouseenter="markSetBrowsed(set)"');
     expect($view)->toContain('x-transition:enter-start="opacity-0 translate-x-4"');
+    expect($view)->toContain('x-text="jamManagerName || \'No jam manager assigned yet\'"');
     expect($view)->toContain('Last saved <span x-text="lastUpdated"></span>');
     expect($view)->toContain('x-show="canManageLiveJam"');
     expect($view)->not->toContain('Run of show');
