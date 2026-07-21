@@ -214,7 +214,7 @@
                     </div>
                     <div>
                         <x-input-label :value="'Notes'" />
-                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $song->notes }}</textarea>
+                        <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $song->notes }}</x-textarea-input>
                     </div>
                 </form>
                 <div class="mt-4 flex items-center justify-between gap-3">

@@ -19,6 +19,8 @@ class JamSession extends Model
         'is_hidden',
         'is_archived',
         'allow_checkins',
+        'is_live',
+        'live_code',
     ];
 
     protected function casts(): array
@@ -29,16 +31,38 @@ class JamSession extends Model
             'is_hidden' => 'boolean',
             'is_archived' => 'boolean',
             'allow_checkins' => 'boolean',
+            'is_live' => 'boolean',
         ];
     }
 
     protected static function booted(): void
     {
+        static::creating(function (JamSession $session): void {
+            $session->live_code ??= self::makeLiveCode();
+        });
+
         static::saving(function (JamSession $session): void {
             if ($session->is_closed) {
                 $session->allow_checkins = false;
+                $session->is_live = false;
             }
+
+            $session->live_code ??= self::makeLiveCode($session->id);
         });
+    }
+
+    public static function makeLiveCode(?int $ignoreId = null): string
+    {
+        do {
+            $code = Str::random(4);
+            $query = self::query()->where('live_code', $code);
+
+            if ($ignoreId !== null) {
+                $query->whereKeyNot($ignoreId);
+            }
+        } while ($query->exists());
+
+        return $code;
     }
 
     public function scopeVisibleTo(Builder $query, ?User $user): Builder

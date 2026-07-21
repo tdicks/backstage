@@ -31,6 +31,7 @@ Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegister
 
 Route::get('/sessions/{jamSession}/live/dashboard', [LiveJamController::class, 'dashboard'])->name('sessions.live.dashboard');
 Route::get('/sessions/{jamSession}/live/data', [LiveJamController::class, 'data'])->name('sessions.live.data');
+Route::get('/live/{liveCode}', [LiveJamController::class, 'shortDashboard'])->whereAlphaNumeric('liveCode')->name('sessions.live.short');
 
 Route::get('/share/session/{jamSession}', [ShareController::class, 'session'])->name('share.session');
 Route::get('/share/set/{set}', [ShareController::class, 'set'])->name('share.set');

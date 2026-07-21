@@ -168,12 +168,12 @@
                                 <div class="space-y-2">
                                     @switch($setting->input_type)
                                         @case('textarea')
-                                            <textarea
+                                            <x-textarea-input
                                                 id="{{ $inputId }}"
                                                 x-model="value"
                                                 rows="4"
                                                 class="block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
-                                            ></textarea>
+                                            />
                                             @break
 
                                         @case('checkbox')

@@ -100,6 +100,59 @@ test('admin can access live jam management dashboard', function () {
         ->assertViewIs('sessions.live.manage');
 });
 
+test('admin can mark a jam session as live', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Live Flag Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'allow_checkins' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('sessions.update', $session), [
+            'name' => $session->name,
+            'date' => $session->date->toDateString(),
+            'description' => $session->description,
+            'allow_checkins' => '1',
+            'is_live' => '1',
+        ])
+        ->assertRedirect();
+
+    expect($session->refresh()->is_live)->toBeTrue();
+});
+
+test('marking a jam session as not live clears live state cache', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Cache Clear Live Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'allow_checkins' => true,
+        'is_live' => true,
+    ]);
+
+    Cache::put('live_jam_session:'.$session->id, [
+        'sets' => [['set_id' => 1, 'status' => 'playing_now', 'order' => 0]],
+        'updated_at' => now()->toIso8601String(),
+    ], 3600);
+
+    $this->actingAs($admin)
+        ->patch(route('sessions.update', $session), [
+            'name' => $session->name,
+            'date' => $session->date->toDateString(),
+            'description' => $session->description,
+            'allow_checkins' => '1',
+            'is_live' => '0',
+        ])
+        ->assertRedirect();
+
+    expect($session->refresh()->is_live)->toBeFalse()
+        ->and(Cache::has('live_jam_session:'.$session->id))->toBeFalse();
+});
+
 test('non-admin cannot access live jam management dashboard', function () {
     $user = User::factory()->create(['is_admin' => false]);
 
@@ -124,6 +177,18 @@ test('public can access live jam participant dashboard', function () {
     $this->get(route('sessions.live.dashboard', $session))
         ->assertOk()
         ->assertViewIs('sessions.live.dashboard');
+});
+
+test('short live code redirects to live dashboard', function () {
+    $session = JamSession::create([
+        'name' => 'Short Code Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'live_code' => 'XgUk',
+    ]);
+
+    $this->get(route('sessions.live.short', $session->live_code))
+        ->assertRedirect(route('sessions.live.dashboard', $session));
 });
 
 test('live data endpoint returns set list with health', function () {

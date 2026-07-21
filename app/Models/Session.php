@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Session extends Model
 {
@@ -17,6 +17,8 @@ class Session extends Model
         'is_hidden',
         'is_archived',
         'allow_checkins',
+        'is_live',
+        'live_code',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class Session extends Model
             'is_hidden' => 'boolean',
             'is_archived' => 'boolean',
             'allow_checkins' => 'boolean',
+            'is_live' => 'boolean',
         ];
     }
 
@@ -35,6 +38,7 @@ class Session extends Model
         static::saving(function (Session $session): void {
             if ($session->is_closed) {
                 $session->allow_checkins = false;
+                $session->is_live = false;
             }
         });
     }

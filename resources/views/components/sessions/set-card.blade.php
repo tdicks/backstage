@@ -452,7 +452,7 @@
                     </div>
                     <div>
                         <x-input-label :value="'Description'" />
-                        <textarea name="description" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $set->description }}</textarea>
+                        <x-textarea-input name="description" rows="4" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $set->description }}</x-textarea-input>
                     </div>
                     <div>
                         <x-input-label :value="'Jam Session'" />
@@ -636,7 +636,7 @@
                     <input type="hidden" name="source" :value="deezerTitleSelected ? 'deezer' : ''">
                     <div>
                         <x-input-label :value="'Notes'" />
-                        <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                        <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                     </div>
                     <div>
                         <x-input-label :value="'Band Template (optional)'" />
@@ -752,7 +752,7 @@
                     </div>
                     <div>
                         <x-input-label for="request_notes_{{ $set->id }}" value="Notes" />
-                        <textarea id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                        <x-textarea-input id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                     </div>
                     <div class="flex justify-end gap-3">
                         <x-modal-secondary-button type="button" @click="openSongRequest = false; resetSongRequestAutocomplete()">Cancel</x-modal-secondary-button>

@@ -138,8 +138,8 @@
                                                 @if ($navSession->is_closed)
                                                     <x-heroicon-m-lock-closed class="h-3.5 w-3.5 text-amber-400" aria-hidden="true" title="Jam session locked" />
                                                 @endif
-                                                @if ($navSession->allow_checkins)
-                                                    <x-heroicon-m-arrow-right-on-rectangle class="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" title="Check-ins enabled" />
+                                                @if ($navSession->is_live)
+                                                    <x-live-status-icon size="h-3.5 w-3.5" title="Jam session is live" />
                                                 @endif
                                             </div>
                                         </div>
@@ -321,8 +321,8 @@
                             @if ($navSession->is_closed)
                                 <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-400" aria-hidden="true" title="Jam session locked" />
                             @endif
-                            @if ($navSession->allow_checkins)
-                                <x-heroicon-m-arrow-right-on-rectangle class="h-4 w-4 text-emerald-400" aria-hidden="true" title="Check-ins enabled" />
+                            @if ($navSession->is_live)
+                                <x-live-status-icon size="h-4 w-4" title="Jam session is live" />
                             @endif
                         </div>
                     </div>

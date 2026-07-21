@@ -58,7 +58,7 @@
                                     <div>
                                         <h3 class="text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl" x-text="playingNow.name"></h3>
                                         <p class="mt-1.5 text-base text-emerald-100" x-show="playingNow.owner" x-text="playingNow.owner"></p>
-                                        <p class="mt-2 rounded-lg border border-emerald-800 bg-slate-950/50 px-3 py-1.5 text-sm text-slate-200" x-show="playingNow.details" x-text="playingNow.details"></p>
+                                        <p class="mt-2 whitespace-pre-line rounded-lg border border-emerald-800 bg-slate-950/50 px-3 py-1.5 text-sm text-slate-200" x-show="playingNow.details" x-text="playingNow.details"></p>
                                         <p class="mt-1.5 text-xs text-emerald-100" x-show="playingNow.participants" x-text="playingNow.participants"></p>
                                     </div>
                                     <div class="grid content-start gap-2">
@@ -91,7 +91,7 @@
                                     <div class="rounded-xl border border-amber-700 bg-amber-950 p-3">
                                         <h3 class="text-xl font-semibold text-slate-50" x-text="set.name"></h3>
                                         <p class="mt-1 text-sm text-amber-100" x-show="set.owner" x-text="set.owner"></p>
-                                        <p class="mt-1.5 rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-1.5 text-xs text-slate-200" x-show="set.details" x-text="set.details"></p>
+                                        <p class="mt-1.5 whitespace-pre-line rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-1.5 text-xs text-slate-200" x-show="set.details" x-text="set.details"></p>
                                         <p class="mt-1.5 text-xs text-amber-100" x-show="set.participants" x-text="set.participants"></p>
                                         <template x-if="set.songs.length > 0">
                                             <div class="mt-2 divide-y divide-amber-900 overflow-hidden rounded-lg border border-amber-800 bg-slate-950/50">
@@ -129,7 +129,7 @@
                                         <p class="text-base font-semibold text-slate-100" x-text="set.name"></p>
                                         <p class="mt-1 text-sm text-slate-400" x-show="set.owner" x-text="set.owner"></p>
                                         <template x-if="set.details">
-                                            <p class="mt-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300" x-text="set.details"></p>
+                                            <p class="mt-1.5 whitespace-pre-line rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300" x-text="set.details"></p>
                                         </template>
                                         <template x-if="set.songs.length > 0">
                                             <div class="mt-1.5 divide-y divide-slate-800 overflow-hidden rounded-lg border border-slate-800 bg-slate-950">

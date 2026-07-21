@@ -211,7 +211,7 @@
 
                                                                     <div>
                                                                         <x-input-label for="edit_user_bio_{{ $user->id }}" :value="'Bio'" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
-                                                                        <textarea id="edit_user_bio_{{ $user->id }}" name="bio" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $user->bio }}</textarea>
+                                                                        <x-textarea-input id="edit_user_bio_{{ $user->id }}" name="bio" rows="4" class="mt-2 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $user->bio }}</x-textarea-input>
                                                                     </div>
 
                                                                     <input type="hidden" name="hide_from_directory" value="0">

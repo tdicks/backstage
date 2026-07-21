@@ -53,6 +53,18 @@ class LiveJamController extends Controller
     }
 
     /**
+     * Redirect a short live code URL to the full live dashboard.
+     */
+    public function shortDashboard(string $liveCode)
+    {
+        $jamSession = JamSession::query()
+            ->where('live_code', $liveCode)
+            ->firstOrFail();
+
+        return redirect()->route('sessions.live.dashboard', $jamSession);
+    }
+
+    /**
      * Return the current live state as JSON (used for polling from both dashboards).
      */
     public function data(Request $request, JamSession $jamSession): JsonResponse

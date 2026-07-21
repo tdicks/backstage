@@ -25,7 +25,7 @@
                                     </div>
                                     <div>
                                         <x-input-label for="description" value="Description (Markdown)" />
-                                        <textarea id="description" name="description" rows="5" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                                        <x-textarea-input id="description" name="description" rows="5" class="mt-1 w-full" />
                                     </div>
                                     <div>
                                         <input type="hidden" name="is_hidden" value="0">
@@ -63,8 +63,8 @@
                             <div>
                                 <h3 class="flex items-center gap-2 text-lg font-semibold text-slate-900">
                                     <span>{{ $session->name }}</span>
-                                    @if (auth()->user()?->is_admin && $session->allow_checkins)
-                                        <x-heroicon-m-arrow-right-on-rectangle class="h-5 w-5 text-emerald-600" aria-hidden="true" title="Check-ins are open for this jam" />
+                                    @if ($session->is_live)
+                                        <x-live-status-icon size="h-5 w-5" title="Jam session is live" />
                                     @endif
                                     @if ($session->is_closed)
                                         <x-heroicon-m-lock-closed class="h-5 w-5 text-amber-400" aria-hidden="true" title="This jam is closed to new sets" />

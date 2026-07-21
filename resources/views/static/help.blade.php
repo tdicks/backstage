@@ -33,8 +33,8 @@
                             <p><span class="font-semibold text-slate-900">Feature set.</span> A larger set, usually with a theme, run by the house band.</p>
                         </div>
                         <div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <x-heroicon-m-arrow-right-on-rectangle class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-                            <p><span class="font-semibold text-slate-900">Check-ins are open.</span> An organiser is tracking who has arrived for the session.</p>
+                            <x-live-status-icon size="h-5 w-5" class="mt-0.5 shrink-0" title="Jam session is live" />
+                            <p><span class="font-semibold text-slate-900">Live session.</span> The jam is in motion and organisers are using the live dashboard.</p>
                         </div>
                         <div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <x-heroicon-m-lock-closed class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />
@@ -121,12 +121,12 @@
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
-                    <h3 class="text-lg font-semibold text-slate-950">Sharing and Check-Ins</h3>
+                    <h3 class="text-lg font-semibold text-slate-950">Sharing and Live Sessions</h3>
                     <p>
                         Use the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-share class="h-3.5 w-3.5" aria-hidden="true" /> Copy share link</span> control for sessions and sets when you want someone to see the plan without signing in. Shared pages are read-only, so they are handy for previews, reminders, and posting the running order elsewhere.
                     </p>
                     <p>
-                        If organisers are using check-ins, admins can open <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Who's Here</span> to mark people in and out on the night. As a player, the main thing to know is that the session page will show the <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-heroicon-m-arrow-right-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" /> Check-ins are open</span> icon when check-ins are open.
+                        If organisers are running the live dashboard, admins can open <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Who's Here</span> from the management dashboard to mark people in and out on the night. As a player, the main thing to know is that the session page will show the <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-live-status-icon size="h-3.5 w-3.5" title="Jam session is live" /> Live session</span> icon when the jam is live.
                     </p>
                 </div>
             </div>

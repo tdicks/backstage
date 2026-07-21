@@ -1,19 +1,11 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ liveDisplayModalOpen: false }" @keydown.escape.window="liveDisplayModalOpen = false">
             <div>
                 <h2 class="text-xl font-semibold text-slate-100">Live Control</h2>
                 <p class="text-sm text-slate-400">{{ $session->name }} &middot; {{ $session->date->format('l, F j, Y') }}</p>
             </div>
             <div class="flex items-center gap-2">
-                <a
-                    href="{{ route('sessions.live.dashboard', $session) }}"
-                    target="_blank"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300"
-                >
-                    <x-heroicon-m-tv class="h-4 w-4" aria-hidden="true" />
-                    Live Display
-                </a>
                 <a
                     href="{{ route('sessions.show', $session) }}"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300"
@@ -21,7 +13,47 @@
                     <x-heroicon-m-arrow-left class="h-4 w-4" aria-hidden="true" />
                     Back to Session
                 </a>
+                <button
+                    type="button"
+                    @click="$dispatch('open-who-is-here')"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300"
+                >
+                    <x-heroicon-m-user-group class="h-4 w-4" aria-hidden="true" />
+                    Who's Here
+                </button>
+                <button
+                    type="button"
+                    @click="liveDisplayModalOpen = true"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300"
+                >
+                    <x-heroicon-m-tv class="h-4 w-4" aria-hidden="true" />
+                    Live Display
+                </button>
             </div>
+            <template x-teleport="body">
+                <div x-show="liveDisplayModalOpen" x-cloak @keydown.escape.window="liveDisplayModalOpen = false">
+                    <div class="fixed inset-0 z-40 bg-black/50" @click="liveDisplayModalOpen = false"></div>
+                    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div @click.stop class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-900 shadow-2xl">
+                            <h3 class="text-lg font-semibold">Live Display</h3>
+                            <p class="mt-1 text-sm text-slate-600">Scan to open the live dashboard.</p>
+                            <div class="mt-5 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                                <img
+                                    src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=12&data={{ urlencode(route('sessions.live.short', $session->live_code)) }}"
+                                    alt="QR code for {{ route('sessions.live.short', $session->live_code) }}"
+                                    class="mx-auto h-64 w-64"
+                                >
+                            </div>
+                            <a href="{{ route('sessions.live.short', $session->live_code) }}" target="_blank" class="mt-4 block break-all text-sm font-medium text-emerald-700 underline decoration-emerald-300 underline-offset-4">
+                                {{ route('sessions.live.short', $session->live_code) }}
+                            </a>
+                            <div class="mt-5 flex justify-end">
+                                <x-modal-secondary-button type="button" @click="liveDisplayModalOpen = false">Close</x-modal-secondary-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
     </x-slot>
 
@@ -86,22 +118,23 @@
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                         <h3 class="text-lg font-semibold">Add Live Set</h3>
+                        <p class="mt-1 text-sm text-slate-600">Add a one-off set for tonight; it will disappear after the jam.</p>
                         <div class="mt-4 space-y-4">
-                            <div>
-                                <x-input-label value="Organiser" />
-                                <x-text-input type="text" x-model="addSetForm.organiser" class="mt-1 block w-full" />
-                            </div>
                             <div>
                                 <x-input-label value="Set Name" />
                                 <x-text-input type="text" x-model="addSetForm.name" class="mt-1 block w-full" />
                             </div>
                             <div>
-                                <x-input-label value="Participants" />
+                                <x-input-label value="Organiser (optional)" />
+                                <x-text-input type="text" x-model="addSetForm.organiser" class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label value="Participants (optional)" />
                                 <x-text-input type="text" x-model="addSetForm.participants" class="mt-1 block w-full" />
                             </div>
                             <div>
-                                <x-input-label value="Details" />
-                                <textarea x-model="addSetForm.details" rows="5" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                                <x-input-label value="Details (optional)" />
+                                <x-textarea-input x-model="addSetForm.details" rows="5" class="mt-1 w-full" />
                             </div>
                             <div class="flex justify-end gap-3">
                                 <x-modal-secondary-button type="button" @click="closeAddSetModal()">Cancel</x-modal-secondary-button>
@@ -120,22 +153,23 @@
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                         <h3 class="text-lg font-semibold">Edit Live Set</h3>
+                        <p class="mt-1 text-sm text-slate-600">This one-off set is only for tonight and will not persist after the jam.</p>
                         <div class="mt-4 space-y-4">
-                            <div>
-                                <x-input-label value="Organiser" />
-                                <x-text-input type="text" x-model="editSetForm.organiser" class="mt-1 block w-full" />
-                            </div>
                             <div>
                                 <x-input-label value="Set Name" />
                                 <x-text-input type="text" x-model="editSetForm.name" class="mt-1 block w-full" />
                             </div>
                             <div>
-                                <x-input-label value="Participants" />
+                                <x-input-label value="Organiser (optional)" />
+                                <x-text-input type="text" x-model="editSetForm.organiser" class="mt-1 block w-full" />
+                            </div>
+                            <div>
+                                <x-input-label value="Participants (optional)" />
                                 <x-text-input type="text" x-model="editSetForm.participants" class="mt-1 block w-full" />
                             </div>
                             <div>
-                                <x-input-label value="Details" />
-                                <textarea x-model="editSetForm.details" rows="5" class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                                <x-input-label value="Details (optional)" />
+                                <x-textarea-input x-model="editSetForm.details" rows="5" class="mt-1 w-full" />
                             </div>
                             <div class="flex justify-end gap-3">
                                 <x-modal-secondary-button type="button" @click="closeEditSetModal()">Cancel</x-modal-secondary-button>
@@ -190,7 +224,7 @@
                                 </div>
                                 <div x-show="set.details" class="mt-1 flex gap-2">
                                     <span class="shrink-0 font-semibold text-slate-400">Details</span>
-                                    <span x-text="set.details"></span>
+                                    <span class="whitespace-pre-line" x-text="set.details"></span>
                                 </div>
                             </div>
 
@@ -267,6 +301,8 @@
                                 <x-heroicon-m-play class="h-4 w-4" aria-hidden="true" />
                             </button>
 
+                            <div class="my-1 h-px w-8 bg-slate-700/80"></div>
+
                             {{-- Push Down --}}
                             <button
                                 type="button"
@@ -276,28 +312,6 @@
                                 title="Push Down"
                             >
                                 <x-heroicon-m-arrow-down class="h-4 w-4" aria-hidden="true" />
-                            </button>
-
-                            {{-- Edit (Live Sets Only) --}}
-                            <button
-                                type="button"
-                                x-show="set.isLiveSet"
-                                @click="openEditSetModal(set)"
-                                class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-sky-600 hover:bg-sky-950/60 hover:text-sky-300 active:scale-95"
-                                title="Edit"
-                            >
-                                <x-heroicon-m-pencil class="h-4 w-4" aria-hidden="true" />
-                            </button>
-
-                            {{-- Delete (Live Sets Only) --}}
-                            <button
-                                type="button"
-                                x-show="set.isLiveSet"
-                                @click="deleteSet(set)"
-                                class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-rose-600 hover:bg-rose-950/60 hover:text-rose-300 active:scale-95"
-                                title="Delete"
-                            >
-                                <x-heroicon-m-trash class="h-4 w-4" aria-hidden="true" />
                             </button>
 
                             {{-- Coming Up --}}
@@ -323,6 +337,28 @@
                                 <x-heroicon-m-no-symbol class="h-4 w-4" aria-hidden="true" />
                             </button>
 
+                            {{-- Edit (Live Sets Only) --}}
+                            <button
+                                type="button"
+                                x-show="set.isLiveSet"
+                                @click="openEditSetModal(set)"
+                                class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-sky-600 hover:bg-sky-950/60 hover:text-sky-300 active:scale-95"
+                                title="Edit"
+                            >
+                                <x-heroicon-m-pencil class="h-4 w-4" aria-hidden="true" />
+                            </button>
+
+                            {{-- Delete (Live Sets Only) --}}
+                            <button
+                                type="button"
+                                x-show="set.isLiveSet"
+                                @click="deleteSet(set)"
+                                class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-rose-600 hover:bg-rose-950/60 hover:text-rose-300 active:scale-95"
+                                title="Delete"
+                            >
+                                <x-heroicon-m-trash class="h-4 w-4" aria-hidden="true" />
+                            </button>
+
                             {{-- Restore --}}
                             <button
                                 type="button"
@@ -333,6 +369,8 @@
                             >
                                 <x-heroicon-m-arrow-uturn-left class="h-4 w-4" aria-hidden="true" />
                             </button>
+
+                            <div x-show="canMoveUp(set) || canMoveDown(set)" class="my-1 h-px w-8 bg-slate-700/80"></div>
 
                             {{-- Up --}}
                             <button
@@ -365,6 +403,10 @@
             </div>
         </div>
     </div>
+
+    @can('update', $session)
+        <x-sessions.who-is-here-modal :session="$session" />
+    @endcan
 
     @push('scripts')
     <script>
@@ -675,6 +717,22 @@
                 this.animateSetMovement(previousRects);
             },
 
+            nextOrderForStatus(status, excludeId = null) {
+                const orders = this.sets
+                    .filter(s => s.status === status && String(s.id) !== String(excludeId))
+                    .map(s => s.order);
+
+                return orders.length > 0 ? Math.max(...orders) + 1 : 0;
+            },
+
+            replaceSetWithAnimation(setId, changes) {
+                const previousRects = this.captureSetPositions();
+                this.sets = this.sets.map(set => String(set.id) === String(setId)
+                    ? { ...set, ...changes }
+                    : set);
+                this.animateSetMovement(previousRects);
+            },
+
             canDragSet(set) {
                 return this.movableSetsForStatus(set.status).some(s => s.id === set.id);
             },
@@ -852,39 +910,40 @@
             },
 
             startSet(set) {
-                // Clear any existing playing_now
-                this.sets.forEach(s => {
-                    if (s.status === 'playing_now') { s.status = 'pending'; }
+                const previousRects = this.captureSetPositions();
+                this.sets = this.sets.map(currentSet => {
+                    if (String(currentSet.id) === String(set.id)) {
+                        return { ...currentSet, status: 'playing_now', order: 0 };
+                    }
+
+                    if (currentSet.status === 'playing_now') {
+                        return { ...currentSet, status: 'pending' };
+                    }
+
+                    return currentSet;
                 });
-                set.status = 'playing_now';
-                set.order = 0;
+                this.animateSetMovement(previousRects);
             },
 
             finishSet(set) {
-                set.status = 'finished';
-                // Get max order of finished sets and add 1
-                const finishedOrders = this.sets
-                    .filter(s => s.status === 'finished')
-                    .map(s => s.order);
-                set.order = finishedOrders.length > 0 ? Math.max(...finishedOrders) + 1 : 0;
+                this.replaceSetWithAnimation(set.id, {
+                    status: 'finished',
+                    order: this.nextOrderForStatus('finished', set.id),
+                });
             },
 
             postponeSet(set) {
-                set.status = 'postponed';
-                // Get max order of postponed sets and add 1
-                const postponedOrders = this.sets
-                    .filter(s => s.status === 'postponed')
-                    .map(s => s.order);
-                set.order = postponedOrders.length > 0 ? Math.max(...postponedOrders) + 1 : 0;
+                this.replaceSetWithAnimation(set.id, {
+                    status: 'postponed',
+                    order: this.nextOrderForStatus('postponed', set.id),
+                });
             },
 
             restoreSet(set) {
-                set.status = 'pending';
-                // Get max order of pending sets and add 1
-                const pendingOrders = this.sets
-                    .filter(s => s.status === 'pending')
-                    .map(s => s.order);
-                set.order = pendingOrders.length > 0 ? Math.max(...pendingOrders) + 1 : 0;
+                this.replaceSetWithAnimation(set.id, {
+                    status: 'pending',
+                    order: this.nextOrderForStatus('pending', set.id),
+                });
             },
 
             deleteSet(set) {
@@ -898,19 +957,17 @@
             markComingUp(set) {
                 if (this.comingUpSets.length >= 2) { return; }
 
-                set.status = 'coming_up';
-                const comingUpOrders = this.comingUpSets
-                    .filter(s => s.id !== set.id)
-                    .map(s => s.order);
-                set.order = comingUpOrders.length > 0 ? Math.max(...comingUpOrders) + 1 : 0;
+                this.replaceSetWithAnimation(set.id, {
+                    status: 'coming_up',
+                    order: this.nextOrderForStatus('coming_up', set.id),
+                });
             },
 
             pushDown(set) {
-                set.status = 'pending';
-                const pendingOrders = this.sets
-                    .filter(s => s.status === 'pending' && s.id !== set.id)
-                    .map(s => s.order);
-                set.order = pendingOrders.length > 0 ? Math.max(...pendingOrders) + 1 : 0;
+                this.replaceSetWithAnimation(set.id, {
+                    status: 'pending',
+                    order: this.nextOrderForStatus('pending', set.id),
+                });
             },
 
             async saveState() {

@@ -54,7 +54,7 @@
             @endif
             <div>
                 <x-input-label :value="'Message (optional)'" />
-                <textarea x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                <x-textarea-input x-model="proposeMessage" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                 <p class="mt-2 text-xs leading-5 text-slate-500">
                     @if ($isSetOwner)
                         They will get a chance to say yes before the slot changes.

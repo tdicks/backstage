@@ -1,11 +1,11 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, free_for_all_create: false, shareCopied: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.openEditSession = true; }, async copySessionShareLink() { await window.copyShareLink(@js(route('share.session', $session))); this.shareCopied = true; setTimeout(() => this.shareCopied = false, 1800); } }" @keydown.escape.window="openEditSession = false; openSet = false">
+        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ openEditSession: false, openSet: false, free_for_all_create: false, shareCopied: false, initialEditSessionClosed: @js((bool) $session->is_closed), initialEditSessionAllowCheckins: @js((bool) $session->allow_checkins), initialEditSessionLive: @js((bool) $session->is_live), editSessionClosed: @js((bool) $session->is_closed), editSessionAllowCheckins: @js((bool) $session->allow_checkins), editSessionLive: @js((bool) $session->is_live), openEditSessionModal() { this.editSessionClosed = this.initialEditSessionClosed; this.editSessionAllowCheckins = this.initialEditSessionAllowCheckins; this.editSessionLive = this.initialEditSessionLive; this.openEditSession = true; }, async copySessionShareLink() { await window.copyShareLink(@js(route('share.session', $session))); this.shareCopied = true; setTimeout(() => this.shareCopied = false, 1800); } }" @keydown.escape.window="openEditSession = false; openSet = false">
             <div>
                 <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
                     <span>{{ $session->name }}</span>
-                    @if (auth()->user()?->is_admin && $session->allow_checkins)
-                        <x-heroicon-m-arrow-right-on-rectangle class="h-6 w-6 text-emerald-400" aria-hidden="true" title="Check-ins are open for this jam" />
+                    @if ($session->is_live)
+                        <x-live-status-icon size="h-6 w-6" title="This jam session is live" />
                     @endif
                     @if ($session->is_closed)
                         <x-heroicon-m-lock-closed class="h-6 w-6 text-amber-400" aria-hidden="true" title="This jam is closed to new sets" />
@@ -45,13 +45,12 @@
                 </span>
                 @can('update', $session)
                     <x-secondary-button @click="openEditSessionModal()">Edit Session</x-secondary-button>
-                    @if ($session->allow_checkins)
-                        <x-secondary-button @click="$dispatch('open-who-is-here')">Who's Here</x-secondary-button>
+                    @if ($session->is_live)
+                        <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm transition ease-in-out duration-150 hover:border-emerald-500 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+                            <x-live-status-icon size="h-4 w-4" title="Open live dashboard" />
+                            Live Dashboard
+                        </a>
                     @endif
-                    <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-3 py-2 text-sm font-medium text-emerald-300 transition hover:border-emerald-500 hover:text-emerald-200">
-                        <x-heroicon-m-signal class="h-4 w-4" aria-hidden="true" />
-                        Live Jam
-                    </a>
                 @endcan
                 @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
                     <x-primary-button @click="openSet = true">Create Set</x-primary-button>
@@ -81,7 +80,7 @@
                                     </div>
                                     <div>
                                         <x-input-label for="session_description" value="Description (Markdown)" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
-                                        <textarea id="session_description" name="description" rows="6" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $session->description }}</textarea>
+                                        <x-textarea-input id="session_description" name="description" rows="6" class="mt-2 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $session->description }}</x-textarea-input>
                                     </div>
                                     <div>
                                         <input type="hidden" name="is_closed" value="0">
@@ -117,6 +116,22 @@
                                         <p x-show="initialEditSessionAllowCheckins && !editSessionAllowCheckins" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                                             This action will check out all attendees from this session.
                                         </p>
+                                    </div>
+                                    <div>
+                                        <input type="hidden" name="is_live" value="0">
+                                        <label for="session_is_live" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                            <input
+                                                id="session_is_live"
+                                                type="checkbox"
+                                                name="is_live"
+                                                value="1"
+                                                x-model="editSessionLive"
+                                                x-bind:disabled="editSessionClosed"
+                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
+                                                @checked($session->is_live)
+                                            >
+                                            <span>Mark this jam session as live</span>
+                                        </label>
                                     </div>
                                     <div>
                                         <input type="hidden" name="is_hidden" value="0">
@@ -180,7 +195,7 @@
                                     </div>
                                     <div>
                                         <x-input-label for="set_description" value="Description" />
-                                        <textarea id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200"></textarea>
+                                        <x-textarea-input id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                                     </div>
                                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                         <input type="hidden" name="is_hidden" value="0">
@@ -260,7 +275,4 @@
         </div>
     </div>
 
-    @can('update', $session)
-        <x-sessions.who-is-here-modal :session="$session" />
-    @endcan
 </x-app-layout>

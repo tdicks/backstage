@@ -12,6 +12,7 @@ use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class JamSessionController extends Controller
@@ -86,6 +87,7 @@ class JamSessionController extends Controller
             'is_hidden' => ['nullable', 'boolean'],
             'is_archived' => ['nullable', 'boolean'],
             'allow_checkins' => ['nullable', 'boolean'],
+            'is_live' => ['nullable', 'boolean'],
         ]);
 
         $isClosed = (bool) ($validated['is_closed'] ?? false);
@@ -99,6 +101,7 @@ class JamSessionController extends Controller
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'is_archived' => (bool) ($validated['is_archived'] ?? false),
             'allow_checkins' => $allowCheckins,
+            'is_live' => $isClosed ? false : (bool) ($validated['is_live'] ?? false),
         ]);
 
         if (! $jamSession->is_hidden && ! $jamSession->is_archived) {
@@ -243,6 +246,7 @@ class JamSessionController extends Controller
             'is_hidden' => ['nullable', 'boolean'],
             'is_archived' => ['nullable', 'boolean'],
             'allow_checkins' => ['nullable', 'boolean'],
+            'is_live' => ['nullable', 'boolean'],
         ]);
 
         $isClosed = (bool) ($validated['is_closed'] ?? $jamSession->is_closed);
@@ -252,6 +256,7 @@ class JamSessionController extends Controller
 
         $wasAllowingCheckins = $jamSession->allow_checkins;
         $wasClosed = $jamSession->is_closed;
+        $wasLive = $jamSession->is_live;
         $previousDate = $jamSession->date?->toDateString();
 
         $jamSession->update([
@@ -260,10 +265,15 @@ class JamSessionController extends Controller
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'is_archived' => (bool) ($validated['is_archived'] ?? $jamSession->is_archived),
             'allow_checkins' => $allowCheckins,
+            'is_live' => $isClosed ? false : (bool) ($validated['is_live'] ?? false),
         ]);
 
         if ($wasAllowingCheckins && ! $jamSession->allow_checkins) {
             $jamSession->signIns()->delete();
+        }
+
+        if ($wasLive && ! $jamSession->is_live) {
+            Cache::forget('live_jam_session:'.$jamSession->id);
         }
 
         $notificationService = app(NotificationService::class);
