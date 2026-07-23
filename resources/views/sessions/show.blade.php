@@ -34,11 +34,11 @@
                     <button
                         type="button"
                         @click="copySessionShareLink()"
-                        class="inline-flex w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-900 px-2 py-2 text-slate-100 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-100 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
                         x-bind:title="shareCopied ? 'Share link copied' : 'Copy share link'"
                         aria-label="Copy share link"
                     >
-                        <x-heroicon-m-share class="h-5 w-5" aria-hidden="true" />
+                        <x-heroicon-m-share class="h-4 w-4" aria-hidden="true" />
                         <span class="sr-only" x-text="shareCopied ? 'Share link copied' : 'Copy share link'">Copy share link</span>
                     </button>
                     <div
@@ -53,16 +53,22 @@
                     </div>
                 </span>
                 @can('update', $session)
-                    <x-secondary-button @click="openEditSessionModal()">Edit Session</x-secondary-button>
+                    <x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session">
+                        <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
+                        <span class="hidden sm:inline">Edit Session</span>
+                    </x-secondary-button>
                     @if ($session->is_live)
-                        <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm transition ease-in-out duration-150 hover:border-emerald-500 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+                        <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm transition ease-in-out duration-150 hover:border-emerald-500 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 sm:px-4" title="Open Live Dashboard" aria-label="Open Live Dashboard">
                             <x-live-status-icon size="h-4 w-4" title="Open live dashboard" />
-                            Live Dashboard
+                            <span class="hidden sm:inline">Live Dashboard</span>
                         </a>
                     @endif
                 @endcan
                 @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
-                    <x-primary-button @click="openSet = true">Create Set</x-primary-button>
+                    <x-primary-button @click="openSet = true" title="Create Set" aria-label="Create Set">
+                        <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
+                        <span class="hidden sm:inline">Create Set</span>
+                    </x-primary-button>
                 @endif
             </div>
 

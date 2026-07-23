@@ -417,3 +417,25 @@ test('hidden sets are not counted for other users on the session list', function
         ->assertOk()
         ->assertSee('0 sets');
 });
+
+test('navigation shows the hidden session indicator to admins', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $member = User::factory()->create();
+    $session = JamSession::query()->create([
+        'name' => 'Hidden Navigation Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_hidden' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertSee($session->name)
+        ->assertSee('Jam session is hidden from non-admin users');
+
+    $this->actingAs($member)
+        ->get(route('sessions.index'))
+        ->assertOk()
+        ->assertDontSee($session->name);
+});

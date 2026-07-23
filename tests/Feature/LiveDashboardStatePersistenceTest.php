@@ -174,6 +174,68 @@ test('saving live state normalizes each status stack to contiguous unique orders
     expect($cachedPendingOrders)->toBe([0, 1, 2, 3, 4]);
 });
 
+test('completed songs are persisted in live state and returned to dashboards', function () {
+    $set = Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Completed Song Set',
+        'owner_id' => $this->user->id,
+        'position' => 0,
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'The Artists',
+        'title' => 'The Completed Song',
+        'position' => 0,
+    ]);
+    $this->jamSession->update(['jam_manager_id' => $this->user->id]);
+
+    $this->actingAs($this->user)
+        ->postJson(route('sessions.live.update', $this->jamSession), [
+            'sets' => [[
+                'set_id' => $set->id,
+                'status' => 'playing_now',
+                'order' => 0,
+                'completed_song_ids' => [$song->id],
+            ]],
+        ])
+        ->assertOk();
+
+    expect(Cache::get("live_jam_session:{$this->jamSession->id}")['sets'][0]['completed_song_ids'])
+        ->toBe([$song->id]);
+
+    $this->getJson(route('sessions.live.data', $this->jamSession))
+        ->assertOk()
+        ->assertJsonPath('sets.0.songs.0.completed', true);
+});
+
+test('public song list collapse is persisted in live state and returned to dashboards', function () {
+    $set = Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Long Set',
+        'owner_id' => $this->user->id,
+        'position' => 0,
+    ]);
+    $this->jamSession->update(['jam_manager_id' => $this->user->id]);
+
+    $this->actingAs($this->user)
+        ->postJson(route('sessions.live.update', $this->jamSession), [
+            'sets' => [[
+                'set_id' => $set->id,
+                'status' => 'coming_up',
+                'order' => 0,
+                'songs_collapsed' => true,
+            ]],
+        ])
+        ->assertOk();
+
+    expect(Cache::get("live_jam_session:{$this->jamSession->id}")['sets'][0]['songs_collapsed'])
+        ->toBeTrue();
+
+    $this->getJson(route('sessions.live.data', $this->jamSession))
+        ->assertOk()
+        ->assertJsonPath('sets.0.songs_collapsed', true);
+});
+
 test('jam manager can update a live slot assignment and receives assignment edit data', function () {
     $setOwner = User::factory()->create();
     $jamManager = User::factory()->create();

@@ -141,6 +141,9 @@
                                                 @if ($navSession->is_live)
                                                     <x-live-status-icon size="h-3.5 w-3.5" title="Jam session is live" />
                                                 @endif
+                                                @if ($navSession->is_hidden)
+                                                    <x-heroicon-m-eye-slash class="h-3.5 w-3.5 text-sky-400" aria-hidden="true" title="Jam session is hidden from non-admin users" />
+                                                @endif
                                             </div>
                                         </div>
                                     </x-dropdown-link>
@@ -323,6 +326,9 @@
                             @endif
                             @if ($navSession->is_live)
                                 <x-live-status-icon size="h-4 w-4" title="Jam session is live" />
+                            @endif
+                            @if ($navSession->is_hidden)
+                                <x-heroicon-m-eye-slash class="h-3.5 w-3.5 text-sky-400" aria-hidden="true" title="Jam session is hidden from non-admin users" />
                             @endif
                         </div>
                     </div>

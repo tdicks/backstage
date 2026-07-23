@@ -86,6 +86,7 @@ class LiveJamController extends Controller
         $sets = $jamSession->sets()
             ->visibleTo($request->user())
             ->where('performed', false)
+            ->where('is_hidden', false)
             ->with(['owner', 'songs' => fn ($q) => $q->with(['slots.user'])])
             ->get();
 
@@ -102,6 +103,10 @@ class LiveJamController extends Controller
             $stateEntry = collect($liveState['sets'] ?? [])->firstWhere('set_id', $set->id);
             $status = $stateEntry['status'] ?? 'pending';
             $order = $stateEntry['order'] ?? $set->position;
+            $songsCollapsed = (bool) ($stateEntry['songs_collapsed'] ?? false);
+            $completedSongIds = collect($stateEntry['completed_song_ids'] ?? [])
+                ->map(fn ($songId) => (int) $songId)
+                ->all();
 
             $totalSlots = 0;
             $filledSlots = 0;
@@ -143,6 +148,7 @@ class LiveJamController extends Controller
                 'created_at' => $set->created_at?->toIso8601String(),
                 'status' => $status,
                 'order' => $order,
+                'songs_collapsed' => $songsCollapsed,
                 'health' => $health,
                 'total_slots' => $totalSlots,
                 'filled_slots' => $filledSlots,
@@ -153,6 +159,7 @@ class LiveJamController extends Controller
                     'title' => $song->title,
                     'duration' => $song->duration,
                     'source' => $song->source,
+                    'completed' => in_array($song->id, $completedSongIds, true),
                     'slots' => $song->slots->map(fn ($slot) => [
                         'id' => $slot->id,
                         'name' => $slotOptions[$slot->name] ?? $slot->name,
@@ -181,6 +188,7 @@ class LiveJamController extends Controller
                     'created_at' => $liveData['created_at'] ?? null,
                     'status' => $s['status'] ?? 'pending',
                     'order' => $s['order'] ?? 0,
+                    'songs_collapsed' => (bool) ($s['songs_collapsed'] ?? false),
                     'health' => 0,
                     'total_slots' => 0,
                     'filled_slots' => 0,
@@ -260,8 +268,11 @@ class LiveJamController extends Controller
             'sets.*.set_id' => ['required'],  // Can be int (database) or string (live set)
             'sets.*.status' => ['required', 'string', 'in:'.implode(',', self::STATES)],
             'sets.*.order' => ['required', 'integer', 'min:-1'],
+            'sets.*.songs_collapsed' => ['nullable', 'boolean'],
             'sets.*.isLiveSet' => ['nullable', 'boolean'],
             'sets.*.liveSetData' => ['nullable', 'array'],
+            'sets.*.completed_song_ids' => ['nullable', 'array'],
+            'sets.*.completed_song_ids.*' => ['integer'],
             'sets.*.liveSetData.name' => ['nullable', 'string'],
             'sets.*.liveSetData.owner' => ['nullable', 'string'],
             'sets.*.liveSetData.participants' => ['nullable', 'string'],

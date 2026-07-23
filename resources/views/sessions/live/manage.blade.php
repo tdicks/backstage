@@ -82,17 +82,6 @@
                             x-bind:class="jamManagerId ? (canManageLiveJam ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-500'"
                         />
                         <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
-                        <button
-                            type="button"
-                            x-show="canManageLiveJam"
-                            x-cloak
-                            @click="releaseManager()"
-                            :disabled="managerBusy"
-                            class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-800 bg-rose-950/60 text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
-                        >
-                            <x-heroicon-m-arrow-left-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" />
-                            <span class="sr-only">Exit jam manager mode</span>
-                        </button>
                     </div>
                 </div>
                 <div class="flex flex-col items-center gap-2 lg:items-end">
@@ -117,31 +106,43 @@
                     >
                         <button
                             type="button"
+                            @click="releaseManager()"
+                            :disabled="managerBusy"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-amber-800 bg-amber-950/60 px-2 py-2 text-sm font-medium text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50 sm:px-3"
+                            title="Release Manager"
+                            aria-label="Release Manager"
+                        >
+                            <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
+                            <span class="hidden sm:inline">Release</span>
+                        </button>
+                        <button
+                            type="button"
                             @click="clearState()"
                             :disabled="clearBusy"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-3 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/60 px-2 py-2 text-sm font-medium text-rose-300 transition hover:border-rose-600 hover:bg-rose-900/70 disabled:opacity-50 sm:px-3"
+                            title="Reset"
+                            aria-label="Reset"
                         >
                             <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
-                            Reset
+                            <span class="hidden sm:inline">Reset</span>
                         </button>
                         <button
                             type="button"
                             @click="openAddSetModal()"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-800 px-2 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700 sm:px-3"
+                            title="Add Set"
+                            aria-label="Add Set"
                         >
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
-                            Add Set
+                            <span class="hidden sm:inline">Add Set</span>
                         </button>
-                        <button
-                            type="button"
-                            @click="saveState()"
-                            :disabled="saveBusy || !hasChanges"
-                            class="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
-                        >
-                            <x-heroicon-m-arrow-up-tray class="h-4 w-4" aria-hidden="true" />
-                            <span x-show="!saveBusy">Update</span>
-                            <span x-show="saveBusy" x-cloak>Saving…</span>
-                        </button>
+                        <span
+                            class="text-xs font-medium text-slate-400"
+                            x-show="saveBusy || saveError"
+                            x-cloak
+                            :class="saveError ? 'text-rose-400' : 'text-slate-400'"
+                            x-text="saveError || 'Saving…'"
+                        ></span>
                     </div>
                 </div>
             </div>
@@ -249,7 +250,21 @@
                         <div class="min-w-0 flex-1 p-5 text-slate-100">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <h3 class="flex items-center gap-2 text-xl font-semibold text-slate-100">
+                                    <button
+                                        type="button"
+                                        x-show="set.songs.length > 0"
+                                        @click="toggleSetSongs(set)"
+                                        x-bind:aria-expanded="(!set.songsCollapsed).toString()"
+                                        x-bind:title="set.songsCollapsed ? 'Show songs' : 'Hide songs'"
+                                        class="flex min-w-0 items-center gap-2 text-left text-xl font-semibold text-slate-100 transition hover:text-white focus:outline-none"
+                                    >
+                                        <span class="min-w-0 truncate" x-text="set.name"></span>
+                                        <template x-if="set.feature_set">
+                                            <x-feature-set-icon />
+                                        </template>
+                                        <x-heroicon-m-chevron-down class="h-4 w-4 shrink-0 transition-transform" x-bind:class="set.songsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
+                                    </button>
+                                    <h3 x-show="set.songs.length === 0" class="flex items-center gap-2 text-xl font-semibold text-slate-100">
                                         <span class="min-w-0 truncate" x-text="set.name"></span>
                                         <template x-if="set.feature_set">
                                             <x-feature-set-icon />
@@ -258,17 +273,6 @@
                                     <p class="mt-1 truncate text-sm text-slate-400" x-show="set.owner" x-text="`by ${set.owner}`"></p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        x-show="set.songs.length > 0"
-                                        @click="toggleSetSongs(set)"
-                                        x-bind:aria-expanded="(!set.songsCollapsed).toString()"
-                                        x-bind:title="set.songsCollapsed ? 'Show songs' : 'Hide songs'"
-                                        class="flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100"
-                                    >
-                                        <x-heroicon-m-chevron-down class="h-4 w-4 transition-transform" x-bind:class="set.songsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
-                                        <span class="sr-only">Toggle songs</span>
-                                    </button>
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadgeClasses(set)" x-text="statusLabel(set.status)"></span>
                                 </div>
                             </div>
@@ -311,24 +315,43 @@
                             <ul x-show="set.songs.length > 0 && !set.songsCollapsed" x-transition.opacity.duration.150ms class="mt-4 divide-y divide-slate-700 overflow-hidden rounded-lg border border-slate-700 bg-slate-950/40">
                                 <template x-for="song in set.songs" :key="song.id">
                                     <li class="px-3 py-2 text-sm">
-                                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                                            <span class="font-semibold text-slate-100" x-text="`${song.artist} – ${song.title}`"></span>
+                                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <span class="font-semibold" :class="song.completed ? 'text-slate-500 line-through' : 'text-slate-100'" x-text="`${song.artist} – ${song.title}`"></span>
                                             <span x-show="song.duration" x-cloak class="text-slate-500" x-text="song.duration ? formatDuration(song.duration) : ''"></span>
+                                            <button
+                                                type="button"
+                                                x-show="canManageLiveJam"
+                                                x-cloak
+                                                x-transition:enter="transition ease-out duration-150"
+                                                x-transition:enter-start="opacity-0 translate-x-2"
+                                                x-transition:enter-end="opacity-100 translate-x-0"
+                                                x-transition:leave="transition ease-in duration-100"
+                                                x-transition:leave-start="opacity-100 translate-x-0"
+                                                x-transition:leave-end="opacity-0 translate-x-2"
+                                                @click="toggleSongCompleted(song)"
+                                                class="ml-auto inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition"
+                                                :class="song.completed ? 'border-emerald-700 bg-emerald-950/70 text-emerald-300' : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-emerald-700 hover:text-emerald-300'"
+                                                :title="song.completed ? 'Mark song incomplete' : 'Mark song completed'"
+                                                :aria-label="song.completed ? 'Mark song incomplete' : 'Mark song completed'"
+                                            >
+                                                <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
+                                            </button>
                                         </div>
                                         <span class="mt-1.5 flex flex-wrap gap-1">
                                             <template x-for="slot in song.slots" :key="slot.id">
                                                 <button
                                                     type="button"
                                                     @click="openEditSlotModal(set, song, slot)"
-                                                    x-bind:disabled="!canManageLiveJam"
+                                                    x-bind:disabled="!canManageLiveJam || set.status === 'finished' || song.completed"
                                                     class="inline-block rounded-md px-2 py-1 text-left text-xs transition disabled:cursor-default"
                                                     :class="{
                                                         'bg-emerald-900/80 text-emerald-50 ring-1 ring-emerald-400/80': slot.filled && slot.checked_in,
                                                         'bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800': slot.filled && !slot.checked_in,
                                                         'bg-slate-800 text-slate-500': !slot.filled,
-                                                        'hover:ring-2 hover:ring-amber-400': canManageLiveJam
+                                                        'opacity-50': song.completed,
+                                                        'hover:ring-2 hover:ring-amber-400': canManageLiveJam && set.status !== 'finished' && !song.completed
                                                     }"
-                                                    :title="canManageLiveJam ? 'Edit assignment' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
+                                                    :title="canManageLiveJam && set.status !== 'finished' && !song.completed ? 'Edit assignment' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
                                                 >
                                                     <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
                                                     <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
@@ -375,6 +398,21 @@
                             </button>
 
                             <div class="my-1 h-px w-8 bg-slate-700/80"></div>
+
+                            {{-- Public Song List --}}
+                            <button
+                                type="button"
+                                x-show="set.songs.length > 0 && set.status !== 'finished' && set.status !== 'postponed'"
+                                @click="togglePublicSetSongs(set)"
+                                class="flex h-8 w-8 items-center justify-center rounded-md border transition active:scale-95"
+                                :class="set.songs_collapsed
+                                    ? 'border-violet-600 bg-violet-950/70 text-violet-300 hover:border-violet-500 hover:bg-violet-900/70 hover:text-violet-100'
+                                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100'"
+                                title="Condensed view"
+                                aria-label="Condensed view"
+                            >
+                                <x-heroicon-m-arrows-pointing-in class="h-4 w-4" aria-hidden="true" />
+                            </button>
 
                             {{-- Push Down --}}
                             <button
@@ -503,6 +541,8 @@
             seenObserver: null,
             seenDwellTimers: new Map(),
             pollTimer: null,
+            saveTimer: null,
+            saveQueued: false,
             addSetModalOpen: false,
             editSetModalOpen: false,
             openEditSlot: false,
@@ -604,7 +644,7 @@
                     const setId = String(entry.target.dataset.liveSetId);
                     const set = this.sets.find(item => String(item.id) === setId);
 
-                    if (!entry.isIntersecting || entry.intersectionRatio < 0.6 || !set?.highlighted) {
+                    if (!entry.isIntersecting || entry.intersectionRatio < 0.2 || !set?.highlighted) {
                         this.clearSeenDwellTimer(setId);
                         return;
                     }
@@ -690,7 +730,19 @@
             },
 
             stateSnapshot(set) {
-                const snapshot = { id: set.id, status: set.status, order: set.order };
+                const snapshot = {
+                    id: set.id,
+                    status: set.status,
+                    order: set.order,
+                    songsCollapsed: Boolean(set.songs_collapsed),
+                };
+
+                if (!set.isLiveSet) {
+                    snapshot.completedSongIds = set.songs
+                        .filter(song => song.completed)
+                        .map(song => song.id)
+                        .sort((firstId, secondId) => Number(firstId) - Number(secondId));
+                }
 
                 if (set.isLiveSet) {
                     snapshot.name = set.name || '';
@@ -715,7 +767,7 @@
                 }
                 this.seenObserver = new IntersectionObserver(
                     (entries) => this.handleSetVisibility(entries),
-                    { threshold: 0.6 },
+                    { threshold: 0.2 },
                 );
                 this.fetchData();
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
@@ -767,12 +819,19 @@
                                 ...(hadLocalChanges ? {
                                     status: localSet.status,
                                     order: localSet.order,
+                                    songs_collapsed: localSet.songs_collapsed,
                                 } : {}),
                                 ...(hadLocalChanges && localSet.isLiveSet ? {
                                     name: localSet.name,
                                     owner: localSet.owner,
                                     participants: localSet.participants,
                                     details: localSet.details,
+                                } : {}),
+                                ...(hadLocalChanges && !localSet.isLiveSet ? {
+                                    songs: serverSet.songs.map(song => ({
+                                        ...song,
+                                        completed: localSet.songs.find(localSong => String(localSong.id) === String(song.id))?.completed ?? song.completed,
+                                    })),
                                 } : {}),
                                 highlighted: !this.seenSetIds.has(String(serverSet.id)),
                                 highlightFading: localSet.highlightFading ?? false,
@@ -870,6 +929,7 @@
 
                 this.sets.push(newSet);
                 this.closeAddSetModal();
+                this.scheduleSave();
             },
 
             resetAddSetForm() {
@@ -1067,6 +1127,25 @@
                 set.details = this.editSetForm.details.trim();
 
                 this.closeEditSetModal();
+                this.scheduleSave();
+            },
+
+            toggleSongCompleted(song) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
+                song.completed = !song.completed;
+                this.scheduleSave();
+            },
+
+            togglePublicSetSongs(set) {
+                if (!this.canManageLiveJam) {
+                    return;
+                }
+
+                set.songs_collapsed = !set.songs_collapsed;
+                this.scheduleSave();
             },
 
             resetEditSetForm() {
@@ -1169,6 +1248,7 @@
                     : set);
                 this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
+                this.scheduleSave();
             },
 
             canDragSet(set) {
@@ -1280,6 +1360,7 @@
                     setsContainer.insertBefore(draggedEl, this.setDropPlaceholderEl);
                     this.syncDraggedSetOrder();
                     this.animateOrderChange(this.dragStartRects);
+                    this.scheduleSave();
                 }
 
                 this.onSetDragEnd();
@@ -1349,6 +1430,7 @@
                 ]));
                 this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
+                this.scheduleSave();
             },
 
             moveDown(set) {
@@ -1373,6 +1455,7 @@
                 ]));
                 this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
+                this.scheduleSave();
             },
 
             startSet(set) {
@@ -1395,6 +1478,7 @@
                 });
                 this.normalizeSetOrders();
                 this.animateSetMovement(previousRects);
+                this.scheduleSave();
             },
 
             finishSet(set) {
@@ -1439,6 +1523,7 @@
                     if (!confirm(`Delete "${set.name}"? This will remove the live set from the run of show.`)) { return; }
 
                     this.sets = this.sets.filter(s => s.id !== set.id);
+                    this.scheduleSave();
                 }
             },
 
@@ -1466,22 +1551,42 @@
                 });
             },
 
-            async saveState() {
+            scheduleSave() {
                 if (!this.canManageLiveJam) {
+                    return;
+                }
+
+                this.saveQueued = true;
+                clearTimeout(this.saveTimer);
+                this.saveTimer = setTimeout(() => this.saveState(), 500);
+            },
+
+            async saveState() {
+                if (!this.canManageLiveJam || !this.saveQueued) {
+                    return;
+                }
+
+                if (this.saveBusy) {
                     return;
                 }
 
                 this.normalizeSetOrders();
                 this.saveBusy = true;
+                this.saveQueued = false;
                 this.saveSuccess = false;
                 this.saveError = '';
 
                 try {
+                    const savedState = this.sets.map(set => this.stateSnapshot(set));
                     const payload = {
                         sets: this.sets.map((s, i) => ({
                             set_id: s.id,
                             status: s.status,
                             order: s.order,
+                            songs_collapsed: Boolean(s.songs_collapsed),
+                            completed_song_ids: s.isLiveSet
+                                ? []
+                                : s.songs.filter(song => song.completed).map(song => song.id),
                             // Include live set data for cache
                             isLiveSet: s.isLiveSet || false,
                             liveSetData: s.isLiveSet ? {
@@ -1509,13 +1614,19 @@
 
                     this.saveSuccess = true;
                     this.lastUpdated = new Date().toLocaleTimeString();
-                    this.originalSets = this.sets.map(s => this.stateSnapshot(s));
+                    this.originalSets = savedState;
                     setTimeout(() => { this.saveSuccess = false; }, 2500);
                 } catch (e) {
                     this.saveError = 'Could not save. Please try again.';
                     setTimeout(() => { this.saveError = ''; }, 4000);
+                    this.saveQueued = true;
+                    setTimeout(() => this.saveState(), 2000);
                 } finally {
                     this.saveBusy = false;
+
+                    if (this.saveQueued) {
+                        this.saveState();
+                    }
                 }
             },
 
