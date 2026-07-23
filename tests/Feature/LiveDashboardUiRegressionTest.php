@@ -65,6 +65,11 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     $managementView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain('slotBadgeClasses(slot)');
+    expect($view)->toContain('isLive: config.isLive,');
+    expect($view)->toContain('this.isLive = Boolean(payload.is_live);');
+    expect($view)->toContain('this.pollTimer = setInterval(() => this.fetchData(), 5000);');
+    expect($view)->toContain('<div x-show="!isLive" class="flex items-center justify-center py-16 sm:py-24">');
+    expect($view)->toContain('<div x-show="isLive">');
     expect($view)->toContain('border-emerald-300 bg-emerald-900/80 text-emerald-50');
     expect($view)->toContain('bg-emerald-950/60 text-emerald-300');
     expect($view)->toContain('bg-slate-800 text-slate-500');
@@ -83,12 +88,19 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($view)->toContain('.sort((firstName, secondName) => firstName.localeCompare(secondName));');
     expect($view)->toContain('<x-heroicon-m-check x-show="song.completed" x-cloak class="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />');
     expect($managementView)->toContain('@click="toggleSongCompleted(song)"');
+    expect($managementView)->toContain('@disabled(! $session->allow_checkins)');
+    expect($managementView)->toContain('@click="if (! $el.disabled) { $dispatch(\'open-who-is-here\') }"');
+    expect($managementView)->toContain('disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900 disabled:text-slate-600 disabled:opacity-60');
+    expect($managementView)->toContain("'Check-ins are disabled for this jam'");
     expect($managementView)->toContain('x-show="canManageLiveJam"');
     expect($managementView)->toContain('@click="toggleSetSongs(set)"');
     expect($managementView)->toContain('@click="togglePublicSetSongs(set)"');
     expect($managementView)->toContain("x-show=\"set.songs.length > 0 && set.status !== 'finished' && set.status !== 'postponed'\"");
     expect($managementView)->toContain('title="Condensed view"');
     expect($managementView)->toContain('aria-label="Condensed view"');
+    expect(strpos($managementView, 'title="Condensed view"'))->toBeLessThan(strpos($managementView, 'title="Postpone"'));
+    expect($managementView)->toContain("x-show=\"set.status !== 'playing_now' && set.status !== 'finished' && set.status !== 'postponed'\"");
+    expect($managementView)->toContain("<div x-show=\"set.status !== 'finished' && set.status !== 'postponed'\" class=\"my-1 h-px w-8 bg-slate-700/80\"></div>");
     expect($managementView)->toContain("? 'border-violet-600 bg-violet-950/70 text-violet-300 hover:border-violet-500 hover:bg-violet-900/70 hover:text-violet-100'");
     expect($managementView)->toContain(": 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100'");
     expect($managementView)->toContain('<x-heroicon-m-arrows-pointing-in class="h-4 w-4" aria-hidden="true" />');
@@ -115,6 +127,9 @@ test('live management assignment badges open and save through the assignment edi
     $sessionCards = file_get_contents(resource_path('js/components/sessionCards.js'));
 
     expect($view)->toContain('@click="openEditSlotModal(set, song, slot)"');
+    expect($view)->toContain('<template x-if="slot.manual_performer_name">');
+    expect($view)->toContain('<x-heroicon-m-pencil-square class="h-3 w-3" aria-hidden="true" />');
+    expect($view)->toContain('title="Manually assigned"');
     expect($view)->toContain('<x-sessions.slot-edit-modal :slot-options="$slotOptions" :users="$assignmentUsers" live-dashboard />');
     expect($view)->toContain('async submitLiveSlotEdit()');
     expect($view)->toContain("config.slotUpdateUrlTemplate.replace('__slot__', slot.id)");
@@ -159,9 +174,14 @@ test('session controls compact to icons and live management saves automatically'
     expect($sessionView)->toContain('<span class="hidden sm:inline">Create Set</span>');
     expect($liveManagementView)->toContain('<span class="hidden sm:inline">Reset</span>');
     expect($liveManagementView)->toContain('<span class="hidden sm:inline">Add Set</span>');
+    expect($liveManagementView)->toContain('relative mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm');
+    expect($liveManagementView)->toContain('absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-950');
     expect($liveManagementView)->toContain('@click="releaseManager()"');
+    expect($liveManagementView)->toContain('absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-800');
     expect($liveManagementView)->toContain('border border-amber-800 bg-amber-950/60');
-    expect($liveManagementView)->toContain('<span class="hidden sm:inline">Release</span>');
+    expect($liveManagementView)->toContain('<x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />');
+    expect($liveManagementView)->toContain('<x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />');
+    expect($liveManagementView)->toContain('aria-label="Manage"');
     expect($liveManagementView)->toContain('aria-label="Release Manager"');
     expect($liveManagementView)->toContain('aria-label="Reset"');
     expect($liveManagementView)->toContain('aria-label="Add Set"');
@@ -188,10 +208,50 @@ test('slot editing remains clickable while drag reordering ignores interactive c
     expect($slotRowComponent)->toContain(':current-user-id="$currentUserId"');
     expect($slotRowComponent)->toContain('jam_manager_id === $currentUserId');
     expect($slotRowComponent)->toContain(':can-edit-slot="$canEditSlot"');
+    expect($slotRowComponent)->toContain('align-middle transition hover:bg-slate-50/70 md:align-top');
+    expect($slotRowComponent)->toContain('flex items-center justify-end gap-2 md:items-start');
     expect($slotRowComponent)->toContain('@dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"');
     expect($slotRowComponent)->toContain('@dragend.self="onSlotDragEnd()"');
+    expect($slotRowComponent)->toContain('inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden');
+    expect($slotRowComponent)->toContain('aria-label="Move slot up"');
+    expect($slotRowComponent)->toContain('aria-label="Move slot down"');
+    expect($slotRowComponent)->toContain('border-t border-slate-200');
     expect($dragUtility)->toContain('export function isInteractiveDragSource(event) {');
     expect($appJs)->toContain('window.isInteractiveDragSource = isInteractiveDragSource;');
+});
+
+test('song cards use the song reorder capability for drag and ordering controls', function () {
+    $songCardComponent = file_get_contents(resource_path('views/components/sessions/song-card.blade.php'));
+    $setCardComponent = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+    $sessionCards = file_get_contents(resource_path('js/components/sessionCards.js'));
+
+    expect($songCardComponent)->toContain('data-song-drag-handle');
+    expect($songCardComponent)->toContain("x-bind:draggable=\"isDesktopReorderEnabled && canReorderSongs && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'\"");
+    expect($songCardComponent)->toContain('select-none flex-wrap items-center justify-between gap-3 md:items-start md:!cursor-grab md:active:!cursor-grabbing');
+    expect($songCardComponent)->toContain("'canReorderSongs' => \$canReorderSongs,");
+    expect($songCardComponent)->not->toContain("'canReorderSlots' => \$canManageSet");
+    expect($songCardComponent)->not->toContain("\$dispatch('song-drag-start'");
+    expect($setCardComponent)->toContain("@dragstart=\"onSongDragStart(\$event, Number(\$event.target.closest('[data-song-id]')?.dataset.songId))\"");
+    expect($setCardComponent)->toContain("@dragover=\"onSongDragOver(\$event, Number(\$event.target.closest('[data-song-id]')?.dataset.songId) || null)\"");
+    expect($setCardComponent)->toContain('@dragend="onSongDragEnd()"');
+    expect($setCardComponent)->toContain('<p class="hidden text-xs text-slate-500 md:block">Tip: drag songs and slots to reorder them.</p>');
+    expect($sessionCards)->toContain('canReorderSongs: config.canReorderSongs,');
+    expect($sessionCards)->toContain('mobileSongReorderBusy: false,');
+    expect($sessionCards)->toContain("new CustomEvent('song-reorder-start', {");
+    expect($sessionCards)->toContain("new CustomEvent('song-reorder-complete', {");
+    expect($sessionCards)->toContain("isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,");
+    expect($sessionCards)->toContain('syncDesktopReorderEnabled() {');
+    expect($setCardComponent)->toContain('@resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"');
+    expect($songCardComponent)->toContain('@resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"');
+    expect($songCardComponent)->toContain('x-on:song-reorder-start.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = true"');
+    expect($songCardComponent)->toContain('x-on:song-reorder-complete.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = false"');
+    expect($songCardComponent)->toContain('if (!mobileSongReorderBusy) { mobileSongReorderBusy = true; window.dispatchEvent(new CustomEvent(\'mobile-song-move\'');
+    expect($songCardComponent)->toContain("x-bind:disabled=\"{{ \$canMoveSongUp ? 'false' : 'true' }} || mobileSongReorderBusy ||");
+    expect($songCardComponent)->toContain("x-bind:disabled=\"{{ \$canMoveSongDown ? 'false' : 'true' }} || mobileSongReorderBusy ||");
+    expect($songCardComponent)->toContain('inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden');
+    expect($songCardComponent)->toContain('aria-label="Move song up"');
+    expect($songCardComponent)->toContain('aria-label="Move song down"');
+    expect($sessionCards)->toContain("this.reorderFeedback = 'Song order saved.';\n                this.refreshSessionSets();");
 });
 
 test('management set cards collapse from the full card surface', function () {
@@ -246,6 +306,14 @@ test('edit set modal keeps its header and original actions outside the scrollabl
     expect($setCard)->toContain('class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4"');
     expect($setCard)->toContain('Delete Set');
     expect($setCard)->toContain('form="edit_set_form_{{ $set->id }}"');
+});
+
+test('add song modal keeps its actions outside the scrollable form body', function () {
+    $setCard = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+
+    expect($setCard)->toContain('class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitAddSong($event)"');
+    expect($setCard)->toContain('class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4"');
+    expect($setCard)->toContain('class="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4"');
 });
 
 test('live management normalizes stack order and queues saves after each mutation', function () {

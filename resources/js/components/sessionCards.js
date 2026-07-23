@@ -10,6 +10,9 @@ export function registerSessionCards(Alpine) {
 function baseDragState() {
     return {
         isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,
+        syncDesktopReorderEnabled() {
+            this.isDesktopReorderEnabled = window.matchMedia('(min-width: 768px)').matches;
+        },
     };
 }
 
@@ -143,6 +146,10 @@ export function sessionSetCard(config) {
             if (!this.canDragSongs() || this.reorderBusy) {
                 return;
             }
+
+            window.dispatchEvent(new CustomEvent('song-reorder-start', {
+                detail: { setId: this.setId },
+            }));
 
             this.clearDropPlaceholder();
 
@@ -347,8 +354,12 @@ export function sessionSetCard(config) {
                 }
 
                 this.reorderFeedback = 'Song order saved.';
+                this.refreshSessionSets();
             } catch (e) {
                 this.reorderError = 'Could not save song order. Refresh and try again.';
+                window.dispatchEvent(new CustomEvent('song-reorder-complete', {
+                    detail: { setId: this.setId, succeeded: false },
+                }));
             } finally {
                 this.reorderBusy = false;
             }
@@ -932,11 +943,13 @@ export function sessionSongCard(config) {
         busyAction: false,
         actionError: '',
         reorderBusy: false,
+        mobileSongReorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
         toast: { visible: false, type: 'error', message: '' },
         toastTimer: null,
         canReorderSlots: config.canReorderSlots,
+        canReorderSongs: config.canReorderSongs,
         isAdminUser: config.isAdminUser,
         jamSessionClosed: config.jamSessionClosed,
         ...baseDragState(),
@@ -948,6 +961,7 @@ export function sessionSongCard(config) {
         },
         canDragSlots() {
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
+                this.refreshSessionSets();
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));

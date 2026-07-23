@@ -78,15 +78,22 @@ class LiveJamController extends Controller
         if (! $jamSession->is_live) {
             return response()->json([
                 'sets' => [],
+                'is_live' => false,
+                'jam_finished' => false,
                 'updated_at' => null,
                 'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
             ]);
         }
 
-        $sets = $jamSession->sets()
+        $visibleSets = $jamSession->sets()
             ->visibleTo($request->user())
+            ->where('is_hidden', false);
+
+        $jamFinished = (clone $visibleSets)->exists()
+            && ! (clone $visibleSets)->where('performed', false)->exists();
+
+        $sets = $visibleSets
             ->where('performed', false)
-            ->where('is_hidden', false)
             ->with(['owner', 'songs' => fn ($q) => $q->with(['slots.user'])])
             ->get();
 
@@ -220,6 +227,8 @@ class LiveJamController extends Controller
 
         return response()->json([
             'sets' => $allSets,
+            'is_live' => true,
+            'jam_finished' => $jamFinished,
             'updated_at' => $liveState['updated_at'] ?? null,
             'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
         ]);

@@ -33,7 +33,15 @@
 
         <main class="flex-1 px-4 py-3 sm:px-5 lg:py-4">
             <div class="mx-auto max-w-7xl">
-                @if ($session->is_live)
+                <div x-show="!isLive" class="flex items-center justify-center py-16 sm:py-24">
+                    <div class="max-w-xl rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center shadow-xl">
+                        <x-heroicon-m-clock class="mx-auto h-14 w-14 text-amber-400" aria-hidden="true" />
+                        <p class="mt-5 text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
+                        <p class="mt-3 text-3xl font-semibold text-slate-100">This jam session hasn&#39;t started yet or is finished.</p>
+                    </div>
+                </div>
+
+                <div x-show="isLive">
                     <div x-show="loading" class="flex items-center justify-center py-24 text-slate-400">
                             <svg class="mr-3 h-6 w-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -43,8 +51,18 @@
                     </div>
 
                     <div x-show="!loading && sets.length === 0" x-cloak class="rounded-xl border border-slate-800 bg-slate-900 px-6 py-20 text-center">
-                            <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
-                            <p class="mt-3 text-2xl font-semibold text-slate-200">The jam has not started yet.</p>
+                        <template x-if="jamFinished">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-widest text-emerald-400">Jam complete</p>
+                                <p class="mt-3 text-2xl font-semibold text-slate-200">That&apos;s all, folks!</p>
+                            </div>
+                        </template>
+                        <template x-if="!jamFinished">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
+                                <p class="mt-3 text-2xl font-semibold text-slate-200">The jam has not started yet.</p>
+                            </div>
+                        </template>
                     </div>
 
                     <div x-show="!loading && sets.length > 0" x-cloak class="space-y-3">
@@ -284,15 +302,7 @@
                         </section>
                     </template>
                     </div>
-                @else
-                    <div class="flex items-center justify-center py-16 sm:py-24">
-                        <div class="max-w-xl rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center shadow-xl">
-                            <x-heroicon-m-clock class="mx-auto h-14 w-14 text-amber-400" aria-hidden="true" />
-                            <p class="mt-5 text-sm font-semibold uppercase tracking-widest text-slate-500">Standing by</p>
-                            <p class="mt-3 text-3xl font-semibold text-slate-100">This jam session hasn&#39;t started yet or is finished.</p>
-                        </div>
-                    </div>
-                @endif
+                </div>
             </div>
         </main>
     </div>
@@ -301,15 +311,12 @@
     function liveJamDisplay(config) {
         return {
             sets: [],
+            isLive: config.isLive,
+            jamFinished: false,
             loading: true,
             lastUpdated: '',
 
             init() {
-                if (!config.isLive) {
-                    this.loading = false;
-                    return;
-                }
-
                 this.fetchData();
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
@@ -326,6 +333,8 @@
                     const payload = await resp.json();
                     // Create new objects to trigger Alpine reactivity
                     this.sets = (payload.sets || []).map(s => ({ ...s }));
+                    this.isLive = Boolean(payload.is_live);
+                    this.jamFinished = Boolean(payload.jam_finished);
                     if (payload.updated_at) {
                         this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();
                     }

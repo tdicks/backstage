@@ -95,7 +95,7 @@
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     @scroll.window="repositionActionMenu()"
-    @resize.window="repositionActionMenu()"
+    @resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
@@ -570,10 +570,10 @@
                         {{ $isAdminManagingOtherSet ? 'Add Song to '.$set->owner->name.'\'s Set' : 'Add Song to '.$set->name }}
                     </h4>
                 </div>
-                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-                <form method="POST" action="{{ route('songs.store', $set) }}" class="space-y-4" @submit.prevent="submitAddSong($event)">
+                <form method="POST" action="{{ route('songs.store', $set) }}" class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitAddSong($event)">
                     @csrf
-                    <p x-show="addSongError" x-text="addSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
+                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+                        <p x-show="addSongError" x-text="addSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="relative">
                             <x-input-label :value="'Artist'" />
@@ -668,7 +668,8 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="flex justify-end gap-3">
+                    </div>
+                    <div class="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4">
                         <x-modal-secondary-button type="button" @click="openSong = false; resetSongAutocomplete()">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button x-bind:disabled="addSongBusy">
                             @if ($isAdminManagingOtherSet)
@@ -679,7 +680,6 @@
                         </x-modal-primary-button>
                     </div>
                 </form>
-                </div>
             </div>
         </div>
     @else
@@ -780,10 +780,17 @@
     <div class="mt-5 space-y-4" x-show="!setCollapsed" x-transition.opacity.duration.150ms>
         <p x-show="reorderError" x-text="reorderError" class="text-sm text-red-700"></p>
         @if ($isSetOwner && ! $setLocked)
-            <p class="text-xs text-slate-500">Tip: drag songs and slots to reorder them.</p>
+            <p class="hidden text-xs text-slate-500 md:block">Tip: drag songs and slots to reorder them.</p>
         @endif
 
-        <div class="space-y-4" x-ref="songsContainer" @dragover="onSongDragOver($event)" @drop="onSongDrop($event)">
+        <div
+            class="space-y-4"
+            x-ref="songsContainer"
+            @dragstart="onSongDragStart($event, Number($event.target.closest('[data-song-id]')?.dataset.songId))"
+            @dragover="onSongDragOver($event, Number($event.target.closest('[data-song-id]')?.dataset.songId) || null)"
+            @drop="onSongDrop($event)"
+            @dragend="onSongDragEnd()"
+        >
             @forelse ($set->songs as $song)
                 <x-sessions.song-card
                     :song="$song"

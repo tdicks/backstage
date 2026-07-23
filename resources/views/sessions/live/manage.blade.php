@@ -15,8 +15,10 @@
                 </a>
                 <button
                     type="button"
-                    @click="$dispatch('open-who-is-here')"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300"
+                    @disabled(! $session->allow_checkins)
+                    @click="if (! $el.disabled) { $dispatch('open-who-is-here') }"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900 disabled:text-slate-600 disabled:opacity-60"
+                    title="{{ $session->allow_checkins ? 'Who\'s Here' : 'Check-ins are disabled for this jam' }}"
                 >
                     <x-heroicon-m-user-group class="h-4 w-4" aria-hidden="true" />
                     Who's Here
@@ -72,7 +74,7 @@
             csrfToken: @js(csrf_token()),
         })"
     >
-        <div class="mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
+        <div class="relative mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div class="text-center lg:text-left">
                     <div class="flex items-center justify-center gap-2 text-sm text-slate-300 lg:justify-start">
@@ -85,36 +87,11 @@
                     </div>
                 </div>
                 <div class="flex flex-col items-center gap-2 lg:items-end">
-                    <div class="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
-                        <button
-                            type="button"
-                            x-show="!canManageLiveJam"
-                            x-cloak
-                            @click="claimManager()"
-                            :disabled="managerBusy"
-                            class="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-slate-950 transition disabled:opacity-50"
-                            :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
-                        >
-                            <x-heroicon-m-microphone class="h-4 w-4" aria-hidden="true" />
-                            Manage
-                        </button>
-                    </div>
                     <div
                         x-show="canManageLiveJam"
                         x-cloak
                         class="flex flex-wrap items-center justify-center gap-2"
                     >
-                        <button
-                            type="button"
-                            @click="releaseManager()"
-                            :disabled="managerBusy"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-amber-800 bg-amber-950/60 px-2 py-2 text-sm font-medium text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50 sm:px-3"
-                            title="Release Manager"
-                            aria-label="Release Manager"
-                        >
-                            <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4" aria-hidden="true" />
-                            <span class="hidden sm:inline">Release</span>
-                        </button>
                         <button
                             type="button"
                             @click="clearState()"
@@ -146,6 +123,31 @@
                     </div>
                 </div>
             </div>
+            <button
+                type="button"
+                x-show="!canManageLiveJam"
+                x-cloak
+                @click="claimManager()"
+                :disabled="managerBusy"
+                class="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-950 transition disabled:opacity-50"
+                :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
+                title="Manage"
+                aria-label="Manage"
+            >
+                <x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />
+            </button>
+            <button
+                type="button"
+                x-show="canManageLiveJam"
+                x-cloak
+                @click="releaseManager()"
+                :disabled="managerBusy"
+                class="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50"
+                title="Release Manager"
+                aria-label="Release Manager"
+            >
+                <x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />
+            </button>
         </div>
 
         {{-- Add Set Modal --}}
@@ -354,6 +356,11 @@
                                                     :title="canManageLiveJam && set.status !== 'finished' && !song.completed ? 'Edit assignment' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
                                                 >
                                                     <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
+                                                    <template x-if="slot.manual_performer_name">
+                                                        <span class="ml-1 inline-flex items-center" title="Manually assigned">
+                                                            <x-heroicon-m-pencil-square class="h-3 w-3" aria-hidden="true" />
+                                                        </span>
+                                                    </template>
                                                     <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
                                                 </button>
                                             </template>
@@ -389,7 +396,7 @@
                             {{-- Play --}}
                             <button
                                 type="button"
-                                x-show="set.status !== 'playing_now' && set.status !== 'finished'"
+                                x-show="set.status !== 'playing_now' && set.status !== 'finished' && set.status !== 'postponed'"
                                 @click="startSet(set)"
                                 class="flex h-8 w-8 items-center justify-center rounded-md border border-emerald-800 bg-emerald-950/60 text-emerald-300 transition hover:border-emerald-600 hover:bg-emerald-900/70 active:scale-95"
                                 title="Play"
@@ -397,22 +404,7 @@
                                 <x-heroicon-m-play class="h-4 w-4" aria-hidden="true" />
                             </button>
 
-                            <div class="my-1 h-px w-8 bg-slate-700/80"></div>
-
-                            {{-- Public Song List --}}
-                            <button
-                                type="button"
-                                x-show="set.songs.length > 0 && set.status !== 'finished' && set.status !== 'postponed'"
-                                @click="togglePublicSetSongs(set)"
-                                class="flex h-8 w-8 items-center justify-center rounded-md border transition active:scale-95"
-                                :class="set.songs_collapsed
-                                    ? 'border-violet-600 bg-violet-950/70 text-violet-300 hover:border-violet-500 hover:bg-violet-900/70 hover:text-violet-100'
-                                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100'"
-                                title="Condensed view"
-                                aria-label="Condensed view"
-                            >
-                                <x-heroicon-m-arrows-pointing-in class="h-4 w-4" aria-hidden="true" />
-                            </button>
+                            <div x-show="set.status !== 'finished' && set.status !== 'postponed'" class="my-1 h-px w-8 bg-slate-700/80"></div>
 
                             {{-- Push Down --}}
                             <button
@@ -435,6 +427,21 @@
                                 title="Coming Up"
                             >
                                 <x-heroicon-m-arrow-up class="h-4 w-4" aria-hidden="true" />
+                            </button>
+
+                            {{-- Public Song List --}}
+                            <button
+                                type="button"
+                                x-show="set.songs.length > 0 && set.status !== 'finished' && set.status !== 'postponed'"
+                                @click="togglePublicSetSongs(set)"
+                                class="flex h-8 w-8 items-center justify-center rounded-md border transition active:scale-95"
+                                :class="set.songs_collapsed
+                                    ? 'border-violet-600 bg-violet-950/70 text-violet-300 hover:border-violet-500 hover:bg-violet-900/70 hover:text-violet-100'
+                                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100'"
+                                title="Condensed view"
+                                aria-label="Condensed view"
+                            >
+                                <x-heroicon-m-arrows-pointing-in class="h-4 w-4" aria-hidden="true" />
                             </button>
 
                             {{-- Postpone --}}

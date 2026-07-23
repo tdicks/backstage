@@ -79,7 +79,7 @@
                                 <p class="text-sm text-slate-500">{{ $session->date->format('D, M j, Y') }}</p>
                             </div>
                             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                                {{ $session->sets_count }} sets
+                                {{ $session->sets_count }} {{ Str::plural('set', $session->sets_count) }}
                             </span>
                         </div>
                     </a>

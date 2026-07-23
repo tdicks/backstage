@@ -29,16 +29,9 @@
     class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm transition hover:border-slate-400 hover:shadow-md"
     data-song-id="{{ $song->id }}"
     x-bind:data-song-open="(!songCollapsed).toString()"
-    x-bind:draggable="isDesktopReorderEnabled && canReorderSlots && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'"
-    @dragstart.self="onSongDragStart($event, {{ $song->id }})"
-    @dragover.self="onSongDragOver($event, {{ $song->id }})"
-    @drop.self="onSongDrop($event)"
-    x-bind:class="{
-        'opacity-70': draggingSongId === {{ $song->id }}
-    }"
     x-data="sessionSongCard(@js([
         'songKey' => 'backstage:u'.auth()->id().':song:'.$song->id,
-        'canReorderSlots' => $canManageSet && ! $setLocked && ! ($jamSessionClosed && !auth()->user()?->is_admin),
+        'canReorderSongs' => $canReorderSongs,
         'isAdminUser' => auth()->user()?->is_admin ?? false,
         'jamSessionClosed' => $jamSessionClosed,
         'setLocked' => $setLocked,
@@ -50,11 +43,13 @@
     ]))"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
     x-effect="localStorage.setItem(songKey, songCollapsed ? '1' : '0')"
+    x-on:song-reorder-start.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = true"
+    x-on:song-reorder-complete.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = false"
     x-on:mobile-slot-move.window="if ($event.detail.songId === {{ $song->id }}) moveSlot($event.detail.slotId, $event.detail.direction)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     @scroll.window="repositionActionMenu()"
-    @resize.window="repositionActionMenu()"
+    @resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <template x-teleport="body">
@@ -72,7 +67,9 @@
     </template>
 
     <div
-        class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
+        data-song-drag-handle
+        x-bind:draggable="isDesktopReorderEnabled && canReorderSongs && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'"
+        class="flex cursor-pointer select-none flex-wrap items-center justify-between gap-3 md:items-start md:!cursor-grab md:active:!cursor-grabbing"
         @click="toggleSongCollapsed()"
         role="button"
         tabindex="0"
@@ -91,33 +88,29 @@
 
         <div class="flex shrink-0 items-center gap-2" @click.stop>
             @if ($isSetOwner && ! $setLocked)
-                <div class="flex items-center gap-1 md:hidden">
-                    @if ($canMoveSongUp)
-                        <button
-                            type="button"
-                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
-                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: -1 } }))"
-                            x-bind:disabled="reorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Move song up"
-                            title="Move song up"
-                        >
-                            <x-heroicon-m-chevron-up class="h-4 w-4" aria-hidden="true" />
-                        </button>
-                    @endif
-                    @if ($canMoveSongDown)
-                        <button
-                            type="button"
-                            @disabled($jamSessionClosed && !auth()->user()?->is_admin)
-                            @click.prevent="window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: 1 } }))"
-                            x-bind:disabled="reorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Move song down"
-                            title="Move song down"
-                        >
-                            <x-heroicon-m-chevron-down class="h-4 w-4" aria-hidden="true" />
-                        </button>
-                    @endif
+                <div class="inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden">
+                    <button
+                        type="button"
+                        @disabled(! $canMoveSongUp || ($jamSessionClosed && !auth()->user()?->is_admin))
+                        @click.prevent="if (!mobileSongReorderBusy) { mobileSongReorderBusy = true; window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: -1 } })) }"
+                        x-bind:disabled="{{ $canMoveSongUp ? 'false' : 'true' }} || mobileSongReorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                        class="inline-flex h-5 items-center justify-center transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Move song up"
+                        title="Move song up"
+                    >
+                        <x-heroicon-m-chevron-up class="h-3 w-3" aria-hidden="true" />
+                    </button>
+                    <button
+                        type="button"
+                        @disabled(! $canMoveSongDown || ($jamSessionClosed && !auth()->user()?->is_admin))
+                        @click.prevent="if (!mobileSongReorderBusy) { mobileSongReorderBusy = true; window.dispatchEvent(new CustomEvent('mobile-song-move', { detail: { setId: {{ $set->id }}, songId: {{ $song->id }}, direction: 1 } })) }"
+                        x-bind:disabled="{{ $canMoveSongDown ? 'false' : 'true' }} || mobileSongReorderBusy || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                        class="inline-flex h-5 items-center justify-center border-t border-slate-200 transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Move song down"
+                        title="Move song down"
+                    >
+                        <x-heroicon-m-chevron-down class="h-3 w-3" aria-hidden="true" />
+                    </button>
                 </div>
             @endif
             <div class="relative">

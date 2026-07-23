@@ -127,7 +127,32 @@ test('live data excludes performed sets', function () {
     $returnedIds = collect($response->json('sets'))->pluck('id');
 
     expect($returnedIds)->toContain($upcomingSet->id)
-        ->and($returnedIds)->not->toContain($performedSet->id);
+        ->and($returnedIds)->not->toContain($performedSet->id)
+        ->and($response->json('jam_finished'))->toBeFalse();
+});
+
+test('live data identifies a jam as finished once every visible set is performed', function () {
+    Set::create([
+        'jam_session_id' => $this->jamSession->id,
+        'name' => 'Final Set',
+        'owner_id' => $this->user->id,
+        'position' => 0,
+        'performed' => true,
+    ]);
+
+    $response = $this->getJson("/sessions/{$this->jamSession->routeSlug()}/live/data");
+
+    $response->assertOk()
+        ->assertJsonPath('sets', [])
+        ->assertJsonPath('jam_finished', true);
+});
+
+test('live data does not identify a jam with no sets as finished', function () {
+    $response = $this->getJson("/sessions/{$this->jamSession->routeSlug()}/live/data");
+
+    $response->assertOk()
+        ->assertJsonPath('sets', [])
+        ->assertJsonPath('jam_finished', false);
 });
 
 test('saving live state normalizes each status stack to contiguous unique orders', function () {
@@ -292,5 +317,7 @@ test('non-live sessions do not return live sets', function () {
 
     $response = $this->actingAs($this->user)->getJson("/sessions/{$session->routeSlug()}/live/data");
 
-    $response->assertOk()->assertJsonCount(0, 'sets');
+    $response->assertOk()
+        ->assertJsonCount(0, 'sets')
+        ->assertJsonPath('is_live', false);
 });
