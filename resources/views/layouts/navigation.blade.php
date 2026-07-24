@@ -91,7 +91,7 @@
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('sessions.index') }}" class="inline-flex items-center gap-2">
+                    <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2">
                         <x-application-logo class="block h-9 w-9 text-slate-100" />
                         <span class="hidden text-sm font-semibold tracking-wide text-slate-100 sm:inline">Backstage</span>
                     </a>

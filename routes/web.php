@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\SlotTypeConflictController;
 use App\Http\Controllers\Admin\SlotTypeController;
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
@@ -22,7 +23,7 @@ use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\UserDirectoryController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/sessions');
+Route::get('/', DashboardController::class)->name('dashboard');
 
 Route::get('/jam-register', [JamRegisterController::class, 'index'])->name('jam-register.index');
 Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name('jam-register.users');
