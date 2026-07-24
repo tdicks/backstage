@@ -69,7 +69,7 @@
     <div
         data-song-drag-handle
         x-bind:draggable="isDesktopReorderEnabled && canReorderSongs && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'"
-        class="flex cursor-pointer select-none flex-wrap items-center justify-between gap-3 md:items-start md:!cursor-grab md:active:!cursor-grabbing"
+        class="flex cursor-pointer select-none flex-wrap items-center justify-between gap-3 md:items-start"
         @click="toggleSongCollapsed()"
         role="button"
         tabindex="0"

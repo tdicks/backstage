@@ -287,7 +287,8 @@ test('song cards use the song reorder capability for drag and ordering controls'
 
     expect($songCardComponent)->toContain('data-song-drag-handle');
     expect($songCardComponent)->toContain("x-bind:draggable=\"isDesktopReorderEnabled && canReorderSongs && !(jamSessionClosed && !isAdminUser) ? 'true' : 'false'\"");
-    expect($songCardComponent)->toContain('select-none flex-wrap items-center justify-between gap-3 md:items-start md:!cursor-grab md:active:!cursor-grabbing');
+    expect($songCardComponent)->toContain('select-none flex-wrap items-center justify-between gap-3 md:items-start');
+    expect($songCardComponent)->not->toContain('cursor-grab');
     expect($songCardComponent)->toContain("'canReorderSongs' => \$canReorderSongs,");
     expect($songCardComponent)->not->toContain("'canReorderSlots' => \$canManageSet");
     expect($songCardComponent)->not->toContain("\$dispatch('song-drag-start'");
