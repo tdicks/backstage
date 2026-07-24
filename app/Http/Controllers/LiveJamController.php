@@ -79,6 +79,7 @@ class LiveJamController extends Controller
             return response()->json([
                 'sets' => [],
                 'is_live' => false,
+                'allow_checkins' => $jamSession->allow_checkins,
                 'jam_finished' => false,
                 'updated_at' => null,
                 'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
@@ -235,6 +236,7 @@ class LiveJamController extends Controller
         return response()->json([
             'sets' => $allSets,
             'is_live' => true,
+            'allow_checkins' => $jamSession->allow_checkins,
             'jam_finished' => $jamFinished,
             'updated_at' => $liveState['updated_at'] ?? null,
             'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),

@@ -20,6 +20,20 @@ beforeEach(function () {
     ]);
 });
 
+it('returns the current sign-in setting in the live payload', function () {
+    $this->jamSession->update(['allow_checkins' => true]);
+
+    $this->getJson(route('sessions.live.data', $this->jamSession))
+        ->assertOk()
+        ->assertJsonPath('allow_checkins', true);
+
+    $this->jamSession->update(['allow_checkins' => false]);
+
+    $this->getJson(route('sessions.live.data', $this->jamSession))
+        ->assertOk()
+        ->assertJsonPath('allow_checkins', false);
+});
+
 it('persists state to cache and returns it', function () {
     // Create sets
     $set1 = Set::create([

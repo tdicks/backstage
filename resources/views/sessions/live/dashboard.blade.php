@@ -12,6 +12,7 @@
         x-data="liveJamDisplay({
             dataUrl: @js(route('sessions.live.data', $session)),
             isLive: @js((bool) $session->is_live),
+            allowCheckins: @js((bool) $session->allow_checkins),
         })"
     >
         <header class="border-b border-slate-800 bg-slate-900 px-4 py-3 sm:px-6">
@@ -24,21 +25,10 @@
                     <h1 class="truncate text-xl font-semibold text-slate-100 sm:text-2xl">{{ $session->name }}</h1>
                     <p class="mt-0.5 text-sm text-slate-400">{{ $session->date->format('l, F j, Y') }}</p>
                 </div>
-                @if ($session->allow_checkins)
-                    <div class="hidden text-center text-xs font-semibold uppercase tracking-wide text-slate-400 sm:block">
-                        <div>Sign in/out</div>
-                        <img
-                            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data={{ urlencode(route('jam-register.session', $session->jam_register_code)) }}"
-                            alt="QR code for signing in or out of {{ $session->name }}"
-                            class="mx-auto mt-1 h-20 w-20 rounded bg-white p-1"
-                        >
-                    </div>
-                @else
-                    <div class="hidden text-right text-xs uppercase tracking-wide text-slate-500 sm:block">
-                        <div>Live room</div>
-                        <div x-show="lastUpdated" x-cloak x-text="lastUpdated"></div>
-                    </div>
-                @endif
+                <div class="hidden text-center text-xs uppercase tracking-wide text-slate-500 sm:block">
+                    <div>Live room</div>
+                    <div x-show="lastUpdated" x-cloak x-text="lastUpdated"></div>
+                </div>
             </div>
         </header>
 
@@ -325,6 +315,15 @@
                 </div>
             </div>
         </main>
+
+        <aside x-show="allowCheckins" x-cloak class="fixed bottom-5 right-5 z-30 hidden w-32 border border-slate-700 bg-slate-900/95 p-2 text-center shadow-xl backdrop-blur lg:block">
+            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Sign in/out</p>
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data={{ urlencode(route('jam-register.session', $session->jam_register_code)) }}"
+                alt="QR code for signing in or out of {{ $session->name }}"
+                class="mx-auto mt-1 h-24 w-24 bg-white p-1"
+            >
+        </aside>
     </div>
 
     <script>
@@ -332,6 +331,7 @@
         return {
             sets: [],
             isLive: config.isLive,
+            allowCheckins: config.allowCheckins,
             jamFinished: false,
             loading: true,
             lastUpdated: '',
@@ -354,6 +354,7 @@
                     // Create new objects to trigger Alpine reactivity
                     this.sets = (payload.sets || []).map(s => ({ ...s }));
                     this.isLive = Boolean(payload.is_live);
+                    this.allowCheckins = Boolean(payload.allow_checkins);
                     this.jamFinished = Boolean(payload.jam_finished);
                     if (payload.updated_at) {
                         this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();

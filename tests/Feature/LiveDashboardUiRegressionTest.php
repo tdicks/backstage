@@ -88,11 +88,19 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     $managementView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain('slotBadgeClasses(slot)');
-    expect($view)->toContain('@if ($session->allow_checkins)');
-    expect($view)->toContain('>Sign in/out</div>');
+    expect($view)->toContain('allowCheckins: @js((bool) $session->allow_checkins),');
     expect($view)->toContain("route('jam-register.session', \$session->jam_register_code)");
+    expect($view)->toContain('x-show="allowCheckins" x-cloak');
+    expect($view)->toContain('fixed bottom-5 right-5 z-30 hidden w-32');
+    expect($view)->toContain('backdrop-blur lg:block');
+    expect($view)->toContain('class="mx-auto mt-1 h-24 w-24 bg-white p-1"');
+    expect(strpos($view, 'fixed bottom-5 right-5 z-30 hidden w-32'))->toBeGreaterThan(strpos($view, '</main>'));
     expect($view)->toContain('isLive: config.isLive,');
     expect($view)->toContain('this.isLive = Boolean(payload.is_live);');
+    expect($view)->toContain('this.allowCheckins = Boolean(payload.allow_checkins);');
+    expect($view)->toContain('hidden text-center text-xs uppercase tracking-wide text-slate-500 sm:block');
+    expect($view)->toContain('x-show="lastUpdated" x-cloak x-text="lastUpdated"');
+    expect($view)->toContain('this.lastUpdated = new Date(payload.updated_at).toLocaleTimeString();');
     expect($view)->toContain('this.pollTimer = setInterval(() => this.fetchData(), 5000);');
     expect($view)->toContain('<div x-show="!isLive" class="flex items-center justify-center py-16 sm:py-24">');
     expect($view)->toContain('<div x-show="isLive">');
