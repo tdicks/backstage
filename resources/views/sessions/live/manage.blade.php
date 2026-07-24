@@ -18,7 +18,7 @@
                     @disabled(! $session->allow_checkins)
                     @click="if (! $el.disabled) { $dispatch('open-who-is-here') }"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-400 hover:text-amber-300 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900 disabled:text-slate-600 disabled:opacity-60"
-                    title="{{ $session->allow_checkins ? 'Who\'s Here' : 'Check-ins are disabled for this jam' }}"
+                    title="{{ $session->allow_checkins ? 'Who\'s Here' : 'Sign-ins are disabled for this jam' }}"
                 >
                     <x-heroicon-m-user-group class="h-4 w-4" aria-hidden="true" />
                     Who's Here
@@ -74,24 +74,39 @@
             csrfToken: @js(csrf_token()),
         })"
     >
-        <div class="relative mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="text-center lg:text-left">
-                    <div class="flex items-center justify-center gap-2 text-sm text-slate-300 lg:justify-start">
+        <div class="mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm">
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                <div class="min-w-0 text-left">
+                    <div class="flex items-center justify-start gap-2 text-sm text-slate-300">
                         <x-heroicon-m-microphone
                             class="h-4 w-4"
                             aria-hidden="true"
                             x-bind:class="jamManagerId ? (canManageLiveJam ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-500'"
                         />
-                        <span x-text="jamManagerName || 'No jam manager assigned yet'"></span>
+                        <span class="truncate" x-text="canManageLiveJam ? 'You are the Jam Manager' : (jamManagerName ? `${jamManagerName} is the Jam Manager` : 'Nobody is the Jam Manager')"></span>
                     </div>
                 </div>
-                <div class="flex flex-col items-center gap-2 lg:items-end">
+                <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     <div
                         x-show="canManageLiveJam"
                         x-cloak
-                        class="flex flex-wrap items-center justify-center gap-2"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-x-4"
+                        x-transition:enter-end="opacity-100 translate-x-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-x-0"
+                        x-transition:leave-end="opacity-0 translate-x-4"
+                        class="flex flex-wrap items-center justify-end gap-2"
                     >
+                        <span
+                            x-show="saveBusy"
+                            x-cloak
+                            class="inline-flex h-5 w-5 shrink-0 items-center justify-center text-slate-400"
+                            title="Saving"
+                            aria-label="Saving"
+                        >
+                            <x-heroicon-m-arrow-path class="h-4 w-4 animate-spin" aria-hidden="true" />
+                        </span>
                         <button
                             type="button"
                             @click="clearState()"
@@ -113,41 +128,35 @@
                             <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                             <span class="hidden sm:inline">Add Set</span>
                         </button>
-                        <span
-                            class="text-xs font-medium text-slate-400"
-                            x-show="saveBusy || saveError"
-                            x-cloak
-                            :class="saveError ? 'text-rose-400' : 'text-slate-400'"
-                            x-text="saveError || 'Saving…'"
-                        ></span>
                     </div>
+                    <div class="h-8 w-px shrink-0 bg-slate-700" aria-hidden="true"></div>
+                    <button
+                        type="button"
+                        x-show="!canManageLiveJam"
+                        x-cloak
+                        @click="claimManager()"
+                        :disabled="managerBusy"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-950 transition disabled:opacity-50"
+                        :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
+                        title="Manage"
+                        aria-label="Manage"
+                    >
+                        <x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />
+                    </button>
+                    <button
+                        type="button"
+                        x-show="canManageLiveJam"
+                        x-cloak
+                        @click="releaseManager()"
+                        :disabled="managerBusy"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50"
+                        title="Release Manager"
+                        aria-label="Release Manager"
+                    >
+                        <x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />
+                    </button>
                 </div>
             </div>
-            <button
-                type="button"
-                x-show="!canManageLiveJam"
-                x-cloak
-                @click="claimManager()"
-                :disabled="managerBusy"
-                class="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-950 transition disabled:opacity-50"
-                :class="jamManagerId ? 'border border-amber-700 bg-amber-500 hover:bg-amber-400' : 'border border-emerald-700 bg-emerald-500 hover:bg-emerald-400'"
-                title="Manage"
-                aria-label="Manage"
-            >
-                <x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />
-            </button>
-            <button
-                type="button"
-                x-show="canManageLiveJam"
-                x-cloak
-                @click="releaseManager()"
-                :disabled="managerBusy"
-                class="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50"
-                title="Release Manager"
-                aria-label="Release Manager"
-            >
-                <x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />
-            </button>
         </div>
 
         {{-- Add Set Modal --}}
@@ -155,10 +164,12 @@
             <div x-show="addSetModalOpen" x-cloak @keydown.escape.window="closeAddSetModal()">
                 <div x-show="addSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 text-slate-900 shadow-2xl">
-                        <h3 class="text-lg font-semibold text-slate-900">Add Live Set</h3>
-                        <p class="mt-1 text-sm text-slate-600">Add a one-off set for tonight; it will disappear after the jam.</p>
-                        <div class="mt-4 space-y-4">
+                    <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl">
+                        <div class="shrink-0 border-b border-slate-200 px-6 py-4">
+                            <h3 class="text-lg font-semibold text-slate-900">Add Live Set</h3>
+                            <p class="mt-1 text-sm text-slate-600">Add a one-off set for tonight; it will disappear after the jam.</p>
+                        </div>
+                        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
                             <div>
                                 <x-input-label value="Set Name" />
                                 <x-text-input type="text" x-model="addSetForm.name" class="mt-1 block w-full" />
@@ -175,10 +186,10 @@
                                 <x-input-label value="Details (optional)" />
                                 <x-textarea-input x-model="addSetForm.details" rows="5" class="mt-1 w-full" />
                             </div>
-                            <div class="flex justify-end gap-3">
-                                <x-modal-secondary-button type="button" @click="closeAddSetModal()">Cancel</x-modal-secondary-button>
-                                <x-modal-primary-button type="button" @click="saveNewSet()">Save Set</x-modal-primary-button>
-                            </div>
+                        </div>
+                        <div class="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                            <x-modal-secondary-button type="button" @click="closeAddSetModal()">Cancel</x-modal-secondary-button>
+                            <x-modal-primary-button type="button" @click="saveNewSet()">Save Set</x-modal-primary-button>
                         </div>
                     </div>
                 </div>
@@ -250,31 +261,27 @@
                     <div class="flex min-h-40">
                         {{-- Main content --}}
                         <div class="min-w-0 flex-1 p-5 text-slate-100">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div class="min-w-0">
+                            <div class="flex flex-nowrap items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
                                     <button
                                         type="button"
                                         x-show="set.songs.length > 0"
                                         @click="toggleSetSongs(set)"
                                         x-bind:aria-expanded="(!set.songsCollapsed).toString()"
                                         x-bind:title="set.songsCollapsed ? 'Show songs' : 'Hide songs'"
-                                        class="flex min-w-0 items-center gap-2 text-left text-xl font-semibold text-slate-100 transition hover:text-white focus:outline-none"
+                                        class="block text-left text-xl font-semibold text-slate-100 transition hover:text-white focus:outline-none"
                                     >
-                                        <span class="min-w-0 truncate" x-text="set.name"></span>
-                                        <template x-if="set.feature_set">
-                                            <x-feature-set-icon />
-                                        </template>
-                                        <x-heroicon-m-chevron-down class="h-4 w-4 shrink-0 transition-transform" x-bind:class="set.songsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
+                                        <span x-text="set.name"></span>
+                                        <span class="inline-flex items-center align-middle whitespace-nowrap">&nbsp;<x-heroicon-m-chevron-down class="h-4 w-4 transition-transform" x-bind:class="set.songsCollapsed ? '' : 'rotate-180'" aria-hidden="true" /></span>
                                     </button>
-                                    <h3 x-show="set.songs.length === 0" class="flex items-center gap-2 text-xl font-semibold text-slate-100">
-                                        <span class="min-w-0 truncate" x-text="set.name"></span>
-                                        <template x-if="set.feature_set">
-                                            <x-feature-set-icon />
-                                        </template>
+                                    <h3 x-show="set.songs.length === 0" class="text-xl font-semibold text-slate-100" x-text="set.name">
                                     </h3>
                                     <p class="mt-1 truncate text-sm text-slate-400" x-show="set.owner" x-text="`by ${set.owner}`"></p>
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex shrink-0 items-center gap-2">
+                                    <template x-if="set.feature_set">
+                                        <x-feature-set-icon />
+                                    </template>
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadgeClasses(set)" x-text="statusLabel(set.status)"></span>
                                 </div>
                             </div>
@@ -293,16 +300,14 @@
 
                             {{-- Duration & health bar --}}
                             <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                                <span x-show="set.duration_seconds > 0" x-cloak class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-2 py-1">
+                                <span x-show="set.has_duration_estimate" x-cloak class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-2 py-1">
                                     ~<span x-text="formatDuration(set.duration_seconds)"></span>
                                 </span>
                                 <span x-show="set.total_slots > 0" class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-2 py-1">
-                                    <span x-text="set.filled_slots"></span>/<span x-text="set.total_slots"></span> slots filled
+                                    <span x-text="set.filled_slots"></span>/<span x-text="set.total_slots"></span>&nbsp;slots filled
                                 </span>
                                 <span x-show="set.isLiveSet" x-cloak class="inline-flex items-center rounded-full border border-sky-800 bg-sky-950/60 px-2 py-1 text-sky-300">Live set</span>
                                 <span x-show="!set.isLiveSet && set.total_slots === 0" x-cloak class="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-2 py-1 italic">No slots defined</span>
-                                <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-950/40 px-2 py-1 text-slate-500">#<span x-text="set.id"></span></span>
-                                <span class="inline-flex items-center rounded-full border border-slate-700 bg-slate-950/40 px-2 py-1 text-slate-500" x-text="`[${set.status}:${set.order}]`"></span>
                             </div>
 
                             {{-- Health bar --}}
@@ -780,7 +785,11 @@
                 this.pollTimer = setInterval(() => this.fetchData(), 5000);
             },
 
-            async fetchData() {
+            async fetchData({ force = false } = {}) {
+                if (!force && (this.saveQueued || this.saveBusy || this.hasChanges)) {
+                    return;
+                }
+
                 try {
                     const hadLocalChanges = this.originalSets.length > 0 && this.hasChanges;
                     const resp = await fetch(config.dataUrl, {
@@ -788,6 +797,9 @@
                     });
                     if (!resp.ok) { return; }
                     const payload = await resp.json();
+                    if (!force && (this.saveQueued || this.saveBusy || this.hasChanges)) {
+                        return;
+                    }
                     const serverSets = (payload.sets || []).map(serverSet => this.normalizeServerSet(serverSet));
                     const isInitialLoad = this.sets.length === 0;
 
@@ -1102,7 +1114,7 @@
                     slot.manual_performer_name = updatedSlot.manual_performer_name;
                     slot.filled = Boolean(updatedSlot.user_id || updatedSlot.manual_performer_name);
                     this.closeEditSlotModal();
-                    await this.fetchData();
+                    await this.fetchData({ force: true });
                 } catch (error) {
                     this.assignmentSaveError = error.message || 'Could not save this assignment.';
                 } finally {
@@ -1642,7 +1654,7 @@
                     return;
                 }
 
-                if (!confirm('Reset the live state? This cannot be undone.')) { return; }
+                if (!confirm('Watning! This will reset all set positions, statuses, and clear any walk-up sets.')) { return; }
                 this.clearBusy = true;
                 try {
                     await fetch(config.clearUrl, {
@@ -1733,6 +1745,10 @@
 
                 if (set.highlightFading) {
                     stateClasses.push('live-set-unseen-exit');
+                }
+
+                if (set.feature_set) {
+                    stateClasses.push('!border-amber-400');
                 }
 
                 if (set.status === 'finished') {

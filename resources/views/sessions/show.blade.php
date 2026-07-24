@@ -53,7 +53,7 @@
                     </div>
                 </span>
                 @can('update', $session)
-                    <x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session">
+                    <x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session" class="gap-1.5">
                         <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />
                         <span class="hidden sm:inline">Edit Session</span>
                     </x-secondary-button>
@@ -65,7 +65,7 @@
                     @endif
                 @endcan
                 @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
-                    <x-primary-button @click="openSet = true" title="Create Set" aria-label="Create Set">
+                    <x-primary-button @click="openSet = true" title="Create Set" aria-label="Create Set" class="gap-1.5">
                         <x-heroicon-m-plus class="h-4 w-4" aria-hidden="true" />
                         <span class="hidden sm:inline">Create Set</span>
                     </x-primary-button>
@@ -106,11 +106,28 @@
                                                 name="is_closed"
                                                 value="1"
                                                 x-model="editSessionClosed"
-                                                @change="if (editSessionClosed) { editSessionAllowCheckins = false; }"
+                                                @change="if (editSessionClosed) { editSessionLive = false; editSessionAllowCheckins = false; }"
                                                 class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
                                                 @checked($session->is_closed)
                                             >
                                             <span>Close this jam session (prevent new sets)</span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <input type="hidden" name="is_live" value="0">
+                                        <label for="session_is_live" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                            <input
+                                                id="session_is_live"
+                                                type="checkbox"
+                                                name="is_live"
+                                                value="1"
+                                                x-model="editSessionLive"
+                                                @change="if (!editSessionLive) { editSessionAllowCheckins = false; }"
+                                                x-bind:disabled="editSessionClosed"
+                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
+                                                @checked($session->is_live)
+                                            >
+                                            <span>Enable Live Mode</span>
                                         </label>
                                     </div>
                                     <div>
@@ -122,31 +139,15 @@
                                                 name="allow_checkins"
                                                 value="1"
                                                 x-model="editSessionAllowCheckins"
-                                                x-bind:disabled="editSessionClosed"
-                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
+                                                x-bind:disabled="editSessionClosed || !editSessionLive"
+                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                                                 @checked($session->allow_checkins)
                                             >
-                                            <span>Allow user check-ins for this session</span>
+                                            <span>Allow user sign-ins for this session</span>
                                         </label>
                                         <p x-show="initialEditSessionAllowCheckins && !editSessionAllowCheckins" x-cloak class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                                            This action will check out all attendees from this session.
+                                            This action will sign out all attendees from this session.
                                         </p>
-                                    </div>
-                                    <div>
-                                        <input type="hidden" name="is_live" value="0">
-                                        <label for="session_is_live" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                                            <input
-                                                id="session_is_live"
-                                                type="checkbox"
-                                                name="is_live"
-                                                value="1"
-                                                x-model="editSessionLive"
-                                                x-bind:disabled="editSessionClosed"
-                                                class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"
-                                                @checked($session->is_live)
-                                            >
-                                            <span>Mark this jam session as live</span>
-                                        </label>
                                     </div>
                                     <div>
                                         <input type="hidden" name="is_hidden" value="0">

@@ -119,9 +119,14 @@ class LiveJamController extends Controller
             $filledSlots = 0;
             $checkedInSlots = 0;
             $totalDurationSeconds = 0;
+            $hasDurationEstimate = $set->songs->isNotEmpty();
             $uniqueUsers = collect();
 
             foreach ($set->songs as $song) {
+                if ($song->duration === null || $song->duration <= 0) {
+                    $hasDurationEstimate = false;
+                }
+
                 if ($song->source !== null && $song->source !== '' && $song->duration !== null) {
                     $totalDurationSeconds += $song->duration;
                 }
@@ -160,6 +165,7 @@ class LiveJamController extends Controller
                 'total_slots' => $totalSlots,
                 'filled_slots' => $filledSlots,
                 'duration_seconds' => $totalDurationSeconds,
+                'has_duration_estimate' => $hasDurationEstimate,
                 'songs' => $set->songs->map(fn ($song) => [
                     'id' => $song->id,
                     'artist' => $song->artist,
@@ -200,6 +206,7 @@ class LiveJamController extends Controller
                     'total_slots' => 0,
                     'filled_slots' => 0,
                     'duration_seconds' => 0,
+                    'has_duration_estimate' => false,
                     'songs' => [],
                     'isLiveSet' => true,
                     'participants' => $liveData['participants'] ?? null,

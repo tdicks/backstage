@@ -13,6 +13,9 @@ test('management dashboard preserves local changes when polling', function () {
     expect($view)->toContain('...serverSet,');
     expect($view)->toContain('const localOnlySets = this.sets.filter(set => !serverSetIds.has(String(set.id)));');
     expect($view)->toContain('this.sets = [...refreshedSets, ...localOnlySets];');
+    expect($view)->toContain('async fetchData({ force = false } = {}) {');
+    expect($view)->toContain('if (!force && (this.saveQueued || this.saveBusy || this.hasChanges)) {');
+    expect($view)->toContain('await this.fetchData({ force: true });');
 });
 
 test('management dashboard highlights new sets until browsed and keeps the updated status panel', function () {
@@ -60,11 +63,34 @@ test('management dashboard highlights new sets until browsed and keeps the updat
     expect($view)->not->toContain('Last saved <span x-text="lastUpdated"></span>');
 });
 
+test('who is here modal uses fixed controls and attendee operation animations', function () {
+    $modal = file_get_contents(resource_path('views/components/sessions/who-is-here-modal.blade.php'));
+    $css = file_get_contents(resource_path('css/app.css'));
+
+    expect($modal)->toContain('max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden');
+    expect($modal)->toContain('min-h-0 flex-1 overflow-y-auto px-6 py-4');
+    expect($modal)->toContain('flex shrink-0 flex-col gap-3 border-t border-slate-200');
+    expect($modal)->toContain('value="Sign someone in"');
+    expect($modal)->toContain('<div class="h-px w-full shrink-0 bg-slate-200 sm:h-10 sm:w-px" aria-hidden="true"></div>');
+    expect($modal)->not->toContain('feedback: \'\',');
+    expect($modal)->toContain('checkedInUserIds: new Set(),');
+    expect($modal)->toContain('checkedOutUserIds: new Set(),');
+    expect($modal)->toContain('this.attendees = (payload.attendees || []).filter(attendee => !this.checkedOutUserIds.has(String(attendee.id)));');
+    expect($modal)->toContain('this.checkedOutUserIds.delete(String(attendee.id));');
+    expect($modal)->toContain("'who-is-here-check-in': checkedInUserIds.has(String(attendee.id))");
+    expect($modal)->toContain("'who-is-here-check-out': checkedOutUserIds.has(String(attendee.id))");
+    expect($css)->toContain('@keyframes who-is-here-check-in');
+    expect($css)->toContain('@keyframes who-is-here-check-out');
+});
+
 test('live dashboard uses emerald slot pills without outer rings', function () {
     $view = file_get_contents(resource_path('views/sessions/live/dashboard.blade.php'));
     $managementView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain('slotBadgeClasses(slot)');
+    expect($view)->toContain('@if ($session->allow_checkins)');
+    expect($view)->toContain('>Sign in/out</div>');
+    expect($view)->toContain("route('jam-register.session', \$session->jam_register_code)");
     expect($view)->toContain('isLive: config.isLive,');
     expect($view)->toContain('this.isLive = Boolean(payload.is_live);');
     expect($view)->toContain('this.pollTimer = setInterval(() => this.fetchData(), 5000);');
@@ -78,21 +104,30 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($view)->toContain('x-show="!song.completed"');
     expect($view)->toContain('!song.completed && song.slots.filter(sl => sl.filled).length > 0');
     expect($view)->toContain(":class=\"comingUpSets.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2'\"");
+    expect($view)->toContain('class="columns-1 gap-2 sm:columns-2 xl:columns-3"');
+    expect($view)->toContain('rounded-xl border border-amber-700 bg-amber-950 p-3');
+    expect($view)->toContain('mb-2 break-inside-avoid rounded-xl border border-slate-800');
     expect($view)->toContain('x-show="!playingNow.songs_collapsed"');
     expect($view)->toContain('set.songs.length > 0 && !set.songs_collapsed');
     expect($view)->toContain('set.songs.length > 0 && set.songs_collapsed');
     expect($view)->toContain('collapsedSetPerformers(set)');
     expect($view)->toContain('collapsedSetPerformers(playingNow)');
     expect($view)->toContain('collapsedSetPerformers(set) {');
-    expect($view)->toContain('performersByName.set(name.toLocaleLowerCase(), name);');
-    expect($view)->toContain('.sort((firstName, secondName) => firstName.localeCompare(secondName));');
+    expect($view)->toContain('const existingPerformer = performersByName.get(performerKey);');
+    expect($view)->toContain('checked_in: Boolean(existingPerformer?.checked_in || slot.checked_in),');
+    expect($view)->toContain('.sort((firstPerformer, secondPerformer) => firstPerformer.name.localeCompare(secondPerformer.name));');
+    expect($view)->toContain('<x-checked-in-dot x-show="performer.checked_in" x-cloak />');
     expect($view)->toContain('<x-heroicon-m-check x-show="song.completed" x-cloak class="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />');
     expect($managementView)->toContain('@click="toggleSongCompleted(song)"');
     expect($managementView)->toContain('@disabled(! $session->allow_checkins)');
     expect($managementView)->toContain('@click="if (! $el.disabled) { $dispatch(\'open-who-is-here\') }"');
     expect($managementView)->toContain('disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-slate-900 disabled:text-slate-600 disabled:opacity-60');
-    expect($managementView)->toContain("'Check-ins are disabled for this jam'");
+    expect($managementView)->toContain("'Sign-ins are disabled for this jam'");
     expect($managementView)->toContain('x-show="canManageLiveJam"');
+    expect($managementView)->toContain('x-show="set.has_duration_estimate"');
+    expect($managementView)->toContain('<span x-text="set.total_slots"></span>&nbsp;slots filled');
+    expect($managementView)->not->toContain('>#[<span x-text="set.id"></span>]');
+    expect($managementView)->not->toContain('x-text="`[${set.status}:${set.order}]`"');
     expect($managementView)->toContain('@click="toggleSetSongs(set)"');
     expect($managementView)->toContain('@click="togglePublicSetSongs(set)"');
     expect($managementView)->toContain("x-show=\"set.songs.length > 0 && set.status !== 'finished' && set.status !== 'postponed'\"");
@@ -107,7 +142,7 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($managementView)->not->toContain('<x-heroicon-m-arrows-pointing-out');
     expect($managementView)->not->toContain('<x-heroicon-m-eye-slash class="h-4 w-4" aria-hidden="true" />');
     expect($managementView)->toContain('togglePublicSetSongs(set) {');
-    expect($managementView)->toContain('class="flex min-w-0 items-center gap-2 text-left text-xl font-semibold text-slate-100');
+    expect($managementView)->toContain('class="block text-left text-xl font-semibold text-slate-100');
     expect($managementView)->not->toContain('focus:ring-amber-400');
     expect($managementView)->toContain('x-transition:enter-start="opacity-0 translate-x-2"');
     expect($managementView)->toContain('x-transition:leave-end="opacity-0 translate-x-2"');
@@ -169,15 +204,26 @@ test('session controls compact to icons and live management saves automatically'
     expect($sessionView)->toContain('<x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />');
     expect($sessionView)->toContain('class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900');
     expect($sessionView)->toContain('<x-heroicon-m-share class="h-4 w-4" aria-hidden="true" />');
+    expect($sessionView)->toContain('<x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session" class="gap-1.5">');
     expect($sessionView)->toContain('<span class="hidden sm:inline">Edit Session</span>');
     expect($sessionView)->toContain('<span class="hidden sm:inline">Live Dashboard</span>');
+    expect($sessionView)->toContain('<x-primary-button @click="openSet = true" title="Create Set" aria-label="Create Set" class="gap-1.5">');
     expect($sessionView)->toContain('<span class="hidden sm:inline">Create Set</span>');
     expect($liveManagementView)->toContain('<span class="hidden sm:inline">Reset</span>');
     expect($liveManagementView)->toContain('<span class="hidden sm:inline">Add Set</span>');
-    expect($liveManagementView)->toContain('relative mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm');
-    expect($liveManagementView)->toContain('absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-950');
+    expect($liveManagementView)->toContain('class="flex items-center justify-start gap-2 text-sm text-slate-300"');
+    expect($liveManagementView)->toContain('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3');
+    expect($liveManagementView)->toContain('flex shrink-0 flex-wrap items-center justify-end gap-2');
+    expect($liveManagementView)->toContain('x-transition:enter-start="opacity-0 translate-x-4"');
+    expect($liveManagementView)->toContain('x-transition:leave-end="opacity-0 translate-x-4"');
+    expect($liveManagementView)->toContain('x-text="canManageLiveJam ? \'You are the Jam Manager\' : (jamManagerName ? `${jamManagerName} is Jam Manager` : \'Nobody is Jam Manager\')"');
+    expect(strpos($liveManagementView, 'You are the Jam Manager'))->toBeLessThan(strpos($liveManagementView, '@click="claimManager()"'));
+    expect(strpos($liveManagementView, '@click="clearState()"'))->toBeLessThan(strpos($liveManagementView, '@click="claimManager()"'));
+    expect($liveManagementView)->toContain('<div class="h-8 w-px shrink-0 bg-slate-700" aria-hidden="true"></div>');
+    expect($liveManagementView)->toContain('mb-6 rounded-xl border border-slate-700 bg-slate-900/85 p-4 text-slate-100 shadow-sm');
+    expect($liveManagementView)->toContain('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-950 transition disabled:opacity-50');
     expect($liveManagementView)->toContain('@click="releaseManager()"');
-    expect($liveManagementView)->toContain('absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-800');
+    expect($liveManagementView)->toContain('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50');
     expect($liveManagementView)->toContain('border border-amber-800 bg-amber-950/60');
     expect($liveManagementView)->toContain('<x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />');
     expect($liveManagementView)->toContain('<x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />');
@@ -192,7 +238,10 @@ test('session controls compact to icons and live management saves automatically'
     expect($liveManagementView)->toContain('const savedState = this.sets.map(set => this.stateSnapshot(set));');
     expect($liveManagementView)->toContain('this.originalSets = savedState;');
     expect($liveManagementView)->toContain('setTimeout(() => this.saveState(), 2000);');
-    expect($liveManagementView)->toContain("x-text=\"saveError || 'Saving…'\"");
+    expect($liveManagementView)->toContain('x-show="saveBusy"');
+    expect($liveManagementView)->toContain('title="Saving"');
+    expect($liveManagementView)->toContain('<x-heroicon-m-arrow-path class="h-4 w-4 animate-spin" aria-hidden="true" />');
+    expect($liveManagementView)->not->toContain("x-text=\"saveError || 'Saving…'\"");
     expect($liveManagementView)->not->toContain('aria-label="Update"');
 });
 
@@ -265,10 +314,24 @@ test('management set cards collapse from the full card surface', function () {
     expect($manageView)->toContain('@click="toggleSetSongs(set)"');
     expect($manageView)->toContain('x-show="set.songs.length > 0"');
     expect($manageView)->toContain('x-bind:aria-expanded="(!set.songsCollapsed).toString()"');
+    expect($manageView)->toContain('<div class="flex flex-nowrap items-start justify-between gap-3">');
+    expect($manageView)->toContain('<div class="min-w-0 flex-1">');
+    expect($manageView)->toContain('class="block text-left text-xl font-semibold text-slate-100 transition hover:text-white focus:outline-none"');
+    expect($manageView)->toContain('<span class="inline-flex items-center align-middle whitespace-nowrap">&nbsp;<x-heroicon-m-chevron-down');
+    expect($manageView)->toContain('<div class="flex shrink-0 items-center gap-2">');
     expect($manageView)->toContain('x-show="set.songs.length > 0 && !set.songsCollapsed" x-transition.opacity.duration.150ms');
     expect($manageView)->toContain('collapsedSetSongIds: new Set(),');
     expect($manageView)->toContain('return `live-jam-collapsed-set-songs:${config.dataUrl}`;');
     expect($manageView)->toContain('toggleSetSongs(set) {');
+    expect($manageView)->toContain("if (set.feature_set) {\n                    stateClasses.push('!border-amber-400');");
+});
+
+test('live add set modal keeps its header and actions fixed', function () {
+    $manageView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
+
+    expect($manageView)->toContain('flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden');
+    expect($manageView)->toContain('min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4');
+    expect($manageView)->toContain('flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4');
 });
 
 test('session set, song, and slot details animate when toggled', function () {

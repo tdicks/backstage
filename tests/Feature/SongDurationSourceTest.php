@@ -123,6 +123,30 @@ test('admin can mark a jam session as live', function () {
     expect($session->refresh()->is_live)->toBeTrue();
 });
 
+test('sign-ins are disabled when live mode is disabled', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $session = JamSession::create([
+        'name' => 'Sign-in Mode Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'allow_checkins' => true,
+        'is_live' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('sessions.update', $session), [
+            'name' => $session->name,
+            'date' => $session->date->toDateString(),
+            'description' => $session->description,
+            'allow_checkins' => '1',
+            'is_live' => '0',
+        ])
+        ->assertRedirect();
+
+    expect($session->refresh()->is_live)->toBeFalse()
+        ->and($session->allow_checkins)->toBeFalse();
+});
+
 test('marking a jam session as not live clears live state cache', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $owner = User::factory()->create();
@@ -504,6 +528,7 @@ test('set duration is calculated correctly in live data', function () {
         'name' => 'Duration Calc Jam',
         'date' => now()->addDay(),
         'description' => null,
+        'is_live' => true,
     ]);
 
     $set = Set::create([
@@ -543,5 +568,50 @@ test('set duration is calculated correctly in live data', function () {
         ->assertOk();
 
     // Only the song with source should be included (255 seconds)
-    expect($response->json('sets.0.duration_seconds'))->toBe(255);
+    expect($response->json('sets.0.duration_seconds'))->toBe(255)
+        ->and($response->json('sets.0.has_duration_estimate'))->toBeTrue();
+});
+
+test('live data does not offer a duration estimate when a set contains an undetermined song duration', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Incomplete Duration Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'is_live' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Incomplete Duration Set',
+        'description' => null,
+        'owner_id' => $admin->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Known Artist',
+        'title' => 'Known Duration',
+        'position' => 1,
+        'duration' => 255,
+        'source' => 'deezer',
+    ]);
+
+    Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Unknown Artist',
+        'title' => 'Unknown Duration',
+        'position' => 2,
+        'duration' => null,
+        'source' => null,
+    ]);
+
+    $this->actingAs($admin)
+        ->getJson(route('sessions.live.data', $session))
+        ->assertOk()
+        ->assertJsonPath('sets.0.has_duration_estimate', false);
 });

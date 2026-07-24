@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SlotTypeConflictController;
+use App\Http\Controllers\Admin\SlotTypeController;
 use App\Http\Controllers\Admin\UserAdministrationController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DeezerLookupController;
@@ -28,6 +29,7 @@ Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name
 Route::get('/jam-register/sessions/{jamSession}/users/{user}/status', [JamRegisterController::class, 'status'])->name('jam-register.status');
 Route::post('/jam-register/sessions/{jamSession}/check-in', [JamRegisterController::class, 'signIn'])->name('jam-register.sign-in');
 Route::post('/jam-register/sessions/{jamSession}/check-out/{user}', [JamRegisterController::class, 'signOut'])->name('jam-register.sign-out');
+Route::get('/jam-register/{code}', [JamRegisterController::class, 'register'])->where('code', '[A-Za-z0-9]{4}')->name('jam-register.session');
 
 Route::get('/sessions/{jamSession}/live/dashboard', [LiveJamController::class, 'dashboard'])->name('sessions.live.dashboard');
 Route::get('/sessions/{jamSession}/live/data', [LiveJamController::class, 'data'])->name('sessions.live.data');
@@ -48,6 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('/settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
+        Route::post('/slot-types', [SlotTypeController::class, 'store'])->name('slot-types.store');
+        Route::patch('/slot-types/{slotType}', [SlotTypeController::class, 'update'])->name('slot-types.update');
 
         Route::get('/slot-conflicts', [SlotTypeConflictController::class, 'index'])->name('slot-conflicts.index');
         Route::patch('/slot-conflicts/{slotType}', [SlotTypeConflictController::class, 'update'])->name('slot-conflicts.update');
@@ -75,6 +79,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/sessions/{jamSession}/check-ins', [JamRegisterController::class, 'attendees'])->name('sessions.check-ins');
     Route::get('/sessions/{jamSession}/check-ins/users', [JamRegisterController::class, 'availableUsers'])->name('sessions.check-ins.users');
     Route::post('/sessions/{jamSession}/check-ins/check-in', [JamRegisterController::class, 'manualSignIn'])->name('sessions.check-ins.sign-in');
+    Route::post('/sessions/{jamSession}/check-ins/{user}/check-out', [JamRegisterController::class, 'manualSignOut'])->name('sessions.check-ins.sign-out');
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
     Route::get('/sessions/{jamSession}/live', [LiveJamController::class, 'manage'])->name('sessions.live.manage');

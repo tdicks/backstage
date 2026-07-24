@@ -96,6 +96,6 @@ class SocialLoginController extends Controller
 
     private function abortIfSocialLoginsDisabled(): void
     {
-        abort_unless(Setting::enabled('enable_social_logins', true), 404);
+        abort_unless(Setting::enabled('enable_social_logins'), 404);
     }
 }

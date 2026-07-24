@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JamSession;
 use App\Models\JamSessionSignIn;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,13 +15,23 @@ class JamRegisterController extends Controller
     public function index(): View
     {
         return view('jam-register.index', [
-            'sessions' => JamSession::query()
-                ->where('is_hidden', false)
-                ->where('is_closed', false)
-                ->where('allow_checkins', true)
-                ->whereDate('date', '>=', today())
-                ->orderBy('date')
-                ->get(['id', 'name', 'date']),
+            'sessions' => $this->availableSessions(),
+            'lockedSession' => null,
+        ]);
+    }
+
+    public function register(string $code): View
+    {
+        $jamSession = JamSession::query()
+            ->where('jam_register_code', $code)
+            ->where('is_hidden', false)
+            ->where('is_closed', false)
+            ->where('allow_checkins', true)
+            ->firstOrFail(['id', 'name', 'date']);
+
+        return view('jam-register.index', [
+            'sessions' => collect([$jamSession]),
+            'lockedSession' => $jamSession,
         ]);
     }
 
@@ -103,6 +114,21 @@ class JamRegisterController extends Controller
         ]);
     }
 
+    public function manualSignOut(JamSession $jamSession, User $user): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        JamSessionSignIn::query()
+            ->where('jam_session_id', $jamSession->id)
+            ->where('user_id', $user->id)
+            ->delete();
+
+        return response()->json([
+            'message' => $user->name.' has been checked out.',
+            'signed_in' => false,
+        ]);
+    }
+
     public function status(JamSession $jamSession, User $user): JsonResponse
     {
         $this->abortIfHidden($jamSession);
@@ -143,7 +169,10 @@ class JamRegisterController extends Controller
 
         $attendees = $jamSession->signIns()
             ->with('user:id,name')
-            ->latest('signed_in_at')
+            ->reorder()
+            ->orderBy(User::query()
+                ->select('name')
+                ->whereColumn('users.id', 'jam_session_sign_ins.user_id'))
             ->get()
             ->map(fn (JamSessionSignIn $signIn) => [
                 'id' => $signIn->user_id,
@@ -180,9 +209,20 @@ class JamRegisterController extends Controller
         abort_if($jamSession->is_hidden, 404);
     }
 
+    private function availableSessions(): Collection
+    {
+        return JamSession::query()
+            ->where('is_hidden', false)
+            ->where('is_closed', false)
+            ->where('allow_checkins', true)
+            ->whereDate('date', '>=', today())
+            ->orderBy('date')
+            ->get(['id', 'name', 'date']);
+    }
+
     private function abortIfCheckInsClosed(JamSession $jamSession): void
     {
-        abort_if($jamSession->is_closed || ! $jamSession->allow_checkins, 403, 'Check-ins are closed for this jam session.');
+        abort_if($jamSession->is_closed || ! $jamSession->allow_checkins, 403, 'Sign-ins are closed for this jam session.');
     }
 
     private function signInUser(JamSession $jamSession, int $userId): JamSessionSignIn

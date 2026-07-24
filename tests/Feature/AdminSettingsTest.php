@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Models\SlotType;
 use App\Models\User;
 use Database\Seeders\SettingsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,7 +15,7 @@ test('settings seeder creates the social login setting', function () {
         'key' => 'enable_social_logins',
         'name' => 'Enable Social Logins',
         'input_type' => 'checkbox',
-        'value' => '1',
+        'value' => '0',
     ]);
 });
 
@@ -33,6 +34,7 @@ test('admin can view settings page', function () {
         ->assertOk()
         ->assertSee('Application Settings')
         ->assertSee('Notifications')
+        ->assertSee('Slot Types')
         ->assertSee('Slot request accepted')
         ->assertSee('Enable Social Logins')
         ->assertSee('enable_social_logins');
@@ -84,4 +86,29 @@ test('non admin cannot update settings', function () {
             'value' => false,
         ])
         ->assertForbidden();
+});
+
+test('admin can add and update slot types from settings', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($admin)
+        ->postJson(route('admin.slot-types.store'), ['name' => 'Trumpet'])
+        ->assertCreated()
+        ->assertJsonPath('slot_type.key', 'trumpet')
+        ->assertJsonPath('slot_type.name', 'Trumpet');
+
+    $slotType = SlotType::query()->where('key', 'trumpet')->firstOrFail();
+
+    $this->actingAs($admin)
+        ->patchJson(route('admin.slot-types.update', $slotType), [
+            'name' => 'Brass',
+            'sort_order' => 15,
+            'active' => false,
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot_type.name', 'Brass')
+        ->assertJsonPath('slot_type.active', false);
+
+    expect($slotType->refresh()->key)->toBe('trumpet')
+        ->and($slotType->active)->toBeFalse();
 });

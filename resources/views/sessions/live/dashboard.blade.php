@@ -24,10 +24,21 @@
                     <h1 class="truncate text-xl font-semibold text-slate-100 sm:text-2xl">{{ $session->name }}</h1>
                     <p class="mt-0.5 text-sm text-slate-400">{{ $session->date->format('l, F j, Y') }}</p>
                 </div>
-                <div class="hidden text-right text-xs uppercase tracking-wide text-slate-500 sm:block">
-                    <div>Live room</div>
-                    <div x-show="lastUpdated" x-cloak x-text="lastUpdated"></div>
-                </div>
+                @if ($session->allow_checkins)
+                    <div class="hidden text-center text-xs font-semibold uppercase tracking-wide text-slate-400 sm:block">
+                        <div>Sign in/out</div>
+                        <img
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data={{ urlencode(route('jam-register.session', $session->jam_register_code)) }}"
+                            alt="QR code for signing in or out of {{ $session->name }}"
+                            class="mx-auto mt-1 h-20 w-20 rounded bg-white p-1"
+                        >
+                    </div>
+                @else
+                    <div class="hidden text-right text-xs uppercase tracking-wide text-slate-500 sm:block">
+                        <div>Live room</div>
+                        <div x-show="lastUpdated" x-cloak x-text="lastUpdated"></div>
+                    </div>
+                @endif
             </div>
         </header>
 
@@ -122,8 +133,11 @@
                                         <div class="rounded-lg border border-emerald-800 bg-slate-950/60 px-3 py-2">
                                             <p class="text-xs font-semibold uppercase tracking-wide text-emerald-300">Performers</p>
                                             <ul class="mt-1.5 space-y-1 text-sm text-slate-100">
-                                                <template x-for="performer in collapsedSetPerformers(playingNow)" :key="performer">
-                                                    <li x-text="performer"></li>
+                                                <template x-for="performer in collapsedSetPerformers(playingNow)" :key="performer.name">
+                                                    <li class="flex items-center gap-1.5">
+                                                        <span x-text="performer.name"></span>
+                                                        <x-checked-in-dot x-show="performer.checked_in" x-cloak />
+                                                    </li>
                                                 </template>
                                             </ul>
                                         </div>
@@ -190,8 +204,11 @@
                                                 <div class="rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-2">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-amber-300">Performers</p>
                                                     <ul class="mt-1.5 space-y-1 text-sm text-slate-100">
-                                                        <template x-for="performer in collapsedSetPerformers(set)" :key="performer">
-                                                            <li x-text="performer"></li>
+                                                        <template x-for="performer in collapsedSetPerformers(set)" :key="performer.name">
+                                                            <li class="flex items-center gap-1.5">
+                                                                <span x-text="performer.name"></span>
+                                                                <x-checked-in-dot x-show="performer.checked_in" x-cloak />
+                                                            </li>
                                                         </template>
                                                     </ul>
                                                 </div>
@@ -206,9 +223,9 @@
                     <template x-if="upcomingSets.length > 0">
                         <section>
                             <h2 class="mb-2 text-sm font-semibold uppercase tracking-widest text-slate-400">Up Later</h2>
-                            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            <div class="columns-1 gap-2 sm:columns-2 xl:columns-3">
                                 <template x-for="set in upcomingSets" :key="set.id">
-                                    <div class="rounded-xl border border-slate-800 bg-slate-900 p-2.5">
+                                    <div class="mb-2 break-inside-avoid rounded-xl border border-slate-800 bg-slate-900 p-2.5">
                                         <p class="flex flex-wrap items-center gap-2 text-base font-semibold text-slate-100">
                                             <span x-text="set.name"></span>
                                             <template x-if="set.feature_set">
@@ -261,8 +278,11 @@
                                                 <div class="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-2">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Performers</p>
                                                     <ul class="mt-1.5 space-y-1 text-sm text-slate-200">
-                                                        <template x-for="performer in collapsedSetPerformers(set)" :key="performer">
-                                                            <li x-text="performer"></li>
+                                                        <template x-for="performer in collapsedSetPerformers(set)" :key="performer.name">
+                                                            <li class="flex items-center gap-1.5">
+                                                                <span x-text="performer.name"></span>
+                                                                <x-checked-in-dot x-show="performer.checked_in" x-cloak />
+                                                            </li>
                                                         </template>
                                                     </ul>
                                                 </div>
@@ -389,13 +409,19 @@
                             const name = slot.user_name.trim();
 
                             if (name !== '') {
-                                performersByName.set(name.toLocaleLowerCase(), name);
+                                const performerKey = name.toLocaleLowerCase();
+                                const existingPerformer = performersByName.get(performerKey);
+
+                                performersByName.set(performerKey, {
+                                    name,
+                                    checked_in: Boolean(existingPerformer?.checked_in || slot.checked_in),
+                                });
                             }
                         });
                 });
 
                 return [...performersByName.values()]
-                    .sort((firstName, secondName) => firstName.localeCompare(secondName));
+                    .sort((firstPerformer, secondPerformer) => firstPerformer.name.localeCompare(secondPerformer.name));
             },
 
             formatDuration(seconds) {

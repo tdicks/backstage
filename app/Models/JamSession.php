@@ -22,6 +22,7 @@ class JamSession extends Model
         'allow_checkins',
         'is_live',
         'live_code',
+        'jam_register_code',
         'jam_manager_id',
     ];
 
@@ -42,6 +43,7 @@ class JamSession extends Model
     {
         static::creating(function (JamSession $session): void {
             $session->live_code ??= self::makeLiveCode();
+            $session->jam_register_code ??= self::makeJamRegisterCode();
         });
 
         static::saving(function (JamSession $session): void {
@@ -55,6 +57,7 @@ class JamSession extends Model
             }
 
             $session->live_code ??= self::makeLiveCode($session->id);
+            $session->jam_register_code ??= self::makeJamRegisterCode($session->id);
         });
     }
 
@@ -63,6 +66,20 @@ class JamSession extends Model
         do {
             $code = Str::random(4);
             $query = self::query()->where('live_code', $code);
+
+            if ($ignoreId !== null) {
+                $query->whereKeyNot($ignoreId);
+            }
+        } while ($query->exists());
+
+        return $code;
+    }
+
+    public static function makeJamRegisterCode(?int $ignoreId = null): string
+    {
+        do {
+            $code = Str::random(4);
+            $query = self::query()->where('jam_register_code', $code);
 
             if ($ignoreId !== null) {
                 $query->whereKeyNot($ignoreId);

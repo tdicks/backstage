@@ -11,6 +11,67 @@
     <div class="py-10">
         <div class="mx-auto max-w-5xl space-y-6 sm:px-6 lg:px-8">
             <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
+                                <div class="border-b border-slate-200 px-6 py-4">
+                                    <h3 class="text-lg font-semibold text-slate-900">Slot Types</h3>
+                                    <p class="mt-1 text-sm text-slate-600">Define the positions available when building songs. Deactivated types remain visible on existing slots but cannot be added to new ones.</p>
+                                </div>
+                                <div
+                                    class="space-y-4 px-6 py-5"
+                                    x-data="{
+                                        slotTypes: @js($slotTypes->map(fn ($slotType) => ['id' => $slotType->id, 'key' => $slotType->key, 'name' => $slotType->name, 'sort_order' => $slotType->sort_order, 'active' => $slotType->active])->values()),
+                                        newName: '',
+                                        busyId: null,
+                                        error: '',
+                                        async request(url, method, payload) {
+                                            const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': @js(csrf_token()) }, body: JSON.stringify(payload) });
+                                            const data = await response.json();
+                                            if (!response.ok) throw new Error(data.message || 'Could not save the slot type.');
+                                            return data;
+                                        },
+                                        async add() {
+                                            const name = this.newName.trim();
+                                            if (!name) return;
+                                            this.busyId = 'new'; this.error = '';
+                                            try {
+                                                const data = await this.request(@js(route('admin.slot-types.store')), 'POST', { name });
+                                                this.slotTypes.push(data.slot_type);
+                                                this.newName = '';
+                                            } catch (error) { this.error = error.message; } finally { this.busyId = null; }
+                                        },
+                                        async save(slotType) {
+                                            this.busyId = slotType.id; this.error = '';
+                                            try {
+                                                const data = await this.request(@js(route('admin.slot-types.update', ['slotType' => '__slot_type__'])).replace('__slot_type__', slotType.id), 'PATCH', slotType);
+                                                Object.assign(slotType, data.slot_type);
+                                            } catch (error) { this.error = error.message; } finally { this.busyId = null; }
+                                        },
+                                    }"
+                                >
+                                    <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                        <x-text-input x-model="newName" @keydown.enter.prevent="add()" placeholder="Add a slot type, e.g. Trumpet" class="block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" />
+                                        <x-modal-primary-button type="button" @click="add()" x-bind:disabled="busyId === 'new'">Add slot type</x-modal-primary-button>
+                                    </div>
+                                    <p x-show="error" x-cloak x-text="error" class="text-sm text-rose-700"></p>
+                                    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                            <thead class="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-3 py-2 font-semibold">Name</th><th class="px-3 py-2 font-semibold">Key</th><th class="px-3 py-2 font-semibold">Order</th><th class="px-3 py-2 font-semibold">Active</th><th class="px-3 py-2"></th></tr></thead>
+                                            <tbody class="divide-y divide-slate-200">
+                                                <template x-for="slotType in slotTypes" :key="slotType.id">
+                                                    <tr>
+                                                        <td class="px-3 py-2"><input type="text" x-model="slotType.name" class="w-full rounded border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-200"></td>
+                                                        <td class="px-3 py-2 font-mono text-xs text-slate-500" x-text="slotType.key"></td>
+                                                        <td class="px-3 py-2"><input type="number" min="0" max="99999" x-model.number="slotType.sort_order" class="w-20 rounded border-slate-300 text-slate-900 focus:border-amber-500 focus:ring-amber-200"></td>
+                                                        <td class="px-3 py-2"><input type="checkbox" x-model="slotType.active" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500"></td>
+                                                        <td class="px-3 py-2 text-right"><button type="button" @click="save(slotType)" :disabled="busyId === slotType.id" class="inline-flex items-center rounded-md border border-amber-600 bg-amber-500 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-950 shadow-sm transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"><span x-text="busyId === slotType.id ? 'Saving...' : 'Save'"></span></button></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
                 <div class="border-b border-slate-200 px-6 py-4">
                     <h3 class="text-lg font-semibold text-slate-900">Notifications</h3>
                     <p class="mt-1 text-sm text-slate-600">Admin notification controls always override individual user preferences.</p>

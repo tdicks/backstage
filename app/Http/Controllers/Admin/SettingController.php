@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\SlotType;
 use App\Support\NotificationSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class SettingController extends Controller
         return view('admin.settings.index', [
             'settings' => $settings->reject(fn (Setting $setting) => NotificationSettings::isNotificationKey($setting->key))->values(),
             'notificationSettings' => NotificationSettings::adminOptions(),
+            'slotTypes' => SlotType::query()->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 

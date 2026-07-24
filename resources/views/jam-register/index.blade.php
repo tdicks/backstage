@@ -14,9 +14,9 @@
 			'name' => $session->name,
 			'date_label' => $session->date->format('D, M j, Y'),
 		])->values()),
-		selectedSessionId: null,
-		selectedSessionName: '',
-		showSessionPicker: true,
+		selectedSessionId: @js($lockedSession?->id),
+		selectedSessionName: @js($lockedSession?->name ?? ''),
+		showSessionPicker: @js($lockedSession === null),
 		query: '',
 		selectedUserId: null,
 		selectedUserName: '',
@@ -177,7 +177,7 @@
 				<x-application-logo class="h-14 w-14 text-slate-100" />
 				<div>
 					<h1 class="text-sm font-semibold tracking-[0.18em] text-slate-200">BACKSTAGE</h1>
-					<p class="mt-1 text-sm text-slate-300">Jam check-in.</p>
+					<p class="mt-1 text-sm text-slate-300">Jam sign-in.</p>
 				</div>
 			</div>
 

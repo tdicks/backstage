@@ -29,6 +29,37 @@ test('it returns matching users for jam register search', function () {
     $response->assertJsonPath('users.0.name', 'Alice Player');
 });
 
+test('new jam sessions receive a unique four character register code', function () {
+    $firstSession = createJamSession();
+    $secondSession = createJamSession(['name' => 'Saturday Jam']);
+
+    expect($firstSession->jam_register_code)
+        ->toMatch('/^[A-Za-z0-9]{4}$/')
+        ->not->toBe($secondSession->jam_register_code);
+});
+
+test('a jam register code opens a preselected session', function () {
+    $session = createJamSession([
+        'allow_checkins' => true,
+        'jam_register_code' => 'Ab12',
+    ]);
+
+    $this->get(route('jam-register.session', $session->jam_register_code))
+        ->assertOk()
+        ->assertSee('selectedSessionId: '.$session->id)
+        ->assertSee('showSessionPicker: false');
+});
+
+test('a jam register code is unavailable when sign-ins are disabled', function () {
+    $session = createJamSession([
+        'allow_checkins' => false,
+        'jam_register_code' => 'Cd34',
+    ]);
+
+    $this->get(route('jam-register.session', $session->jam_register_code))
+        ->assertNotFound();
+});
+
 test('it signs a user in and reports status', function () {
     $session = createJamSession(['allow_checkins' => true]);
     $user = User::factory()->create();
@@ -97,6 +128,8 @@ test('admin can see attendees and sign everyone out', function () {
 
     $attendeesResponse->assertOk();
     $attendeesResponse->assertJsonPath('count', 2);
+    $attendeesResponse->assertJsonPath('attendees.0.name', 'Alice');
+    $attendeesResponse->assertJsonPath('attendees.1.name', 'Bob');
 
     $signOutAllResponse = $this->actingAs($admin)
         ->postJson(route('sessions.check-ins.sign-out-all', $session));
@@ -105,6 +138,29 @@ test('admin can see attendees and sign everyone out', function () {
     $signOutAllResponse->assertJsonPath('count', 2);
 
     $this->assertDatabaseCount('jam_session_sign_ins', 0);
+});
+
+test('admin can check out an individual attendee', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $session = createJamSession(['allow_checkins' => true]);
+    $attendee = User::factory()->create();
+
+    JamSessionSignIn::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $attendee->id,
+        'signed_in_at' => now(),
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->postJson(route('sessions.check-ins.sign-out', [$session, $attendee]));
+
+    $response->assertOk();
+    $response->assertJsonPath('signed_in', false);
+
+    $this->assertDatabaseMissing('jam_session_sign_ins', [
+        'jam_session_id' => $session->id,
+        'user_id' => $attendee->id,
+    ]);
 });
 
 test('admin can search users who are not checked in and manually check one in', function () {
@@ -163,6 +219,10 @@ test('non admin cannot access admin check-in endpoints', function () {
         ->postJson(route('sessions.check-ins.sign-in', $session), [
             'user_id' => User::factory()->create()->id,
         ])
+        ->assertForbidden();
+
+    $this->actingAs($member)
+        ->postJson(route('sessions.check-ins.sign-out', [$session, User::factory()->create()]))
         ->assertForbidden();
 });
 
@@ -247,5 +307,5 @@ test('edit jam session form warns when disabling check-ins', function () {
     $this->actingAs($admin)
         ->get(route('sessions.show', $session))
         ->assertOk()
-        ->assertSee('This action will check out all attendees from this session.');
+        ->assertSee('This action will sign out all attendees from this session.');
 });

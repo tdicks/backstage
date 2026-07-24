@@ -22,7 +22,7 @@ class RegisteredUserController extends Controller
     public function create(): View
     {
         return view('auth.register', [
-            'socialLoginsEnabled' => Setting::enabled('enable_social_logins', true),
+            'socialLoginsEnabled' => Setting::enabled('enable_social_logins'),
         ]);
     }
 

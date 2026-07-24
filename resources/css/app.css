@@ -44,6 +44,50 @@
     animation: live-set-unseen-exit 450ms ease-out forwards;
 }
 
+@keyframes who-is-here-check-in {
+    0% {
+        border-color: rgb(16 185 129 / 0.25);
+        box-shadow: 0 0 0 0 rgb(16 185 129 / 0);
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    25% {
+        border-color: rgb(5 150 105 / 0.85);
+        box-shadow: 0 0 0 5px rgb(16 185 129 / 0.22), 0 0 20px rgb(16 185 129 / 0.28);
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        border-color: rgb(226 232 240);
+        box-shadow: 0 0 0 0 rgb(16 185 129 / 0);
+    }
+}
+
+.who-is-here-check-in {
+    animation: who-is-here-check-in 1.4s ease-out;
+}
+
+@keyframes who-is-here-check-out {
+    0% {
+        border-color: rgb(225 29 72 / 0.85);
+        box-shadow: 0 0 0 5px rgb(244 63 94 / 0.2), 0 0 20px rgb(244 63 94 / 0.24);
+        opacity: 1;
+    }
+
+    100% {
+        border-color: rgb(225 29 72 / 0);
+        box-shadow: 0 0 0 0 rgb(244 63 94 / 0);
+        opacity: 0;
+        transform: translateX(8px);
+    }
+}
+
+.who-is-here-check-out {
+    animation: who-is-here-check-out 400ms ease-in forwards;
+}
+
 @keyframes session-fragment-highlight {
     0% {
         outline-color: rgb(37 99 235 / 0);

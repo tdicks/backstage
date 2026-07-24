@@ -20,7 +20,7 @@ class SettingsSeeder extends Seeder
             [
                 'name' => 'Enable Social Logins',
                 'input_type' => 'checkbox',
-                'value' => '1',
+                'value' => '0',
             ]
         );
     }

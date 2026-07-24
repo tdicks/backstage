@@ -8,6 +8,15 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function () {
+    Setting::query()->create([
+        'key' => 'enable_social_logins',
+        'name' => 'Enable Social Logins',
+        'input_type' => 'checkbox',
+        'value' => '1',
+    ]);
+});
+
 test('guest can be redirected to a supported social provider', function () {
     Socialite::shouldReceive('driver->redirect')
         ->once()
@@ -78,17 +87,29 @@ test('unsupported social providers are not routed', function () {
 });
 
 test('social login setting hides buttons and blocks provider redirects', function () {
-    Setting::query()->create([
-        'key' => 'enable_social_logins',
-        'name' => 'Enable Social Logins',
-        'input_type' => 'checkbox',
-        'value' => '0',
-    ]);
+    Setting::query()->where('key', 'enable_social_logins')->update(['value' => '0']);
 
     $this->get(route('login'))
         ->assertOk()
         ->assertDontSee('Continue with Google')
         ->assertDontSee('Continue with Facebook');
+
+    $this->get(route('social.redirect', 'google'))
+        ->assertNotFound();
+});
+
+test('social login buttons and provider redirects require an enabled setting', function () {
+    Setting::query()->where('key', 'enable_social_logins')->delete();
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('Continue with Google')
+        ->assertDontSee('Continue with Facebook');
+
+    $this->get(route('register'))
+        ->assertOk()
+        ->assertDontSee('Register with Google')
+        ->assertDontSee('Register with Facebook');
 
     $this->get(route('social.redirect', 'google'))
         ->assertNotFound();

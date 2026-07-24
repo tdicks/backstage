@@ -91,9 +91,10 @@ class JamSessionController extends Controller
         ]);
 
         $isClosed = (bool) ($validated['is_closed'] ?? false);
-        $allowCheckins = $isClosed
-            ? false
-            : (bool) ($validated['allow_checkins'] ?? false);
+        $isLive = $isClosed ? false : (bool) ($validated['is_live'] ?? false);
+        $allowCheckins = $isLive && ! $isClosed
+            ? (bool) ($validated['allow_checkins'] ?? false)
+            : false;
 
         $jamSession = JamSession::create([
             ...$validated,
@@ -101,7 +102,7 @@ class JamSessionController extends Controller
             'is_hidden' => (bool) ($validated['is_hidden'] ?? false),
             'is_archived' => (bool) ($validated['is_archived'] ?? false),
             'allow_checkins' => $allowCheckins,
-            'is_live' => $isClosed ? false : (bool) ($validated['is_live'] ?? false),
+            'is_live' => $isLive,
         ]);
 
         if (! $jamSession->is_hidden && ! $jamSession->is_archived) {
@@ -251,16 +252,15 @@ class JamSessionController extends Controller
         ]);
 
         $isClosed = (bool) ($validated['is_closed'] ?? $jamSession->is_closed);
-        $allowCheckins = $isClosed
-            ? false
-            : (bool) ($validated['allow_checkins'] ?? $jamSession->allow_checkins);
+        $isLive = $isClosed ? false : (bool) ($validated['is_live'] ?? false);
+        $allowCheckins = $isLive && ! $isClosed
+            ? (bool) ($validated['allow_checkins'] ?? $jamSession->allow_checkins)
+            : false;
 
         $wasAllowingCheckins = $jamSession->allow_checkins;
         $wasClosed = $jamSession->is_closed;
         $wasLive = $jamSession->is_live;
         $previousDate = $jamSession->date?->toDateString();
-
-        $isLive = $isClosed ? false : (bool) ($validated['is_live'] ?? false);
 
         $jamSession->update([
             ...$validated,
