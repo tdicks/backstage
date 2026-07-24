@@ -16,6 +16,6 @@ test('a user can log in with a mixed-case email address', function () {
         'password' => 'password',
     ]);
 
-    $response->assertRedirect(route('my-sets.index', absolute: false));
+    $response->assertRedirect(route('dashboard', absolute: false));
     $this->assertAuthenticatedAs($user);
 });
