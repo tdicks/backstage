@@ -78,8 +78,8 @@
             <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div class="min-w-0 text-left">
                     <div class="flex items-center justify-start gap-2 text-sm text-slate-300">
-                        <x-heroicon-m-microphone
-                            class="h-4 w-4"
+                        <x-heroicon-m-user-circle
+                            class="h-5 w-5"
                             aria-hidden="true"
                             x-bind:class="jamManagerId ? (canManageLiveJam ? 'text-emerald-400' : 'text-amber-400') : 'text-slate-500'"
                         />
@@ -141,7 +141,7 @@
                         title="Manage"
                         aria-label="Manage"
                     >
-                        <x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />
+                        <x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />
                     </button>
                     <button
                         type="button"
@@ -153,7 +153,7 @@
                         title="Release Manager"
                         aria-label="Release Manager"
                     >
-                        <x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />
+                        <x-heroicon-m-arrow-right-on-rectangle class="h-3 w-3" aria-hidden="true" />
                     </button>
                 </div>
             </div>

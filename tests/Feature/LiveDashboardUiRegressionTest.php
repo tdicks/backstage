@@ -110,7 +110,8 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($view)->not->toContain('ring-1 ring-emerald-400/80');
     expect($view)->not->toContain('ring-1 ring-emerald-800');
     expect($view)->toContain('x-show="!song.completed"');
-    expect($view)->toContain('!song.completed && song.slots.filter(sl => sl.filled).length > 0');
+    expect($view)->toContain('!song.completed && song.slots.length > 0');
+    expect(strpos($view, '!song.completed && song.slots.length > 0'))->toBeLessThan(strpos($view, '!song.completed && song.slots.filter(sl => sl.filled).length > 0'));
     expect($view)->toContain(":class=\"comingUpSets.length === 1 ? 'grid-cols-1' : 'sm:grid-cols-2'\"");
     expect($view)->toContain('class="columns-1 gap-2 sm:columns-2 xl:columns-3"');
     expect($view)->toContain('rounded-xl border border-amber-700 bg-amber-950 p-3');
@@ -224,7 +225,7 @@ test('session controls compact to icons and live management saves automatically'
     expect($liveManagementView)->toContain('flex shrink-0 flex-wrap items-center justify-end gap-2');
     expect($liveManagementView)->toContain('x-transition:enter-start="opacity-0 translate-x-4"');
     expect($liveManagementView)->toContain('x-transition:leave-end="opacity-0 translate-x-4"');
-    expect($liveManagementView)->toContain('x-text="canManageLiveJam ? \'You are the Jam Manager\' : (jamManagerName ? `${jamManagerName} is Jam Manager` : \'Nobody is Jam Manager\')"');
+    expect($liveManagementView)->toContain('x-text="canManageLiveJam ? \'You are the Jam Manager\' : (jamManagerName ? `${jamManagerName} is the Jam Manager` : \'Nobody is the Jam Manager\')"');
     expect(strpos($liveManagementView, 'You are the Jam Manager'))->toBeLessThan(strpos($liveManagementView, '@click="claimManager()"'));
     expect(strpos($liveManagementView, '@click="clearState()"'))->toBeLessThan(strpos($liveManagementView, '@click="claimManager()"'));
     expect($liveManagementView)->toContain('<div class="h-8 w-px shrink-0 bg-slate-700" aria-hidden="true"></div>');
@@ -233,8 +234,10 @@ test('session controls compact to icons and live management saves automatically'
     expect($liveManagementView)->toContain('@click="releaseManager()"');
     expect($liveManagementView)->toContain('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-800 bg-amber-950/60 text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 disabled:opacity-50');
     expect($liveManagementView)->toContain('border border-amber-800 bg-amber-950/60');
-    expect($liveManagementView)->toContain('<x-heroicon-m-microphone class="h-3 w-3" aria-hidden="true" />');
+    expect($liveManagementView)->toContain('<x-heroicon-m-arrow-right-on-rectangle class="h-3 w-3" aria-hidden="true" />');
     expect($liveManagementView)->toContain('<x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />');
+    expect(strpos($liveManagementView, 'aria-label="Manage"'))->toBeLessThan(strpos($liveManagementView, '<x-heroicon-m-arrow-left-on-rectangle class="h-3 w-3" aria-hidden="true" />'));
+    expect(strpos($liveManagementView, 'aria-label="Release Manager"'))->toBeLessThan(strpos($liveManagementView, '<x-heroicon-m-arrow-right-on-rectangle class="h-3 w-3" aria-hidden="true" />'));
     expect($liveManagementView)->toContain('aria-label="Manage"');
     expect($liveManagementView)->toContain('aria-label="Release Manager"');
     expect($liveManagementView)->toContain('aria-label="Reset"');

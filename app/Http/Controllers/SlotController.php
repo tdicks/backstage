@@ -198,15 +198,17 @@ class SlotController extends Controller
     {
         $slot->load('song.set');
 
-        if (! $slot->song->set->signups_open) {
-            return back()->with('status', 'Sign ups are closed for this set.');
-        }
-
         $set = $slot->song->set;
         $user = $request->user();
         $isSetManager = $set->owner_id === $user->id || $set->isCollaborator($user) || $user->is_admin;
         $isCollaborator = $set->isCollaborator($user);
         $canFreeTake = $set->free_for_all && $slot->isOpen();
+
+        abort_if($set->performed, 403);
+
+        if (! $set->signups_open && ! $isSetManager) {
+            return back()->with('status', 'Sign ups are closed for this set.');
+        }
 
         if (! $isSetManager && ! $canFreeTake) {
             abort(403);

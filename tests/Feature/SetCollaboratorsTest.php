@@ -364,6 +364,59 @@ test('collaborator can take a slot directly', function () {
     expect($slot->fresh()->user_id)->toBe($collab->id);
 });
 
+test('set owner can take a slot when public sign-ups are closed', function () {
+    $owner = User::factory()->create();
+    $session = makeSession();
+    $set = makeSet($owner, $session);
+    $set->update(['signups_open' => false]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->postJson(route('slots.take', $slot))
+        ->assertOk();
+
+    expect($slot->fresh()->user_id)->toBe($owner->id);
+});
+
+test('collaborator cannot take an open slot when the set is performed', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $session = makeSession();
+    $set = makeSet($owner, $session, [$collaborator->id]);
+    $set->update(['performed' => true, 'signups_open' => false]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($collaborator)
+        ->postJson(route('slots.take', $slot))
+        ->assertForbidden();
+
+    expect($slot->fresh()->user_id)->toBeNull();
+});
+
 test('non-collaborator cannot take a slot directly', function () {
     $owner = User::factory()->create();
     $stranger = User::factory()->create();

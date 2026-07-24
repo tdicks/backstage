@@ -33,7 +33,7 @@
             data-session-action-menu
             class="absolute z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
         >
-            @if ($set->signups_open && $canManageSet && $slotModel->user_id !== auth()->id())
+            @if ($canManageSet && $slotModel->user_id !== auth()->id())
                 <button
                     type="button"
                     @disabled($jamSessionClosed && !auth()->user()?->is_admin)

@@ -160,7 +160,7 @@
                                                             <span x-text="`${song.artist} – ${song.title}`"></span>
                                                             <x-heroicon-m-check x-show="song.completed" x-cloak class="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
                                                         </p>
-                                                        <template x-if="!song.completed && song.slots.filter(sl => sl.filled).length > 0">
+                                                        <template x-if="!song.completed && song.slots.length > 0">
                                                             <div class="mt-1.5 flex flex-wrap gap-1.5">
                                                                 <template x-for="slot in song.slots" :key="slot.id">
                                                                     <span
