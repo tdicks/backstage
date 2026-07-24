@@ -47,7 +47,10 @@ test('a jam register code opens a preselected session', function () {
     $this->get(route('jam-register.session', $session->jam_register_code))
         ->assertOk()
         ->assertSee('selectedSessionId: '.$session->id)
-        ->assertSee('showSessionPicker: false');
+        ->assertSee('showSessionPicker: false')
+        ->assertSee('cameFromShortCode: true')
+        ->assertSee('sessionUrl:')
+        ->assertSee($session->getRouteKey());
 });
 
 test('a jam register code is unavailable when sign-ins are disabled', function () {

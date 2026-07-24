@@ -17,6 +17,9 @@
 		selectedSessionId: @js($lockedSession?->id),
 		selectedSessionName: @js($lockedSession?->name ?? ''),
 		showSessionPicker: @js($lockedSession === null),
+		cameFromShortCode: @js($lockedSession !== null),
+		sessionUrl: @js($lockedSession ? route('sessions.show', $lockedSession) : null),
+		showSessionLink: false,
 		query: '',
 		selectedUserId: null,
 		selectedUserName: '',
@@ -159,6 +162,7 @@
 					return;
 				}
 				this.showToast(payload.message || 'Status updated successfully.');
+				this.showSessionLink = this.cameFromShortCode && !isSigningOut;
 				this.query = '';
 				this.selectedUserId = null;
 				this.selectedUserName = '';
@@ -228,6 +232,15 @@
 								></button>
 							</template>
 						</div>
+
+						<a
+							x-show="showSessionLink"
+							x-cloak
+							:href="sessionUrl"
+							class="mt-3 inline-flex text-sm font-medium text-slate-600 underline decoration-slate-400 underline-offset-4 transition hover:text-slate-900"
+						>
+							View jam session
+						</a>
 					</div>
 
 					<div class="mt-6 flex flex-wrap items-center gap-3">
