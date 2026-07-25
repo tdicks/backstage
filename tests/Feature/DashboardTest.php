@@ -17,7 +17,20 @@ test('guests see the Backstage welcome page', function () {
         ->assertSee(route('register'));
 });
 
-test('authenticated users see their next jam session slots', function () {
+test('authenticated users visiting the homepage are redirected to their dashboard', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/')
+        ->assertRedirect(route('dashboard'));
+});
+
+test('guests visiting the dashboard are redirected to login', function () {
+    $this->get(route('dashboard'))
+        ->assertRedirect(route('login'));
+});
+
+test('authenticated users see their next jam session slots on the dashboard', function () {
     $user = User::factory()->create(['name' => 'Alex Player']);
     $otherUser = User::factory()->create();
 
@@ -62,7 +75,7 @@ test('authenticated users see their next jam session slots', function () {
     Slot::create(['song_id' => $laterSong->id, 'name' => 'bass', 'position' => 1, 'user_id' => $user->id]);
 
     $response = $this->actingAs($user)
-        ->get('/');
+        ->get(route('dashboard'));
 
     $response
         ->assertOk()
@@ -82,7 +95,7 @@ test('authenticated users without upcoming slots see the empty dashboard state',
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get('/')
+        ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('No upcoming slots yet')
         ->assertSee(route('sessions.index'));

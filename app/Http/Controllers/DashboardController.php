@@ -11,10 +11,6 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        if (! $request->user()) {
-            return view('welcome');
-        }
-
         $user = $request->user();
         $nextSession = JamSession::query()
             ->visibleTo($user)

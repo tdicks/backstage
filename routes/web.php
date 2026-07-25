@@ -21,9 +21,20 @@ use App\Http\Controllers\SlotController;
 use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\UserDirectoryController;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\View;
 
-Route::get('/', DashboardController::class)->name('dashboard');
+Route::get('/', function (Request $request): View|RedirectResponse {
+    if ($request->user()) {
+        return to_route('dashboard');
+    }
+
+    return view('welcome');
+})->name('home');
+
+Route::view('/logged-out', 'auth.logged-out')->name('logged-out');
 
 Route::get('/jam-register', [JamRegisterController::class, 'index'])->name('jam-register.index');
 Route::get('/jam-register/users', [JamRegisterController::class, 'users'])->name('jam-register.users');
@@ -42,6 +53,8 @@ Route::view('/about', 'static.about')->name('about');
 Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
     Route::view('/help', 'static.help')->name('help');
 
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
