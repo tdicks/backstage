@@ -27,7 +27,7 @@ class JamRegisterController extends Controller
             ->where('is_hidden', false)
             ->where('is_closed', false)
             ->where('allow_checkins', true)
-            ->firstOrFail(['id', 'name', 'date']);
+            ->firstOrFail(['id', 'name', 'date', 'jam_register_code']);
 
         return view('jam-register.index', [
             'sessions' => collect([$jamSession]),

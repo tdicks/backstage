@@ -18,6 +18,9 @@
 
     <form method="POST" action="{{ route('register') }}">
         @csrf
+        @if ($returnTo)
+            <input type="hidden" name="return_to" value="{{ $returnTo }}">
+        @endif
 
         <!-- Name -->
         <div>

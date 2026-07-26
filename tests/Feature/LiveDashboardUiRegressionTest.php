@@ -120,6 +120,9 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($view)->toContain('set.songs.length > 0 && !set.songs_collapsed');
     expect($view)->toContain('set.songs.length > 0 && set.songs_collapsed');
     expect($view)->toContain('collapsedSetPerformers(set)');
+    expect($view)->toContain('collapsedSetPerformers(set).slice(0, 10)');
+    expect($view)->toContain('collapsedSetPerformers(set).slice(10)');
+    expect($view)->toContain("collapsedSetPerformers(set).length > 10 ? 'sm:grid-cols-2' : ''");
     expect($view)->toContain('collapsedSetPerformers(playingNow)');
     expect($view)->toContain('collapsedSetPerformers(set) {');
     expect($view)->toContain('const existingPerformer = performersByName.get(performerKey);');

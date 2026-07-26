@@ -50,6 +50,11 @@ test('a jam register code opens a preselected session', function () {
         ->assertSee('showSessionPicker: false')
         ->assertSee('cameFromShortCode: true')
         ->assertSee('sessionUrl:')
+        ->assertSee('registerUrl:')
+        ->assertSee("Can't find your name? Register a Backstage account here!")
+        ->assertSee('x-show="cameFromShortCode && !showSessionLink"', false)
+        ->assertSee('x-show="suggestions.length > 0"', false)
+        ->assertSee('class="mt-3 block text-center text-sm font-medium text-slate-600', false)
         ->assertSee($session->getRouteKey());
 });
 

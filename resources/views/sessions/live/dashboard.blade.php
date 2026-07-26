@@ -193,14 +193,24 @@
                                                 </div>
                                                 <div class="rounded-lg border border-amber-800 bg-slate-950/50 px-3 py-2">
                                                     <p class="text-xs font-semibold uppercase tracking-wide text-amber-300">Performers</p>
-                                                    <ul class="mt-1.5 space-y-1 text-sm text-slate-100">
-                                                        <template x-for="performer in collapsedSetPerformers(set)" :key="performer.name">
-                                                            <li class="flex items-center gap-1.5">
-                                                                <span x-text="performer.name"></span>
-                                                                <x-checked-in-dot x-show="performer.checked_in" x-cloak />
-                                                            </li>
-                                                        </template>
-                                                    </ul>
+                                                    <div class="mt-1.5 grid gap-x-4 gap-y-1" :class="collapsedSetPerformers(set).length > 10 ? 'sm:grid-cols-2' : ''">
+                                                        <ul class="space-y-1 text-sm text-slate-100">
+                                                            <template x-for="performer in collapsedSetPerformers(set).slice(0, 10)" :key="performer.name">
+                                                                <li class="flex items-center gap-1.5">
+                                                                    <span x-text="performer.name"></span>
+                                                                    <x-checked-in-dot x-show="performer.checked_in" x-cloak />
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                        <ul x-show="collapsedSetPerformers(set).length > 10" x-cloak class="space-y-1 text-sm text-slate-100">
+                                                            <template x-for="performer in collapsedSetPerformers(set).slice(10)" :key="performer.name">
+                                                                <li class="flex items-center gap-1.5">
+                                                                    <span x-text="performer.name"></span>
+                                                                    <x-checked-in-dot x-show="performer.checked_in" x-cloak />
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </template>

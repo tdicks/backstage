@@ -19,10 +19,13 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        $returnTo = $request->query('return_to');
+
         return view('auth.register', [
             'socialLoginsEnabled' => Setting::enabled('enable_social_logins'),
+            'returnTo' => $this->isJamRegisterReturnUrl($returnTo, $request) ? $returnTo : null,
         ]);
     }
 
@@ -37,6 +40,7 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'return_to' => ['nullable', 'string'],
         ]);
 
         $user = User::create([
@@ -49,6 +53,24 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('my-sets.index', absolute: false));
+        $returnTo = $request->input('return_to');
+
+        if ($this->isJamRegisterReturnUrl($returnTo, $request)) {
+            return redirect($returnTo);
+        }
+
+        return redirect()->intended(route('dashboard', absolute: false));
+    }
+
+    private function isJamRegisterReturnUrl(mixed $returnTo, Request $request): bool
+    {
+        if (! is_string($returnTo)) {
+            return false;
+        }
+
+        $url = parse_url($returnTo);
+
+        return ($url['host'] ?? null) === $request->getHost()
+            && preg_match('#^/jam-register/[A-Za-z0-9]{4}$#', $url['path'] ?? '') === 1;
     }
 }

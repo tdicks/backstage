@@ -19,6 +19,7 @@
 		showSessionPicker: @js($lockedSession === null),
 		cameFromShortCode: @js($lockedSession !== null),
 		sessionUrl: @js($lockedSession ? route('sessions.show', $lockedSession) : null),
+		registerUrl: @js($lockedSession ? route('register', ['return_to' => route('jam-register.session', $lockedSession->jam_register_code)]) : null),
 		showSessionLink: false,
 		query: '',
 		selectedUserId: null,
@@ -233,19 +234,27 @@
 							</template>
 						</div>
 
+						<p class="mt-3 text-sm text-slate-600" x-show="suggestions.length > 0" x-cloak>Select your name to continue.</p>
+
 						<a
 							x-show="showSessionLink"
 							x-cloak
 							:href="sessionUrl"
-							class="mt-3 inline-flex text-sm font-medium text-slate-600 underline decoration-slate-400 underline-offset-4 transition hover:text-slate-900"
+							class="mt-3 block text-center text-sm font-medium text-slate-600 underline decoration-slate-400 underline-offset-4 transition hover:text-slate-900"
 						>
 							View jam session
 						</a>
+
+						<a
+							x-show="cameFromShortCode && !showSessionLink"
+							x-cloak
+							:href="registerUrl"
+							class="mt-4 block text-center text-sm font-medium text-slate-600 underline decoration-slate-400 underline-offset-4 transition hover:text-slate-900"
+						>
+							Can't find your name? Register a Backstage account here!
+						</a>
 					</div>
 
-					<div class="mt-6 flex flex-wrap items-center gap-3">
-						<p class="text-sm text-slate-600" x-show="suggestions.length > 0" x-cloak>Select your name to continue.</p>
-					</div>
 				</section>
 			</div>
 
