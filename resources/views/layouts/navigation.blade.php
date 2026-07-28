@@ -8,7 +8,7 @@
         notificationsOpen: false,
         notificationObserver: null,
         notificationTimers: {},
-        notificationSeenDelay: 3000,
+        notificationSeenDelay: 2000,
         toggleNotifications() {
             this.notificationsOpen = ! this.notificationsOpen;
 
@@ -459,7 +459,7 @@
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
-                            @click="await $store.notifications.dismissAll(); closeNotifications()"
+                            @click="await $store.notifications.dismissAll()"
                             x-show="$store.notifications.items.length > 0"
                             x-transition
                             class="rounded-full p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"

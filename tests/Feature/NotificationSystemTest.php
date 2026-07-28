@@ -168,7 +168,10 @@ test('notification overlay has dismiss all button in header', function () {
     $this->actingAs($user)
         ->get(route('sessions.index'))
         ->assertOk()
+        ->assertSee('notificationSeenDelay: 2000', false)
         ->assertSee('dismissAll()', false)
+        ->assertSee('@click="await $store.notifications.dismissAll()"', false)
+        ->assertDontSee('@click="await $store.notifications.dismissAll(); closeNotifications()"', false)
         ->assertSee('Dismiss All', false);
 });
 
