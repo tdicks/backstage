@@ -62,13 +62,28 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
     ]);
 
     $this->actingAs($owner)
-        ->get(route('sessions.sets', $session), [
+        ->get(route('sessions.sets.body', [$session, $set]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
-        ->assertSee('Lazy Set')
         ->assertSee('Lazy Song')
         ->assertSee('Bass');
+});
+
+test('set card bodies load through the viewport observer or an explicit expansion', function () {
+    $script = file_get_contents(resource_path('js/components/sessionCards.js'));
+    $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
+
+    expect($script)
+        ->toContain("rootMargin: '320px 0px'")
+        ->toContain('queueLazySetBody(rootElement, () => this.loadSetBody(rootElement));')
+        ->toContain('isWithinLazySetBodyBuffer(rootElement)')
+        ->not->toContain('syncLazySetCard');
+
+    expect($shell)
+        ->toContain('initLazySetCard($el)')
+        ->toContain('@click.stop="setCollapsed = !setCollapsed; if (!setCollapsed) loadSetBody()"')
+        ->not->toContain('syncLazySetCard($el)');
 });
 
 test('lazy session sets endpoint renders slot rows with extracted sessionSlotRow wiring', function () {
@@ -106,7 +121,7 @@ test('lazy session sets endpoint renders slot rows with extracted sessionSlotRow
     ]);
 
     $this->actingAs($owner)
-        ->get(route('sessions.sets', $session), [
+        ->get(route('sessions.sets.body', [$session, $set]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
@@ -164,7 +179,7 @@ test('lazy session sets endpoint renders mobile slot activity card for pending s
     ]);
 
     $this->actingAs($owner)
-        ->get(route('sessions.sets', $session), [
+        ->get(route('sessions.sets.body', [$session, $set]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
@@ -299,11 +314,10 @@ test('session activity endpoint batches approval count and open song slot update
         ->assertSee('x-on:session-song-opened.window="$store.approvals.refresh()"', false);
 
     $this->actingAs($owner)
-        ->get(route('sessions.sets', $session), [
+        ->get(route('sessions.sets.body', [$session, $set]), [
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
-        ->assertSee('x-bind:data-set-open="(!setCollapsed).toString()"', false)
         ->assertSee('x-bind:data-song-open="(!songCollapsed).toString()"', false)
         ->assertSee('data-song-slots-id="'.$firstSong->id.'"', false)
         ->assertDontSee('data-song-slots-body data-song-id=', false)
@@ -428,15 +442,17 @@ test('hidden sets are not counted for other users on the session list', function
         'is_hidden' => true,
     ]);
 
-    $this->actingAs($owner)
+    $ownerResponse = $this->actingAs($owner)
         ->get(route('sessions.index'))
-        ->assertOk()
-        ->assertSee('1 sets');
+        ->assertOk();
 
-    $this->actingAs($other)
+    expect($ownerResponse->viewData('sessions')->firstWhere('id', $session->id)->sets_count)->toBe(1);
+
+    $otherResponse = $this->actingAs($other)
         ->get(route('sessions.index'))
-        ->assertOk()
-        ->assertSee('0 sets');
+        ->assertOk();
+
+    expect($otherResponse->viewData('sessions')->firstWhere('id', $session->id)->sets_count)->toBe(0);
 });
 
 test('navigation shows the hidden session indicator to admins', function () {

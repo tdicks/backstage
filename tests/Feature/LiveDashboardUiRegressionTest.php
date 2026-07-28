@@ -276,17 +276,22 @@ test('slot editing remains clickable while drag reordering ignores interactive c
 
     expect($slotRowView)->toContain('@click.stop="openEditSlotModal()"');
     expect($songSlotsView)->toContain(':current-user-id="$currentUserId"');
-    expect($slotRowComponent)->toContain(':current-user-id="$currentUserId"');
     expect($slotRowComponent)->toContain('jam_manager_id === $currentUserId');
     expect($slotRowComponent)->toContain(':can-edit-slot="$canEditSlot"');
     expect($slotRowComponent)->toContain('align-middle transition hover:bg-slate-50/70 md:align-top');
     expect($slotRowComponent)->toContain('flex items-center justify-end gap-2 md:items-start');
-    expect($slotRowComponent)->toContain('@dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"');
-    expect($slotRowComponent)->toContain('@dragend.self="onSlotDragEnd()"');
+    expect($slotRowComponent)->toContain('@dragstart.stop.self="onSlotDragStart($event, {{ $slotModel->id }})"');
+    expect($slotRowComponent)->toContain("@dragover.stop=\"onSlotDragOver(\$event, Number(\$event.target.closest('[data-slot-id]')?.dataset.slotId) || null)\"");
+    expect($slotRowComponent)->toContain('@dragend.stop.self="onSlotDragEnd()"');
     expect($slotRowComponent)->toContain('inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden');
     expect($slotRowComponent)->toContain('aria-label="Move slot up"');
     expect($slotRowComponent)->toContain('aria-label="Move slot down"');
     expect($slotRowComponent)->toContain('border-t border-slate-200');
+    expect($slotRowComponent)->toContain("'canMoveSlotUp' => \$canMoveSlotUp,");
+    expect($slotRowComponent)->toContain("'canMoveSlotDown' => \$canMoveSlotDown,");
+    expect($slotRowComponent)->toContain('x-on:slot-order-changed.window="if ($event.detail.songId === {{ $slotModel->song_id }}) syncMobileSlotOrder()"');
+    expect($slotRowComponent)->toContain('x-bind:disabled="!canMoveSlotUp || busyAction ||');
+    expect($slotRowComponent)->toContain('x-bind:disabled="!canMoveSlotDown || busyAction ||');
     expect($dragUtility)->toContain('export function isInteractiveDragSource(event) {');
     expect($appJs)->toContain('window.isInteractiveDragSource = isInteractiveDragSource;');
 });
@@ -301,7 +306,10 @@ test('song cards use the song reorder capability for drag and ordering controls'
     expect($songCardComponent)->toContain('select-none flex-wrap items-center justify-between gap-3 md:items-start');
     expect($songCardComponent)->not->toContain('cursor-grab');
     expect($songCardComponent)->toContain("'canReorderSongs' => \$canReorderSongs,");
-    expect($songCardComponent)->not->toContain("'canReorderSlots' => \$canManageSet");
+    expect($songCardComponent)->toContain("'songId' => \$song->id,");
+    expect($songCardComponent)->toContain("'canMoveSongUp' => \$canMoveSongUp,");
+    expect($songCardComponent)->toContain("'canMoveSongDown' => \$canMoveSongDown,");
+    expect($songCardComponent)->toContain("'canReorderSlots' => \$canManageSet && ! \$setLocked && ! (\$jamSessionClosed && ! auth()->user()?->is_admin),");
     expect($songCardComponent)->not->toContain("\$dispatch('song-drag-start'");
     expect($setCardComponent)->toContain("@dragstart=\"onSongDragStart(\$event, Number(\$event.target.closest('[data-song-id]')?.dataset.songId))\"");
     expect($setCardComponent)->toContain("@dragover=\"onSongDragOver(\$event, Number(\$event.target.closest('[data-song-id]')?.dataset.songId) || null)\"");
@@ -309,6 +317,13 @@ test('song cards use the song reorder capability for drag and ordering controls'
     expect($setCardComponent)->toContain('<p class="hidden text-xs text-slate-500 md:block">Tip: drag songs and slots to reorder them.</p>');
     expect($sessionCards)->toContain('canReorderSongs: config.canReorderSongs,');
     expect($sessionCards)->toContain('mobileSongReorderBusy: false,');
+    expect($sessionCards)->toContain('songId: config.songId,');
+    expect($sessionCards)->toContain('canMoveSongUp: config.canMoveSongUp,');
+    expect($sessionCards)->toContain('canMoveSongDown: config.canMoveSongDown,');
+    expect($sessionCards)->toContain("new CustomEvent('slot-order-changed', {");
+    expect($sessionCards)->toContain('syncMobileSlotOrder() {');
+    expect($sessionCards)->toContain("new CustomEvent('song-order-changed', {");
+    expect($sessionCards)->toContain('syncMobileSongOrder() {');
     expect($sessionCards)->toContain("new CustomEvent('song-reorder-start', {");
     expect($sessionCards)->toContain("new CustomEvent('song-reorder-complete', {");
     expect($sessionCards)->toContain("isDesktopReorderEnabled: window.matchMedia('(min-width: 768px)').matches,");
@@ -317,13 +332,17 @@ test('song cards use the song reorder capability for drag and ordering controls'
     expect($songCardComponent)->toContain('@resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"');
     expect($songCardComponent)->toContain('x-on:song-reorder-start.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = true"');
     expect($songCardComponent)->toContain('x-on:song-reorder-complete.window="if ($event.detail.setId === {{ $set->id }}) mobileSongReorderBusy = false"');
+    expect($songCardComponent)->toContain('x-on:song-order-changed.window="if ($event.detail.setId === {{ $set->id }}) syncMobileSongOrder()"');
     expect($songCardComponent)->toContain('if (!mobileSongReorderBusy) { mobileSongReorderBusy = true; window.dispatchEvent(new CustomEvent(\'mobile-song-move\'');
-    expect($songCardComponent)->toContain("x-bind:disabled=\"{{ \$canMoveSongUp ? 'false' : 'true' }} || mobileSongReorderBusy ||");
-    expect($songCardComponent)->toContain("x-bind:disabled=\"{{ \$canMoveSongDown ? 'false' : 'true' }} || mobileSongReorderBusy ||");
+    expect($songCardComponent)->toContain('x-bind:disabled="!canMoveSongUp || mobileSongReorderBusy ||');
+    expect($songCardComponent)->toContain('x-bind:disabled="!canMoveSongDown || mobileSongReorderBusy ||');
     expect($songCardComponent)->toContain('inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden');
     expect($songCardComponent)->toContain('aria-label="Move song up"');
     expect($songCardComponent)->toContain('aria-label="Move song down"');
-    expect($sessionCards)->toContain("this.reorderFeedback = 'Song order saved.';\n                this.refreshSessionSets();");
+    expect($sessionCards)->toContain("this.reorderFeedback = 'Song order saved.';\n                window.dispatchEvent(new CustomEvent('song-reorder-complete', {");
+    expect($sessionCards)->toContain("this.actionFeedback = 'Slot order saved.';");
+    expect($sessionCards)->not->toContain("this.reorderFeedback = 'Song order saved.';\n                this.refreshSessionSets();");
+    expect($sessionCards)->not->toContain("this.actionFeedback = 'Slot order saved.';\n                this.refreshSessionSets();");
 });
 
 test('management set cards collapse from the full card surface', function () {
@@ -415,7 +434,7 @@ test('add song modal keeps its actions outside the scrollable form body', functi
     expect($setCard)->toContain("x-show=\"songSlotAdditionMode === 'manual'\"");
     expect($sessionCards)->toContain("const hasBandTemplate = Boolean(formData.get('band_template_id'));");
     expect($sessionCards)->toContain("const hasManualSlots = formData.getAll('slot_names[]').length > 0;");
-    expect($sessionCards)->toContain("No slots will be added to this song now. You can add slots later. Continue?");
+    expect($sessionCards)->toContain('No slots will be added to this song now. You can add slots later. Continue?');
 });
 
 test('live management normalizes stack order and queues saves after each mutation', function () {

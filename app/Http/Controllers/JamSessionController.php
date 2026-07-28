@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BandTemplate;
 use App\Models\JamSession;
+use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
 use App\Models\User;
@@ -142,22 +143,36 @@ class JamSessionController extends Controller
         $this->authorize('view', $jamSession);
 
         $jamSession->load([
-            'sets' => function ($query) use ($request): void {
-                $query->visibleTo($request->user())
-                    ->with([
-                        'session',
-                        'owner',
-                        'songRequests.requester',
-                        'songRequests.responder',
-                        'songRequests.bandTemplate',
-                        'songs.slots.user',
-                        'songs.slots.assignments.actor',
-                        'songs.slots.assignments.target',
-                    ]);
-            },
+            'sets' => fn ($query) => $query
+                ->visibleTo($request->user())
+                ->with('owner')
+                ->orderBy('position'),
         ]);
 
         return view('sessions.partials.set-cards', $this->sessionSetsViewData($jamSession));
+    }
+
+    public function setBody(Request $request, JamSession $jamSession, Set $set): View
+    {
+        $this->authorize('view', $jamSession);
+
+        abort_unless($set->jam_session_id === $jamSession->id, 404);
+
+        $set->load([
+            'session',
+            'owner',
+            'songRequests.requester',
+            'songRequests.responder',
+            'songRequests.bandTemplate',
+            'songs.slots.user',
+            'songs.slots.assignments.actor',
+            'songs.slots.assignments.target',
+        ]);
+
+        return view('sessions.partials.set-card-body', [
+            ...$this->sessionSetsViewData($jamSession),
+            'set' => $set,
+        ]);
     }
 
     public function activity(Request $request, JamSession $jamSession): JsonResponse

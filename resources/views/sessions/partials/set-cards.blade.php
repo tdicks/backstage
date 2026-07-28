@@ -1,6 +1,6 @@
 <div class="space-y-6">
     @forelse ($session->sets as $set)
-        <x-sessions.set-card
+        <x-sessions.set-card-shell
             :set="$set"
             :sessions="$sessions"
             :users="$users"

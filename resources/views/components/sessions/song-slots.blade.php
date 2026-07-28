@@ -15,9 +15,9 @@
     $setLocked = $set->performed;
 @endphp
 
-<tr x-ref="slotDropPlaceholder" class="hidden">
+<tr x-ref="slotDropPlaceholder" class="hidden" @dragover.stop.prevent="onSlotPlaceholderDragOver($event)" @drop.stop="onSlotPlaceholderDrop($event)">
     <td colspan="3" class="px-3 py-3">
-        <div data-slot-drop-label class="rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/70 p-4 text-sm font-medium text-sky-700 shadow-sm">Drop slot here</div>
+        <div data-slot-drop-label class="rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/70 p-4 text-sm font-medium text-sky-700 shadow-sm" @dragover.stop.prevent="onSlotPlaceholderDragOver($event)" @drop.stop="onSlotPlaceholderDrop($event)">Drop slot here</div>
     </td>
 </tr>
 @forelse ($song->slots as $slot)

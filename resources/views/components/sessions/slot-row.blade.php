@@ -30,10 +30,10 @@
     class="border-t border-slate-100 align-middle transition hover:bg-slate-50/70 md:align-top"
     data-slot-id="{{ $slotModel->id }}"
     x-bind:draggable="isDesktopReorderEnabled && canReorderSlots && !jamSessionClosed ? 'true' : 'false'"
-    @dragstart.self="onSlotDragStart($event, {{ $slotModel->id }})"
-    @dragover.stop="onSlotDragOver($event, {{ $slotModel->id }})"
+    @dragstart.stop.self="onSlotDragStart($event, {{ $slotModel->id }})"
+    @dragover.stop="onSlotDragOver($event, Number($event.target.closest('[data-slot-id]')?.dataset.slotId) || null)"
     @drop.stop="onSlotDrop($event)"
-    @dragend.self="onSlotDragEnd()"
+    @dragend.stop.self="onSlotDragEnd()"
     x-bind:class="{
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
@@ -63,12 +63,15 @@
         'noProposableUsersMessage' => $noProposableUsersMessage,
         'setLocked' => $setLocked,
         'canReorderSlots' => $canReorderSlots,
+        'canMoveSlotUp' => $canMoveSlotUp,
+        'canMoveSlotDown' => $canMoveSlotDown,
         'csrfToken' => csrf_token(),
     ]))"
     @scroll.window="repositionActionMenu()"
     @resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
+    x-on:slot-order-changed.window="if ($event.detail.songId === {{ $slotModel->song_id }}) syncMobileSlotOrder()"
     x-on:slot-conflict-toast.window="if ($event.detail.slotId === {{ $slotModel->id }}) showToast('error', $event.detail.message)"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
@@ -84,7 +87,7 @@
                         type="button"
                         @disabled(! $canMoveSlotUp || ($jamSessionClosed && !auth()->user()?->is_admin))
                         @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: -1 } }))"
-                        x-bind:disabled="{{ $canMoveSlotUp ? 'false' : 'true' }} || busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                        x-bind:disabled="!canMoveSlotUp || busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                         class="inline-flex h-5 items-center justify-center transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Move slot up"
                         title="Move slot up"
@@ -95,7 +98,7 @@
                         type="button"
                         @disabled(! $canMoveSlotDown || ($jamSessionClosed && !auth()->user()?->is_admin))
                         @click.prevent="window.dispatchEvent(new CustomEvent('mobile-slot-move', { detail: { songId: {{ $slotModel->song_id }}, slotId: {{ $slotModel->id }}, direction: 1 } }))"
-                        x-bind:disabled="{{ $canMoveSlotDown ? 'false' : 'true' }} || busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                        x-bind:disabled="!canMoveSlotDown || busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                         class="inline-flex h-5 items-center justify-center border-t border-slate-200 transition hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Move slot down"
                         title="Move slot down"

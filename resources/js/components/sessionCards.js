@@ -34,8 +34,65 @@ function viewportActionMenuStyle(button) {
     return `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; max-height: calc(100vh - ${viewportPadding * 2}px); overflow-y: auto;`;
 }
 
+const queuedLazySetBodies = new Map();
+let lazySetBodyQueueActive = false;
+const lazySetBodyViewportBuffer = 320;
+
+function isWithinLazySetBodyBuffer(element) {
+    const { top, bottom } = element.getBoundingClientRect();
+
+    return bottom >= -lazySetBodyViewportBuffer
+        && top <= window.innerHeight + lazySetBodyViewportBuffer;
+}
+
+function lazySetBodyDistanceFromViewport(element) {
+    const { top, bottom } = element.getBoundingClientRect();
+
+    if (bottom < 0) {
+        return -bottom;
+    }
+
+    return top > window.innerHeight ? top - window.innerHeight : 0;
+}
+
+function queueLazySetBody(rootElement, load) {
+    queuedLazySetBodies.set(rootElement, load);
+    processLazySetBodyQueue();
+}
+
+async function processLazySetBodyQueue() {
+    if (lazySetBodyQueueActive) {
+        return;
+    }
+
+    const next = Array.from(queuedLazySetBodies.entries())
+        .filter(([rootElement]) => isWithinLazySetBodyBuffer(rootElement))
+        .sort(([firstElement], [secondElement]) => lazySetBodyDistanceFromViewport(firstElement) - lazySetBodyDistanceFromViewport(secondElement))[0];
+
+    if (!next) {
+        return;
+    }
+
+    const [rootElement, load] = next;
+    queuedLazySetBodies.delete(rootElement);
+    lazySetBodyQueueActive = true;
+
+    try {
+        await load();
+    } finally {
+        lazySetBodyQueueActive = false;
+        window.requestAnimationFrame(() => processLazySetBodyQueue());
+    }
+}
+
 export function sessionSetCard(config) {
     return {
+        setBodyUrl: config.setBodyUrl,
+        contentLoaded: false,
+        contentLoading: false,
+        contentLoadError: '',
+        lazyObserver: null,
+        lazyRootElement: null,
         openSong: false,
         openSongRequest: false,
         actionMenuStyle: '',
@@ -131,6 +188,73 @@ export function sessionSetCard(config) {
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
         },
+        initLazySetCard(rootElement) {
+            this.lazyRootElement = rootElement;
+
+            if (this.lazyObserver || !('IntersectionObserver' in window) || !rootElement) {
+                return;
+            }
+
+            this.lazyObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        queueLazySetBody(rootElement, () => this.loadSetBody(rootElement));
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '320px 0px',
+                threshold: 0.01,
+            });
+
+            this.lazyObserver.observe(rootElement);
+        },
+        async loadSetBody(rootElement = null) {
+            if (this.contentLoaded || this.contentLoading || !this.setBodyUrl) {
+                return;
+            }
+
+            this.contentLoading = true;
+            this.contentLoadError = '';
+
+            try {
+                const response = await fetch(this.setBodyUrl, {
+                    headers: {
+                        'Accept': 'text/html',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load set details');
+                }
+
+                const html = await response.text();
+                const container = this.$refs.setBodyContainer;
+
+                if (container) {
+                    container.innerHTML = html;
+
+                    this.$nextTick(() => {
+                        if (window.Alpine) {
+                            window.Alpine.initTree(container);
+                        }
+                    });
+                }
+
+                this.contentLoaded = true;
+
+                const observedRoot = rootElement ?? this.lazyRootElement;
+
+                if (this.lazyObserver && observedRoot) {
+                    this.lazyObserver.unobserve(observedRoot);
+                }
+            } catch (e) {
+                this.contentLoadError = 'Could not load set details right now.';
+            } finally {
+                this.contentLoading = false;
+            }
+        },
         onSongRequestProcessed(payload = {}) {
             if (Number(payload.setId) !== Number(this.setId)) {
                 return;
@@ -170,6 +294,10 @@ export function sessionSetCard(config) {
             } else {
                 songsContainer.insertBefore(draggedEl, targetEl.nextElementSibling);
             }
+
+            window.dispatchEvent(new CustomEvent('song-order-changed', {
+                detail: { setId: this.setId },
+            }));
 
             await this.persistSongOrder();
         },
@@ -233,6 +361,12 @@ export function sessionSetCard(config) {
                 return;
             }
 
+            // Only start song reordering when dragging from the song card header handle.
+            if (!event.target.closest('[data-song-drag-handle]')) {
+                event.preventDefault();
+                return;
+            }
+
             this.dragSongId = songId;
             this.draggingSongId = songId;
             this.dropTargetSongId = null;
@@ -245,6 +379,7 @@ export function sessionSetCard(config) {
             }
 
             event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('application/x-backstage-song-id', String(songId));
             event.dataTransfer.setData('text/plain', String(songId));
         },
         onSongDragEnd() {
@@ -259,10 +394,15 @@ export function sessionSetCard(config) {
                 return;
             }
 
+            const dragTypes = Array.from(event.dataTransfer?.types ?? []);
+            if (this.dragSongId === null || !dragTypes.includes('application/x-backstage-song-id')) {
+                return;
+            }
+
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
 
-            if (this.dragSongId === null || targetSongId === null || this.dragSongId === targetSongId) {
+            if (targetSongId === null || this.dragSongId === targetSongId) {
                 return;
             }
 
@@ -302,17 +442,17 @@ export function sessionSetCard(config) {
             this.dropTargetPosition = placeAfter ? 'after' : 'before';
         },
         async onSongDrop(event) {
-            event.preventDefault();
-
             if (!this.canDragSongs() || this.reorderBusy) {
                 this.clearDropPlaceholder();
                 return;
             }
 
-            if (this.dragSongId === null) {
-                this.clearDropPlaceholder();
+            const dragTypes = Array.from(event.dataTransfer?.types ?? []);
+            if (this.dragSongId === null || !dragTypes.includes('application/x-backstage-song-id')) {
                 return;
             }
+
+            event.preventDefault();
 
             const songsContainer = this.$refs.songsContainer;
             const draggedEl = songsContainer.querySelector(`[data-song-id='${this.dragSongId}']`);
@@ -354,7 +494,9 @@ export function sessionSetCard(config) {
                 }
 
                 this.reorderFeedback = 'Song order saved.';
-                this.refreshSessionSets();
+                window.dispatchEvent(new CustomEvent('song-reorder-complete', {
+                    detail: { setId: this.setId, succeeded: true },
+                }));
             } catch (e) {
                 this.reorderError = 'Could not save song order. Refresh and try again.';
                 window.dispatchEvent(new CustomEvent('song-reorder-complete', {
@@ -947,7 +1089,10 @@ export function sessionSongCard(config) {
         actionMenuStyle: '',
         directLinkCopied: false,
         songCollapsed: false,
+        songId: config.songId,
         songKey: config.songKey,
+        canMoveSongUp: config.canMoveSongUp,
+        canMoveSongDown: config.canMoveSongDown,
         busyAction: false,
         actionError: '',
         reorderBusy: false,
@@ -964,6 +1109,13 @@ export function sessionSongCard(config) {
         dragSlotId: null,
         draggingSlotId: null,
         dropTargetSlotId: null,
+        syncMobileSongOrder() {
+            const songCards = Array.from(this.$el.parentElement?.querySelectorAll('[data-song-id]') ?? []);
+            const songIndex = songCards.indexOf(this.$el);
+
+            this.canMoveSongUp = songIndex > 0;
+            this.canMoveSongDown = songIndex >= 0 && songIndex < songCards.length - 1;
+        },
         hasOpenDragBlockingModal() {
             return Array.from(document.querySelectorAll('[data-drag-blocking-modal]')).some((el) => window.getComputedStyle(el).display !== 'none');
         },
@@ -998,6 +1150,10 @@ export function sessionSongCard(config) {
             } else {
                 slotsContainer.insertBefore(draggedEl, targetEl.nextElementSibling);
             }
+
+            window.dispatchEvent(new CustomEvent('slot-order-changed', {
+                detail: { songId: config.songId },
+            }));
 
             await this.persistSlotOrder();
         },
@@ -1098,6 +1254,7 @@ export function sessionSongCard(config) {
             }
 
             event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('application/x-backstage-slot-id', String(slotId));
             event.dataTransfer.setData('text/plain', String(slotId));
         },
         onSlotDragEnd() {
@@ -1111,10 +1268,15 @@ export function sessionSongCard(config) {
                 return;
             }
 
+            const dragTypes = Array.from(event.dataTransfer?.types ?? []);
+            if (this.dragSlotId === null || !dragTypes.includes('application/x-backstage-slot-id')) {
+                return;
+            }
+
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
 
-            if (this.dragSlotId === null || targetSlotId === null || this.dragSlotId === targetSlotId) {
+            if (targetSlotId === null || this.dragSlotId === targetSlotId) {
                 return;
             }
 
@@ -1153,18 +1315,52 @@ export function sessionSongCard(config) {
 
             this.dropTargetSlotId = targetSlotId;
         },
-        async onSlotDrop(event) {
-            event.preventDefault();
+        onSlotPlaceholderDragOver(event) {
+            if (!this.canDragSlots() || this.busyAction) {
+                return;
+            }
 
+            const dragTypes = Array.from(event.dataTransfer?.types ?? []);
+            if (this.dragSlotId === null || !dragTypes.includes('application/x-backstage-slot-id')) {
+                return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            const slotsContainer = this.$refs.slotsContainer;
+            const placeholderEl = this.$refs.slotDropPlaceholder;
+
+            if (!slotsContainer || !placeholderEl) {
+                return;
+            }
+
+            const draggedEl = slotsContainer.querySelector(`[data-slot-id='${this.dragSlotId}']`);
+
+            if (!draggedEl) {
+                return;
+            }
+
+            placeholderEl.classList.remove('hidden');
+            placeholderEl.querySelector('[data-slot-drop-label]').style.minHeight = `${draggedEl.offsetHeight}px`;
+            this.dropTargetSlotId = null;
+        },
+        async onSlotPlaceholderDrop(event) {
+            event.preventDefault();
+            await this.onSlotDrop(event);
+        },
+        async onSlotDrop(event) {
             if (!this.canDragSlots() || this.busyAction) {
                 this.clearSlotDropPlaceholder();
                 return;
             }
 
-            if (this.dragSlotId === null) {
-                this.clearSlotDropPlaceholder();
+            const dragTypes = Array.from(event.dataTransfer?.types ?? []);
+            if (this.dragSlotId === null || !dragTypes.includes('application/x-backstage-slot-id')) {
                 return;
             }
+
+            event.preventDefault();
 
             const slotsContainer = this.$refs.slotsContainer;
             const draggedEl = slotsContainer.querySelector(`[data-slot-id='${this.dragSlotId}']`);
@@ -1203,7 +1399,7 @@ export function sessionSongCard(config) {
                     throw new Error('Reorder failed');
                 }
 
-                this.refreshSessionSets();
+                this.actionFeedback = 'Slot order saved.';
             } catch (e) {
                 this.actionError = 'Could not save slot order. Refresh and try again.';
             } finally {
@@ -1317,6 +1513,8 @@ export function sessionSlotRow(config) {
         currentUserId: config.currentUserId,
         assignedToCurrentUser: config.assignedToCurrentUser,
         hasPendingOwnRequest: config.hasPendingOwnRequest,
+        canMoveSlotUp: config.canMoveSlotUp,
+        canMoveSlotDown: config.canMoveSlotDown,
         busyAction: false,
         actionError: '',
         actionFeedback: '',
@@ -1336,6 +1534,13 @@ export function sessionSlotRow(config) {
         showEditUserSuggestions: false,
         showProposalUserSuggestions: false,
         proposeMessage: '',
+        syncMobileSlotOrder() {
+            const slotRows = Array.from(this.$el.parentElement?.querySelectorAll('[data-slot-id]') ?? []);
+            const slotIndex = slotRows.indexOf(this.$el);
+
+            this.canMoveSlotUp = slotIndex > 0;
+            this.canMoveSlotDown = slotIndex >= 0 && slotIndex < slotRows.length - 1;
+        },
         filteredEditUsers() {
             const query = this.editAssignedUserQuery.trim().toLowerCase();
             if (query === '') {
