@@ -7,6 +7,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Notifications\AppActivityNotification;
 use App\Support\NotificationSettings;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Notifications\DatabaseNotification;
 
@@ -115,13 +116,20 @@ class NotificationService
     /**
      * @return array{notifications: list<array{id: string, type_key: string, title: string, body: string, action_url: string|null, action_label: string, should_popup: bool, seen: bool, created_at: string|null, created_at_human: string|null}>, unread_count: int}
      */
-    public function feedForUser(User $user, int $limit = 25): array
+    public function feedForUser(User $user, int $limit = 25, ?CarbonInterface $after = null, array $knownIds = []): array
     {
-        $notifications = $user->notifications()
-            ->whereNull('dismissed_at')
-            ->latest()
-            ->limit($limit)
-            ->get();
+        $notifications = $user->notifications()->whereNull('dismissed_at');
+
+        if ($after !== null) {
+            $notifications
+                ->where('created_at', '>=', $after)
+                ->when($knownIds !== [], fn ($query) => $query->whereNotIn('id', $knownIds))
+                ->oldest();
+        } else {
+            $notifications->latest();
+        }
+
+        $notifications = $notifications->limit($limit)->get();
 
         return [
             'notifications' => $notifications

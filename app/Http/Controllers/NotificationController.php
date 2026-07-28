@@ -8,14 +8,22 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
-    public function __construct(private readonly NotificationService $notificationService)
-    {
-    }
+    public function __construct(private readonly NotificationService $notificationService) {}
 
     public function index(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'after' => ['nullable', 'date'],
+            'known_ids' => ['nullable', 'array', 'max:50'],
+            'known_ids.*' => ['string', 'max:255'],
+        ]);
+
         return response()->json(
-            $this->notificationService->feedForUser($request->user())
+            $this->notificationService->feedForUser(
+                $request->user(),
+                after: $request->date('after'),
+                knownIds: $validated['known_ids'] ?? [],
+            )
         );
     }
 

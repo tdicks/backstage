@@ -203,6 +203,41 @@ test('notification feed excludes dismissed items and can mark notifications seen
         ->assertJsonCount(0, 'notifications');
 });
 
+test('notification feed polls only notifications created after the browser cursor', function () {
+    $user = User::factory()->create();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Earlier update', 'body' => '', 'action_url' => null]
+    ));
+    $earlierNotification = $user->notifications()->firstOrFail();
+    $earlierNotification->forceFill(['created_at' => now()->subMinute()])->save();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Latest update', 'body' => '', 'action_url' => null]
+    ));
+    $latestNotification = $user->notifications()->latest()->firstOrFail();
+
+    $this->actingAs($user)
+        ->getJson(route('notifications.index', [
+            'after' => $earlierNotification->created_at->toIso8601String(),
+            'known_ids' => [$earlierNotification->id],
+        ]))
+        ->assertOk()
+        ->assertJsonPath('unread_count', 2)
+        ->assertJsonCount(1, 'notifications')
+        ->assertJsonPath('notifications.0.id', $latestNotification->id);
+});
+
+    test('authenticated navigation renders the initial notification feed', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
+    });
+
 test('notification popup is positioned in the bottom right on desktop', function () {
     $user = User::factory()->create();
 

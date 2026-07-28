@@ -10,7 +10,8 @@ export function registerNotificationsStore(Alpine) {
 		dismissUrlTemplate: null,
 		initialized: false,
 		intervalId: null,
-		knownIds: [],
+		notificationCursor: null,
+		notificationCursorIds: [],
 		toasts: [],
 		toastTimers: {},
 
@@ -26,7 +27,7 @@ export function registerNotificationsStore(Alpine) {
 			this.dismissUrlTemplate = dismissUrlTemplate || this.dismissUrlTemplate;
 			this.items = items;
 			this.unreadCount = Number(unreadCount || 0);
-			this.knownIds = items.map((item) => item.id);
+			this.updateCursor(items);
 
 			if (!this.initialized) {
 				this.initialized = true;
@@ -42,7 +43,14 @@ export function registerNotificationsStore(Alpine) {
 			}
 
 			try {
-				const response = await fetch(this.indexUrl, {
+				const url = new URL(this.indexUrl, window.location.origin);
+
+				if (this.notificationCursor) {
+					url.searchParams.set('after', this.notificationCursor);
+					this.notificationCursorIds.forEach((id) => url.searchParams.append('known_ids[]', id));
+				}
+
+				const response = await fetch(url, {
 					headers: {
 						'Accept': 'application/json',
 						'X-Requested-With': 'XMLHttpRequest',
@@ -60,11 +68,13 @@ export function registerNotificationsStore(Alpine) {
 
 		applyPayload(payload, { showPopups = true } = {}) {
 			const notifications = Array.isArray(payload.notifications) ? payload.notifications : [];
-			const previousIds = [...this.knownIds];
+			const previousIds = this.items.map((item) => item.id);
 
-			this.items = notifications;
+			this.items = [...notifications, ...this.items]
+				.filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
+				.sort((first, second) => new Date(second.created_at) - new Date(first.created_at));
 			this.unreadCount = Number(payload.unread_count || 0);
-			this.knownIds = notifications.map((item) => item.id);
+			this.updateCursor(this.items);
 
 			if (showPopups) {
 				notifications
@@ -73,6 +83,21 @@ export function registerNotificationsStore(Alpine) {
 			}
 
 			window.dispatchEvent(new CustomEvent('notifications-updated'));
+		},
+
+		updateCursor(items) {
+			const latestNotification = items.reduce((latest, item) => {
+				if (!latest || new Date(item.created_at) > new Date(latest.created_at)) {
+					return item;
+				}
+
+				return latest;
+			}, null);
+
+			this.notificationCursor = latestNotification?.created_at || null;
+			this.notificationCursorIds = this.notificationCursor
+				? items.filter((item) => item.created_at === this.notificationCursor).map((item) => item.id)
+				: [];
 		},
 
 		async markSeen(id) {
