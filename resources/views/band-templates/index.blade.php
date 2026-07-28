@@ -12,7 +12,7 @@
 
                 <template x-teleport="body">
                     <div x-show="openCreate" x-cloak @keydown.escape.window="openCreate = false">
-                        <div class="fixed inset-0 z-40 bg-black/40" @click="openCreate = false"></div>
+                        <div data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="openCreate = false"></div>
                         <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
                             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                                 <div class="px-6 pt-6">
@@ -79,7 +79,7 @@
                     @can('update', $template)
                         <template x-teleport="body">
                             <div x-show="openEdit" x-cloak @keydown.escape.window="openEdit = false">
-                                <div class="fixed inset-0 z-40 bg-black/40" @click="openEdit = false"></div>
+                                <div data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="openEdit = false"></div>
                                 <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
                                     <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                                         <div class="px-6 pt-6">

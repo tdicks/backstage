@@ -12,6 +12,11 @@
     display: none !important;
 }
 
+html.modal-scroll-locked,
+body.modal-scroll-locked {
+    overflow: hidden;
+}
+
 @keyframes live-set-unseen-pulse {
     0%,
     100% {

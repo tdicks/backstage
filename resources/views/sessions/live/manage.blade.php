@@ -34,7 +34,7 @@
             </div>
             <template x-teleport="body">
                 <div x-show="liveDisplayModalOpen" x-cloak @keydown.escape.window="liveDisplayModalOpen = false">
-                    <div class="fixed inset-0 z-40 bg-black/50" @click="liveDisplayModalOpen = false"></div>
+                    <div data-modal-overlay class="fixed inset-0 z-40 bg-black/50" @click="liveDisplayModalOpen = false"></div>
                     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div @click.stop class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-900 shadow-2xl">
                             <h3 class="text-lg font-semibold">Live Display</h3>
@@ -162,7 +162,7 @@
         {{-- Add Set Modal --}}
         <template x-teleport="body">
             <div x-show="addSetModalOpen" x-cloak @keydown.escape.window="closeAddSetModal()">
-                <div x-show="addSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
+                <div x-show="addSetModalOpen" x-transition.opacity.duration.150ms data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="closeAddSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div x-show="addSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl">
                         <div class="shrink-0 border-b border-slate-200 px-6 py-4">
@@ -199,7 +199,7 @@
         {{-- Edit Set Modal --}}
         <template x-teleport="body">
             <div x-show="editSetModalOpen" x-cloak @keydown.escape.window="closeEditSetModal()">
-                <div x-show="editSetModalOpen" x-transition.opacity.duration.150ms class="fixed inset-0 z-40 bg-black/40" @click="closeEditSetModal()"></div>
+                <div x-show="editSetModalOpen" x-transition.opacity.duration.150ms data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="closeEditSetModal()"></div>
                 <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div x-show="editSetModalOpen" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" @click.stop class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                         <h3 class="text-lg font-semibold">Edit Live Set</h3>

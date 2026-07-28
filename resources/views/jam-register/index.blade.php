@@ -287,7 +287,7 @@
 				</div>
 			</div>
 
-			<div x-show="modalOpen" x-cloak class="fixed inset-0 z-[100] bg-black/45" @click="closeModal()"></div>
+			<div x-show="modalOpen" x-cloak data-modal-overlay class="fixed inset-0 z-[100] bg-black/45" @click="closeModal()"></div>
 			<div x-show="modalOpen" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center p-4" @keydown.escape.window="closeModal()">
 				<div class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl">
 					<h4 class="text-lg font-semibold">Confirm Action</h4>

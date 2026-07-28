@@ -66,7 +66,7 @@
             @can('update', $session)
                 <template x-teleport="body">
                     <div x-cloak>
-                        <div x-show="openEditSession" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
+                        <div x-show="openEditSession" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="openEditSession = false"></div>
                         <div x-show="openEditSession" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
                             <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]">
                                 <div class="px-6 pt-6">
@@ -190,7 +190,7 @@
             @if (! $session->is_archived && (auth()->user()->is_admin || ! $session->is_closed))
                 <template x-teleport="body">
                     <div x-cloak>
-                        <div x-show="openSet" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
+                        <div x-show="openSet" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="openSet = false"></div>
                         <div x-show="openSet" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-center justify-center p-4">
                             <div class="w-full max-w-lg rounded-lg bg-white p-6 text-slate-900 shadow-xl">
                                 <h3 class="text-lg font-semibold text-slate-900">New Set for {{ $session->name }}</h3>

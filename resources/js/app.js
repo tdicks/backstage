@@ -12,6 +12,24 @@ window.copyShareLink = copyShareLink;
 window.isInteractiveDragSource = isInteractiveDragSource;
 window.focusSessionFragmentTarget = focusSessionFragmentTarget;
 
+function syncModalScrollLock() {
+	const hasOpenModal = Array.from(document.querySelectorAll('[data-modal-overlay]')).some((overlay) => {
+		return window.getComputedStyle(overlay).display !== 'none';
+	});
+
+	document.documentElement.classList.toggle('modal-scroll-locked', hasOpenModal);
+	document.body.classList.toggle('modal-scroll-locked', hasOpenModal);
+}
+
+new MutationObserver(syncModalScrollLock).observe(document.body, {
+	attributes: true,
+	childList: true,
+	subtree: true,
+	attributeFilter: ['class', 'style'],
+});
+
+syncModalScrollLock();
+
 registerApprovalsStore(Alpine);
 registerNotificationsStore(Alpine);
 registerSessionCards(Alpine);
