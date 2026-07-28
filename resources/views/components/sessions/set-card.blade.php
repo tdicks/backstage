@@ -541,7 +541,7 @@
                         </form>
                     </div>
                 <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
-                    <form method="POST" action="{{ route('sets.destroy', $set) }}">
+                    <form method="POST" action="{{ route('sets.destroy', $set) }}" onsubmit="return confirm('Delete this set? This cannot be undone.');">
                         @csrf
                         @method('DELETE')
                         <x-danger-button type="submit">Delete Set</x-danger-button>

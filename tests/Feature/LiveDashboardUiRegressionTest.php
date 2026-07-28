@@ -221,7 +221,9 @@ test('session controls compact to icons and live management saves automatically'
     expect($sessionView)->toContain('<x-heroicon-m-share class="h-4 w-4" aria-hidden="true" />');
     expect($sessionView)->toContain('<x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session" class="gap-1.5">');
     expect($sessionView)->toContain('<span class="hidden sm:inline">Edit Session</span>');
-    expect($sessionView)->toContain('<span class="hidden sm:inline">Live Dashboard</span>');
+    expect($sessionView)->toContain('<span class="hidden sm:inline">Live Admin</span>');
+    expect($sessionView)->toContain('title="Open Live Admin" aria-label="Open Live Admin"');
+    expect($sessionView)->toContain('<x-live-status-icon size="h-4 w-4" title="Open Live Admin" />');
     expect($sessionView)->toContain('<x-primary-button @click="openSet = true" title="Create Set" aria-label="Create Set" class="gap-1.5">');
     expect($sessionView)->toContain('<span class="hidden sm:inline">Create Set</span>');
     expect($liveManagementView)->toContain('<span class="hidden sm:inline">Reset</span>');
@@ -385,6 +387,7 @@ test('edit set modal keeps its header and original actions outside the scrollabl
     expect($setCard)->toContain('<div class="px-6 pt-6">');
     expect($setCard)->toContain('<div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">');
     expect($setCard)->toContain('class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4"');
+    expect($setCard)->toContain("onsubmit=\"return confirm('Delete this set? This cannot be undone.');\"");
     expect($setCard)->toContain('Delete Set');
     expect($setCard)->toContain('form="edit_set_form_{{ $set->id }}"');
 });

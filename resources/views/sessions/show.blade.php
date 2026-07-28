@@ -49,9 +49,9 @@
                         <span class="hidden sm:inline">Edit Session</span>
                     </x-secondary-button>
                     @if ($session->is_live)
-                        <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm transition ease-in-out duration-150 hover:border-emerald-500 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 sm:px-4" title="Open Live Dashboard" aria-label="Open Live Dashboard">
-                            <x-live-status-icon size="h-4 w-4" title="Open live dashboard" />
-                            <span class="hidden sm:inline">Live Dashboard</span>
+                        <a href="{{ route('sessions.live.manage', $session) }}" class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm transition ease-in-out duration-150 hover:border-emerald-500 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900 sm:px-4" title="Open Live Admin" aria-label="Open Live Admin">
+                            <x-live-status-icon size="h-4 w-4" title="Open Live Admin" />
+                            <span class="hidden sm:inline">Live Admin</span>
                         </a>
                     @endif
                 @endcan
