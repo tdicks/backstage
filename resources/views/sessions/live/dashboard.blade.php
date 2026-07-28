@@ -336,12 +336,20 @@
             </div>
         </main>
 
-        <aside x-show="allowCheckins" x-cloak class="fixed bottom-5 right-5 z-30 hidden w-32 border border-slate-700 bg-slate-900/95 p-2 text-center shadow-xl backdrop-blur lg:block">
-            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Sign in/out</p>
+        <aside x-show="allowCheckins" x-cloak class="fixed bottom-5 left-5 z-30 hidden w-[min(16rem,calc((100vw-min(80rem,calc(100vw-2.5rem)))/2-1.25rem))] border border-slate-700 bg-slate-900/95 p-2 text-center shadow-xl backdrop-blur 2xl:block">
+            <p class="text-[clamp(0.625rem,1.1vw,1rem)] font-semibold uppercase tracking-wide text-slate-400">Sign in/out</p>
             <img
                 src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data={{ urlencode(route('jam-register.session', $session->jam_register_code)) }}"
                 alt="QR code for signing in or out of {{ $session->name }}"
-                class="mx-auto mt-1 h-24 w-24 bg-white p-1"
+                class="mx-auto mt-1 aspect-square w-[calc(100%-1rem)] bg-white p-1"
+            >
+        </aside>
+        <aside x-show="allowCheckins" x-cloak class="fixed bottom-5 right-5 z-30 hidden w-[min(16rem,calc((100vw-min(80rem,calc(100vw-2.5rem)))/2-1.25rem))] border border-slate-700 bg-slate-900/95 p-2 text-center shadow-xl backdrop-blur 2xl:block">
+            <p class="text-[clamp(0.625rem,1.1vw,1rem)] font-semibold uppercase tracking-wide text-slate-400">Sign in/out</p>
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data={{ urlencode(route('jam-register.session', $session->jam_register_code)) }}"
+                alt="QR code for signing in or out of {{ $session->name }}"
+                class="mx-auto mt-1 aspect-square w-[calc(100%-1rem)] bg-white p-1"
             >
         </aside>
     </div>

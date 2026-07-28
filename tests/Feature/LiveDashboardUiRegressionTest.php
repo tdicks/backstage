@@ -91,10 +91,13 @@ test('live dashboard uses emerald slot pills without outer rings', function () {
     expect($view)->toContain('allowCheckins: @js((bool) $session->allow_checkins),');
     expect($view)->toContain("route('jam-register.session', \$session->jam_register_code)");
     expect($view)->toContain('x-show="allowCheckins" x-cloak');
-    expect($view)->toContain('fixed bottom-5 right-5 z-30 hidden w-32');
-    expect($view)->toContain('backdrop-blur lg:block');
-    expect($view)->toContain('class="mx-auto mt-1 h-24 w-24 bg-white p-1"');
-    expect(strpos($view, 'fixed bottom-5 right-5 z-30 hidden w-32'))->toBeGreaterThan(strpos($view, '</main>'));
+    expect($view)->toContain('fixed bottom-5 left-5 z-30 hidden w-[min(16rem,calc((100vw-min(80rem,calc(100vw-2.5rem)))/2-1.25rem))]');
+    expect($view)->toContain('fixed bottom-5 right-5 z-30 hidden w-[min(16rem,calc((100vw-min(80rem,calc(100vw-2.5rem)))/2-1.25rem))]');
+    expect($view)->toContain('backdrop-blur 2xl:block');
+    expect(substr_count($view, 'fixed bottom-5'))->toBe(2);
+    expect(substr_count($view, 'aspect-square w-[calc(100%-1rem)]'))->toBe(2);
+    expect(substr_count($view, 'text-[clamp(0.625rem,1.1vw,1rem)]'))->toBe(2);
+    expect(strpos($view, 'fixed bottom-5 left-5 z-30 hidden w-[min(16rem,calc((100vw-min(80rem,calc(100vw-2.5rem)))/2-1.25rem))]'))->toBeGreaterThan(strpos($view, '</main>'));
     expect($view)->toContain('isLive: config.isLive,');
     expect($view)->toContain('this.isLive = Boolean(payload.is_live);');
     expect($view)->toContain('this.allowCheckins = Boolean(payload.allow_checkins);');
