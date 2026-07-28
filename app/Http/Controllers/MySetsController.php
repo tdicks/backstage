@@ -79,6 +79,7 @@ class MySetsController extends Controller
 
         $practiceSets = $sets->map(function (Set $set) use ($user): array {
             $isOwned = $set->owner_id === $user->id;
+            $isCollaborator = $set->isCollaborator($user);
 
             $songs = $set->songs
                 ->filter(fn ($song) => $song->slots->contains('user_id', $user->id))
@@ -96,6 +97,7 @@ class MySetsController extends Controller
             return [
                 'set' => $set,
                 'isOwned' => $isOwned,
+                'isCollaborator' => $isCollaborator,
                 'songs' => $songs,
             ];
         })->filter(fn (array $group): bool => $group['songs']->isNotEmpty())->values();

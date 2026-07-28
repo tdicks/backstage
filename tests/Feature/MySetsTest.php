@@ -981,6 +981,7 @@ test('my sets combines owned sets signed up songs and pending assignments', func
         'position' => 2,
         'performed' => false,
         'signups_open' => true,
+        'collaborator_ids' => [$user->id],
     ]);
 
     $pendingSet = Set::create([
@@ -1229,12 +1230,14 @@ test('my sets combines owned sets signed up songs and pending assignments', func
         ->assertSeeInOrder(['href="http://backstage-v1.test/my-sets"', '<span>My Sets</span>', '2'], false)
         ->assertSee(now()->addDays(4)->format('F Y'))
         ->assertSee('Owned Practice Set')
+        ->assertSee('Owner')
         ->assertSee('Owner Band - Owner Song')
         ->assertSee('Slot Requester')
         ->assertSee('Can I sing this one?')
         ->assertSee('Signed Practice Set')
+        ->assertSee('Collaborator')
         ->assertSee('Signed Band - Signed Song')
-        ->assertSee('Drums')
+        ->assertSee('You are on Drums')
         ->assertSee(route('sessions.show', $signedSet->session).'#set-'.$signedSet->id, false)
         ->assertSee(route('sessions.show', $signedSet->session).'#song-'.$signedSong->id, false)
         ->assertSee(route('sessions.show', $signedSet->session).'#slot-'.$signedSlot->id, false)
@@ -1242,8 +1245,8 @@ test('my sets combines owned sets signed up songs and pending assignments', func
         ->assertSee('Pending Band - Pending Song')
         ->assertSee('I can cover bass.')
         ->assertSee('You should try keys.')
-        ->assertSee('Slot Recommendation')
-        ->assertSee('Can we put you forward for keys?')
+        ->assertSee('Recommendation for you')
+        ->assertSee('put you forward for keys')
         ->assertDontSee('Owned Set Without My Slots')
         ->assertDontSee('Quiet Band - Not Mine')
         ->assertDontSee('Already Played Set')

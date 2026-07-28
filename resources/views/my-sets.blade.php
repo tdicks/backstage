@@ -675,6 +675,7 @@
                                     @php
                                         $set = $group['set'];
                                         $isOwned = $group['isOwned'];
+                                        $isCollaborator = $group['isCollaborator'];
                                         $isPerformed = $set->performed;
                                     @endphp
 
@@ -689,6 +690,9 @@
                                                     </h4>
                                                     @if ($isOwned)
                                                         <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">Owner</span>
+                                                    @endif
+                                                    @if ($isCollaborator)
+                                                        <span class="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium text-teal-800">Collaborator</span>
                                                     @endif
                                                     @if ($isPerformed)
                                                         <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">Performed</span>
@@ -729,12 +733,10 @@
                                                                 $isMine = $slot->user_id === auth()->id();
                                                             @endphp
                                                             <a href="{{ route('sessions.show', $set->session) }}#slot-{{ $slot->id }}" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $isMine ? 'border-sky-200 bg-sky-50 text-sky-800' : ($slot->isOpen() ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800') }}">
-                                                                <span>{{ $slotLabel }}</span>
-                                                                @if ($isOwned)
-                                                                    <span>-</span>
-                                                                    <span>{{ $slot->assignedPerformerName() }}</span>
-                                                                @elseif ($isMine)
-                                                                    <span class="uppercase tracking-wide opacity-70">you</span>
+                                                                @if ($isMine)
+                                                                    <span>You are on {{ $slotLabel }}</span>
+                                                                @else
+                                                                    <span>{{ $slotLabel }}</span>
                                                                 @endif
                                                             </a>
                                                         @endforeach
