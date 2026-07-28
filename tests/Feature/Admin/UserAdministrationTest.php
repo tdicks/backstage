@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -96,4 +97,65 @@ test('admin can send a password reset email dynamically', function () {
         ->assertJsonStructure(['message']);
 
     Notification::assertSentTo($user, ResetPassword::class);
+});
+
+test('promoting a user to admin notifies the target first and then other current admins', function () {
+    $actor = User::factory()->create(['is_admin' => true, 'name' => 'Grantor']);
+    $otherAdmin = User::factory()->create(['is_admin' => true, 'name' => 'Other Admin']);
+    $target = User::factory()->create(['is_admin' => false, 'name' => 'New Admin']);
+
+    $this->actingAs($actor)
+        ->patch(route('admin.users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'bio' => $target->bio,
+            'hide_from_directory' => 0,
+            'hide_from_slot_proposals' => 0,
+            'is_admin' => 1,
+        ])
+        ->assertRedirect();
+
+    expect($target->refresh()->is_admin)->toBeTrue();
+
+    $targetTypeKeys = $target->notifications()
+        ->get()
+        ->map(fn ($notification) => $notification->data['type_key'])
+        ->all();
+    expect($targetTypeKeys)->toContain(NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED)
+        ->not->toContain(NotificationTypeCatalog::ADMIN_ACCESS_GRANTED_TO_USER);
+
+    $actorAdminNotice = $actor->notifications()->latest()->first();
+    expect($actorAdminNotice?->data['type_key'])->toBe(NotificationTypeCatalog::ADMIN_ACCESS_GRANTED_TO_USER);
+    expect($actorAdminNotice?->data['body'])->toContain('New Admin')->toContain('Grantor');
+
+    $otherAdminNotice = $otherAdmin->notifications()->latest()->first();
+    expect($otherAdminNotice?->data['type_key'])->toBe(NotificationTypeCatalog::ADMIN_ACCESS_GRANTED_TO_USER);
+    expect($otherAdminNotice?->data['body'])->toContain('New Admin')->toContain('Grantor');
+});
+
+test('revoking admin access notifies the target and remaining admins, excluding the demoted user from admin broadcast', function () {
+    $actor = User::factory()->create(['is_admin' => true, 'name' => 'Revoker']);
+    $otherAdmin = User::factory()->create(['is_admin' => true, 'name' => 'Other Admin']);
+    $target = User::factory()->create(['is_admin' => true, 'name' => 'Former Admin']);
+
+    $this->actingAs($actor)
+        ->patch(route('admin.users.toggle-role', $target))
+        ->assertRedirect();
+
+    expect($target->refresh()->is_admin)->toBeFalse();
+
+    $targetTypeKeys = $target->notifications()
+        ->get()
+        ->map(fn ($notification) => $notification->data['type_key'])
+        ->all();
+    expect($targetTypeKeys)->toContain(NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_REVOKED)
+        ->not->toContain(NotificationTypeCatalog::ADMIN_ACCESS_REVOKED_FROM_USER);
+
+    $actorAdminNotice = $actor->notifications()->latest()->first();
+    expect($actorAdminNotice?->data['type_key'])->toBe(NotificationTypeCatalog::ADMIN_ACCESS_REVOKED_FROM_USER);
+    expect($actorAdminNotice?->data['body'])->toContain('Former Admin')->toContain('Revoker');
+
+    $otherAdminNotice = $otherAdmin->notifications()->latest()->first();
+    expect($otherAdminNotice?->data['type_key'])->toBe(NotificationTypeCatalog::ADMIN_ACCESS_REVOKED_FROM_USER);
+    expect($otherAdminNotice?->data['body'])->toContain('Former Admin')->toContain('Revoker');
 });

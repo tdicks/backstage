@@ -31,6 +31,12 @@ test('notification types are categorized correctly', function () {
     expect($definitions['jam_session_date_changed']['category'])->toBe('jam_sessions');
 
     expect($definitions['admin_user_registered']['category'])->toBe('admin');
+    expect($definitions['admin_access_granted_to_user']['category'])->toBe('admin');
+    expect($definitions['admin_access_revoked_from_user']['category'])->toBe('admin');
+    expect($definitions['account_admin_access_granted']['category'])->toBe('admin');
+    expect($definitions['account_admin_access_revoked']['category'])->toBe('admin');
+    expect($definitions['account_admin_access_granted']['is_user_configurable'])->toBeFalse();
+    expect($definitions['account_admin_access_revoked']['is_user_configurable'])->toBeFalse();
 });
 
 test('notification catalog has category definitions', function () {
@@ -69,7 +75,12 @@ test('admin profile options include the admin notification group', function () {
 
     expect($options)->toHaveKey('admin')
         ->and($options['admin']['label'])->toBe('Admin')
-        ->and(collect($options['admin']['options'])->pluck('type')->all())->toContain('admin_user_registered');
+        ->and(collect($options['admin']['options'])->pluck('type')->all())
+        ->toContain('admin_user_registered')
+        ->toContain('admin_access_granted_to_user')
+        ->toContain('admin_access_revoked_from_user')
+        ->not->toContain('account_admin_access_granted')
+        ->not->toContain('account_admin_access_revoked');
 });
 
 test('admin options are grouped by category', function () {
@@ -87,4 +98,11 @@ test('admin options are grouped by category', function () {
             expect($option)->toHaveKeys(['type', 'label', 'description', 'settings']);
         }
     }
+
+    expect(collect($options['admin']['options'])->pluck('type')->all())
+        ->toContain('admin_user_registered')
+        ->toContain('admin_access_granted_to_user')
+        ->toContain('admin_access_revoked_from_user')
+        ->toContain('account_admin_access_granted')
+        ->toContain('account_admin_access_revoked');
 });

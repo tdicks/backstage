@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -45,6 +46,7 @@ test('profile update clears slot coverage when none selected', function () {
         ->patch(route('profile.update'), [
             'name' => $user->name,
             'email' => $user->email,
+            'slot_coverage_present' => '1',
         ])
         ->assertRedirect(route('profile.edit'));
 
@@ -110,4 +112,28 @@ test('profile edit highlights selected slot coverage chips', function () {
         ->assertSee('x-data="{ selected: ', false)
         ->assertSee('x-bind:class="selected ? \'border-indigo-300 bg-indigo-50 text-indigo-700\'', false)
         ->assertSee('@change="selected = $event.target.checked"', false);
+});
+
+test('profile update ignores non-user-configurable notification preference changes', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'notification_preferences' => [
+                NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED => [
+                    'enabled' => '0',
+                    'popup' => '0',
+                    'email' => '0',
+                ],
+            ],
+        ])
+        ->assertRedirect(route('profile.edit'));
+
+    $stored = $user->refresh()->notification_preferences;
+
+    expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['enabled'])->toBeTrue();
+    expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['popup'])->toBeTrue();
+    expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['email'])->toBeTrue();
 });

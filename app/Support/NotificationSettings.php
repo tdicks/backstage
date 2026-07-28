@@ -107,6 +107,10 @@ final class NotificationSettings
         $preferences = self::userPreferences($user);
 
         foreach (NotificationTypeCatalog::keys() as $type) {
+            if (! NotificationTypeCatalog::isUserConfigurable($type)) {
+                continue;
+            }
+
             if (! is_array($input[$type] ?? null)) {
                 continue;
             }
@@ -148,6 +152,10 @@ final class NotificationSettings
 
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
             if (($definition['admin_only'] ?? false) && ! $user->is_admin) {
+                continue;
+            }
+
+            if (! NotificationTypeCatalog::isUserConfigurable($type)) {
                 continue;
             }
 

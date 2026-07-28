@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Slot;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Services\NotificationService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,7 +89,17 @@ class UserAdministrationController extends Controller
             $payload['email_verified_at'] = null;
         }
 
+        $wasAdmin = (bool) $user->is_admin;
+
         $user->forceFill($payload)->save();
+
+        if (
+            array_key_exists('is_admin', $payload)
+            && $request->user()->id !== $user->id
+            && $wasAdmin !== (bool) $user->is_admin
+        ) {
+            $this->notifyAdminRoleChange($request->user(), $user, $wasAdmin);
+        }
 
         return back()->with('status', 'User details updated.');
     }
@@ -132,11 +143,82 @@ class UserAdministrationController extends Controller
             ]);
         }
 
+        $wasAdmin = (bool) $user->is_admin;
+
         $user->forceFill([
             'is_admin' => ! $user->is_admin,
         ])->save();
 
+        $this->notifyAdminRoleChange($request->user(), $user, $wasAdmin);
+
         return back()->with('status', 'User role updated.');
+    }
+
+    private function notifyAdminRoleChange(User $actor, User $target, bool $wasAdmin): void
+    {
+        $isNowAdmin = (bool) $target->is_admin;
+
+        if ($wasAdmin === $isNowAdmin) {
+            return;
+        }
+
+        $notificationService = app(NotificationService::class);
+
+        if ($isNowAdmin) {
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED,
+                [$target],
+                $actor,
+                [
+                    'title' => 'Your account has been given admin access',
+                    'body' => $actor->name.' granted you admin access.',
+                    'action_url' => route('profile.edit'),
+                    'action_label' => 'View profile',
+                ]
+            );
+
+            $notificationService->notifyUsers(
+                NotificationTypeCatalog::ADMIN_ACCESS_GRANTED_TO_USER,
+                User::query()->where('is_admin', true)->get(),
+                $actor,
+                [
+                    'title' => 'Admin access was granted to a user',
+                    'body' => $actor->name.' granted admin access to '.$target->name.'.',
+                    'action_url' => route('admin.users.index'),
+                    'action_label' => 'Manage users',
+                ],
+                excludeActor: false,
+                excludedUserIds: [$target->id],
+            );
+
+            return;
+        }
+
+        $notificationService->notifyUsers(
+            NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_REVOKED,
+            [$target],
+            $actor,
+            [
+                'title' => 'Your account has lost admin access',
+                'body' => $actor->name.' removed your admin access.',
+                'action_url' => route('profile.edit'),
+                'action_label' => 'View profile',
+            ]
+        );
+
+        $notificationService->notifyUsers(
+            NotificationTypeCatalog::ADMIN_ACCESS_REVOKED_FROM_USER,
+            User::query()->where('is_admin', true)->get(),
+            $actor,
+            [
+                'title' => 'Admin access was revoked from a user',
+                'body' => $actor->name.' revoked admin access from '.$target->name.'.',
+                'action_url' => route('admin.users.index'),
+                'action_label' => 'Manage users',
+            ],
+            excludeActor: false,
+            excludedUserIds: [$target->id],
+        );
     }
 
     private function authorizeAdmin(Request $request): void

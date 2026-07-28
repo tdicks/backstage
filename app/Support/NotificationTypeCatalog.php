@@ -36,8 +36,16 @@ final class NotificationTypeCatalog
 
     public const ADMIN_USER_REGISTERED = 'admin_user_registered';
 
+    public const ADMIN_ACCESS_GRANTED_TO_USER = 'admin_access_granted_to_user';
+
+    public const ADMIN_ACCESS_REVOKED_FROM_USER = 'admin_access_revoked_from_user';
+
+    public const ACCOUNT_ADMIN_ACCESS_GRANTED = 'account_admin_access_granted';
+
+    public const ACCOUNT_ADMIN_ACCESS_REVOKED = 'account_admin_access_revoked';
+
     /**
-     * @return array<string, array{label: string, description: string, category: string, admin_only?: bool, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
+     * @return array<string, array{label: string, description: string, category: string, admin_only?: bool, is_user_configurable?: bool, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
      */
     public static function definitions(): array
     {
@@ -139,7 +147,40 @@ final class NotificationTypeCatalog
                 'admin_only' => true,
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
+            self::ADMIN_ACCESS_GRANTED_TO_USER => [
+                'label' => 'Admin access granted to user',
+                'description' => 'When someone is promoted from non-admin to admin.',
+                'category' => 'admin',
+                'admin_only' => true,
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::ADMIN_ACCESS_REVOKED_FROM_USER => [
+                'label' => 'Admin access revoked from user',
+                'description' => 'When someone is demoted from admin to non-admin.',
+                'category' => 'admin',
+                'admin_only' => true,
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::ACCOUNT_ADMIN_ACCESS_GRANTED => [
+                'label' => 'Notify user when given admin access',
+                'description' => 'Notify the user when they are granted admin access by another admin.',
+                'category' => 'admin',
+                'is_user_configurable' => false,
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::ACCOUNT_ADMIN_ACCESS_REVOKED => [
+                'label' => 'Notify user when account loses admin access',
+                'description' => 'Notify the user when they are demoted from admin by another admin.',
+                'category' => 'admin',
+                'is_user_configurable' => false,
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
         ];
+    }
+
+    public static function isUserConfigurable(string $type): bool
+    {
+        return self::definitions()[$type]['is_user_configurable'] ?? true;
     }
 
     /**

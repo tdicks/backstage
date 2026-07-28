@@ -16,15 +16,17 @@ class NotificationService
     /**
      * @param  iterable<User>  $users
      * @param  array{title: string, body: string, action_url: string|null, action_label?: string|null}  $content
+     * @param  list<int>  $excludedUserIds
      */
-    public function notifyUsers(string $type, iterable $users, ?User $actor, array $content): void
+    public function notifyUsers(string $type, iterable $users, ?User $actor, array $content, bool $excludeActor = true, array $excludedUserIds = []): void
     {
         NotificationSettings::ensureAdminSettingsExist();
 
         $recipients = collect($users)
             ->filter(fn ($user) => $user instanceof User)
             ->unique('id')
-            ->reject(fn (User $user) => $actor !== null && $user->is($actor))
+            ->reject(fn (User $user) => $excludeActor && $actor !== null && $user->is($actor))
+            ->reject(fn (User $user) => in_array($user->id, $excludedUserIds, true))
             ->filter(fn (User $user) => NotificationSettings::effectiveDeliveryPreferences($user, $type)['enabled']);
 
         foreach ($recipients as $recipient) {
