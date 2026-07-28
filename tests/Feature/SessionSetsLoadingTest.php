@@ -340,6 +340,9 @@ test('session activity endpoint batches approval count and open song slot update
 
     expect($script)
         ->toContain('hasOpenSongCard()')
+        ->toContain('activitySongIds()')
+        ->toContain('getBoundingClientRect()')
+        ->toContain('bottom >= -viewportHeight && top <= viewportHeight * 2')
         ->toContain('refreshOpenSongCards()')
         ->toContain('patchOpenSongSlots')
         ->toContain('canBackgroundRefreshSets()')
@@ -347,10 +350,9 @@ test('session activity endpoint batches approval count and open song slot update
         ->toContain('window.location.hash')
         ->toContain('hasOpenSessionActionMenu()')
         ->toContain('data-session-action-menu')
-        ->toContain("source: 'provider', background: true")
+        ->toContain('if (isBackground && transitions.length > 0)')
         ->toContain('externalApprovalTransitions')
-        ->toContain('data-song-request-id')
-        ->toContain('[data-session-set-card][data-set-open="true"] [data-session-song-card][data-song-open="true"]');
+        ->toContain('data-song-request-id');
 
     expect($store)
         ->toContain('useRefreshProvider')

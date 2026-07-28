@@ -116,6 +116,18 @@ export function lazySessionSets(url, activityUrl = null) {
 				.map((card) => card.dataset.songId)
 				.filter(Boolean);
 		},
+		activitySongIds() {
+			const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+			return Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-open="true"] [data-session-song-card][data-song-open="true"]') || [])
+				.filter((card) => {
+					const { top, bottom } = card.getBoundingClientRect();
+
+					return bottom >= -viewportHeight && top <= viewportHeight * 2;
+				})
+				.map((card) => card.dataset.songId)
+				.filter(Boolean);
+		},
 		hasOpenSongCard() {
 			return this.openSongIds().length > 0;
 		},
@@ -130,7 +142,7 @@ export function lazySessionSets(url, activityUrl = null) {
 
 			try {
 				const params = new URLSearchParams();
-				this.openSongIds().forEach((songId) => params.append('song_ids[]', songId));
+				this.activitySongIds().forEach((songId) => params.append('song_ids[]', songId));
 
 				const activityResponse = await fetch(`${activityUrl}?${params.toString()}`, {
 					headers: {
