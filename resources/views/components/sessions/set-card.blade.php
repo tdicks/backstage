@@ -17,7 +17,7 @@
     $setLocked = $set->performed;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
     $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
-    $filledSlots = $set->songs->sum(fn ($song) => $song->slots->whereNotNull('user_id')->count());
+    $filledSlots = $set->songs->sum(fn ($song) => $song->slots->filter(fn ($slot) => $slot->user_id !== null || filled($slot->manual_performer_name))->count());
     $healthRatio = $totalSlots > 0 ? $filledSlots / $totalSlots : 0;
     $healthDotClass = match (true) {
         $healthRatio >= 1 => 'bg-emerald-400',

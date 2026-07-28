@@ -208,6 +208,48 @@ test('non-manager still sees song actions menu with direct link action', functio
         ->assertDontSee('Edit Song');
 });
 
+test('manual slots count toward set health on session cards', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::query()->create([
+        'name' => 'Health Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Health Set',
+        'description' => null,
+        'owner_id' => $admin->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Health Artist',
+        'title' => 'Health Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+        'manual_performer_name' => 'Guest Vocalist',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.sets', $session))
+        ->assertOk()
+        ->assertSee('Set health: 1/1 slots filled');
+});
+
 test('admin does not see shield suffix on their own set menu items', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
