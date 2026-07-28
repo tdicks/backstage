@@ -158,6 +158,64 @@ class MySetsController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $approvalSessions = $targetConsentApprovals
+            ->map(fn (SlotAssignment $approval): array => [
+                'session' => $approval->slot->song->set->session,
+                'set' => $approval->slot->song->set,
+                'song' => $approval->slot->song,
+                'type' => 'target_consent',
+                'approval' => $approval,
+            ])
+            ->toBase()
+            ->merge($pendingApprovals->flatMap(fn (array $group) => $group['assignments']->map(fn (SlotAssignment $approval): array => [
+                'session' => $group['session'],
+                'set' => $group['set'],
+                'song' => $group['song'],
+                'type' => 'set_assignment',
+                'approval' => $approval,
+            ])))
+            ->merge($pendingSongRequests->map(fn (SongRequest $songRequest): array => [
+                'session' => $songRequest->set->session,
+                'set' => $songRequest->set,
+                'song' => null,
+                'type' => 'song_request',
+                'approval' => $songRequest,
+            ]))
+            ->groupBy(fn (array $item) => $item['session']->id)
+            ->sortBy(fn (Collection $items) => $items->first()['session']->date)
+            ->map(function (Collection $sessionItems): array {
+                $session = $sessionItems->first()['session'];
+
+                return [
+                    'session' => $session,
+                    'sets' => $sessionItems
+                        ->groupBy(fn (array $item) => $item['set']->id)
+                        ->sortBy(fn (Collection $items) => $items->first()['set']->position)
+                        ->map(function (Collection $setItems): array {
+                            $set = $setItems->first()['set'];
+
+                            return [
+                                'set' => $set,
+                                'songs' => $setItems
+                                    ->filter(fn (array $item) => $item['song'] !== null)
+                                    ->groupBy(fn (array $item) => $item['song']->id)
+                                    ->sortBy(fn (Collection $items) => $items->first()['song']->position)
+                                    ->map(fn (Collection $songItems): array => [
+                                        'song' => $songItems->first()['song'],
+                                        'items' => $songItems->values(),
+                                    ])
+                                    ->values(),
+                                'songRequests' => $setItems
+                                    ->filter(fn (array $item) => $item['type'] === 'song_request')
+                                    ->sortBy(fn (array $item) => $item['approval']->created_at)
+                                    ->values(),
+                            ];
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
         $bandTemplates = BandTemplate::query()
             ->orderBy('name')
             ->get();
@@ -168,6 +226,7 @@ class MySetsController extends Controller
             'targetConsentApprovals' => $targetConsentApprovals,
             'pendingApprovals' => $pendingApprovals,
             'pendingSongRequests' => $pendingSongRequests,
+            'approvalSessions' => $approvalSessions,
             'bandTemplates' => $bandTemplates,
             'slotOptions' => Slot::options(),
         ]);

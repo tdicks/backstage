@@ -95,7 +95,7 @@ class SongRequestController extends Controller
         ]);
 
         $user = $request->user();
-        $songRequest->load('set');
+        $songRequest->load(['set.session', 'requester']);
 
         $isSetManager = $user->is_admin || $songRequest->set->owner_id === $user->id || $songRequest->set->isCollaborator($user);
         $isRequesterRejectingOwn = $songRequest->requester_user_id === $user->id
@@ -144,6 +144,20 @@ class SongRequestController extends Controller
 
             $songRequest->update($updateData);
         });
+
+        if ($validated['status'] === SongRequest::STATUS_ACCEPTED) {
+            app(NotificationService::class)->notifyUsers(
+                NotificationTypeCatalog::SONG_REQUEST_ACCEPTED,
+                [$songRequest->requester],
+                null,
+                [
+                    'title' => 'Song request accepted',
+                    'body' => $user->name.' added '.$songRequest->artist.' - '.$songRequest->title.' to '.$songRequest->set->name.'.',
+                    'action_url' => route('sessions.show', $songRequest->set->session).'#song-'.$songRequest->song_id,
+                    'action_label' => 'View song',
+                ]
+            );
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

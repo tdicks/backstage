@@ -81,6 +81,7 @@
                 $approvalsTotal = $targetConsentApprovals->count()
                     + $pendingApprovals->sum(fn ($group) => $group['assignments']->count())
                     + $pendingSongRequests->count();
+                $hasUpcomingWork = $approvalsTotal > 0 || $pendingForUser->isNotEmpty() || $practiceSets->isNotEmpty();
             @endphp
             <section class="grid gap-4 md:grid-cols-3">
                 <div
@@ -108,6 +109,18 @@
                     <p class="mt-1 text-sm text-slate-600">sets with confirmed slots for you</p>
                 </div>
             </section>
+
+            @unless ($hasUpcomingWork)
+                <section class="rounded-xl border border-slate-200 bg-slate-50/95 px-6 py-7 text-center shadow-sm">
+                    <x-heroicon-m-musical-note class="mx-auto h-7 w-7 text-sky-600" aria-hidden="true" />
+                    <h3 class="mt-3 text-lg font-semibold text-slate-900">Your next part is waiting</h3>
+                    <p class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">There is nothing needing your attention just now. Browse the upcoming jams, find a song that speaks to you, and put yourself forward when you are ready.</p>
+                    <div class="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-semibold">
+                        <a href="{{ route('sessions.index') }}" class="text-sky-800 underline decoration-sky-300 underline-offset-2 hover:decoration-sky-700">Explore jam sessions</a>
+                        <a href="{{ route('help') }}" class="text-sky-800 underline decoration-sky-300 underline-offset-2 hover:decoration-sky-700">Need a hand?</a>
+                    </div>
+                </section>
+            @endunless
 
             <div
                 x-data="{ pendingCount: {{ $approvalsTotal }}, approvalsCollapsed: false, approvalsKey: 'my-sets-approvals-collapsed' }"
@@ -154,6 +167,13 @@
                         <p class="text-sm text-slate-500">No approvals need your attention right now.</p>
                     @else
                     <div class="space-y-3" x-show="pendingCount > 0">
+                        <x-my-sets.approval-hierarchy
+                            :approval-sessions="$approvalSessions"
+                            :band-templates="$bandTemplates"
+                            :slot-options="$slotOptions"
+                        />
+
+                        {{--
                         @foreach ($targetConsentApprovals as $consentApproval)
                             @php
                                 $set = $consentApproval->slot->song->set;
@@ -510,6 +530,7 @@
                                 </div>
                             </article>
                         @endforeach
+                        --}}
                     </div>
                     @endif
                     </div>
@@ -632,6 +653,7 @@
                 </section>
             @endif
 
+            @if ($practiceSets->isNotEmpty())
             <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -733,6 +755,7 @@
                     @endforelse
                 </div>
             </section>
+            @endif
 
             </div>
 

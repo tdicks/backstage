@@ -111,6 +111,22 @@ test('my sets page shows combined pending work for owner and signup sets', funct
         ->assertSee('Band B - Track B');
 });
 
+test('my sets shows next-step guidance when there is no pending or practice work', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertSee('Your next part is waiting')
+        ->assertSee('rounded-xl border border-slate-200 bg-slate-50/95 px-6 py-7 text-center shadow-sm', false)
+        ->assertSee('Explore jam sessions')
+        ->assertSee('Need a hand?')
+        ->assertSee(route('sessions.index'))
+        ->assertSee(route('help'))
+        ->assertSee('Practice list')
+        ->assertDontSee('Practice plan');
+});
+
 test('my sets count endpoint returns pending approval count', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();
@@ -266,6 +282,79 @@ test('my sets approvals include pending work for collaborator sets', function ()
         ->getJson(route('my-sets.count'))
         ->assertOk()
         ->assertJson(['count' => 2]);
+});
+
+test('my sets approvals are grouped and ordered by session set and song', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+    $laterSession = JamSession::create([
+        'name' => 'Later Jam',
+        'date' => now()->addDays(10),
+        'description' => null,
+    ]);
+    $earlierSession = JamSession::create([
+        'name' => 'Earlier Jam',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+    $laterSet = Set::create([
+        'name' => 'Later Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $laterSession->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+    $secondEarlySet = Set::create([
+        'name' => 'Second Early Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $earlierSession->id,
+        'position' => 2,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+    $firstEarlySet = Set::create([
+        'name' => 'First Early Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $earlierSession->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $laterSong = Song::create(['set_id' => $laterSet->id, 'artist' => 'Later', 'title' => 'Song', 'notes' => null, 'position' => 1]);
+    $secondSetSong = Song::create(['set_id' => $secondEarlySet->id, 'artist' => 'Second Set', 'title' => 'Song', 'notes' => null, 'position' => 1]);
+    $secondSong = Song::create(['set_id' => $firstEarlySet->id, 'artist' => 'Song Position', 'title' => 'Two', 'notes' => null, 'position' => 2]);
+    $firstSong = Song::create(['set_id' => $firstEarlySet->id, 'artist' => 'Song Position', 'title' => 'One', 'notes' => null, 'position' => 1]);
+
+    foreach ([$laterSong, $secondSetSong, $secondSong, $firstSong] as $song) {
+        $slot = Slot::create(['song_id' => $song->id, 'name' => 'vocals', 'position' => 1]);
+        SlotAssignment::create([
+            'slot_id' => $slot->id,
+            'actor_user_id' => $requester->id,
+            'target_user_id' => $requester->id,
+            'type' => SlotAssignment::TYPE_REQUEST,
+            'status' => SlotAssignment::STATUS_PENDING,
+        ]);
+    }
+
+    $response = $this->actingAs($owner)->get(route('my-sets.index'));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    expect($content)
+        ->toContain('Jam session')
+        ->toContain('Earlier Jam')
+        ->toContain('First Early Set')
+        ->toContain('Song Position - One');
+
+    expect(strpos($content, 'data-approval-session-id="'.$earlierSession->id.'"'))->toBeLessThan(strpos($content, 'data-approval-session-id="'.$laterSession->id.'"'));
+    expect(strpos($content, 'data-approval-set-id="'.$firstEarlySet->id.'"'))->toBeLessThan(strpos($content, 'data-approval-set-id="'.$secondEarlySet->id.'"'));
+    expect(strpos($content, 'data-approval-song-id="'.$firstSong->id.'"'))->toBeLessThan(strpos($content, 'data-approval-song-id="'.$secondSong->id.'"'));
 });
 
 test('my sets approval card warns when approval will move a player from a conflicting slot', function () {

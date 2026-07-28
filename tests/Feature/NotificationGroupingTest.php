@@ -21,6 +21,10 @@ test('notification types are categorized correctly', function () {
     expect($definitions['set_collaborator_removed']['category'])->toBe('sets');
     expect($definitions['set_updated']['category'])->toBe('sets');
     expect($definitions['song_request_received']['category'])->toBe('sets');
+    expect($definitions['song_request_accepted']['category'])->toBe('sets');
+
+    $setTypes = collect(NotificationSettings::profileOptions(User::factory()->create())['sets']['options'])->pluck('type')->all();
+    expect(array_search('song_request_received', $setTypes))->toBeLessThan(array_search('song_request_accepted', $setTypes));
 
     expect($definitions['jam_session_published']['category'])->toBe('jam_sessions');
     expect($definitions['jam_session_lock_changed']['category'])->toBe('jam_sessions');

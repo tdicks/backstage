@@ -772,13 +772,13 @@
                                 class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
                                 @click.outside="showRequestTitleSuggestions = false"
                             >
-                                <template x-for="title in requestTitleSuggestions" :key="`request-title-${title}`">
+                                <template x-for="track in requestTitleSuggestions" :key="`request-title-${track.title}`">
                                     <li>
                                         <button
                                             type="button"
-                                            @click="selectRequestTitleSuggestion(title)"
+                                            @click="selectRequestTitleSuggestion(track.title)"
                                             class="w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                                            x-text="title"
+                                            x-text="track.title"
                                         ></button>
                                     </li>
                                 </template>

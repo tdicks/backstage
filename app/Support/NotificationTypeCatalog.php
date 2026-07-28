@@ -10,6 +10,8 @@ final class NotificationTypeCatalog
 
     public const SONG_REQUEST_RECEIVED = 'song_request_received';
 
+    public const SONG_REQUEST_ACCEPTED = 'song_request_accepted';
+
     public const SLOT_RECOMMENDATION_RECEIVED = 'slot_recommendation_received';
 
     public const SLOT_RECOMMENDATION_ACCEPTED = 'slot_recommendation_accepted';
@@ -55,6 +57,12 @@ final class NotificationTypeCatalog
             self::SONG_REQUEST_RECEIVED => [
                 'label' => 'Song request received',
                 'description' => 'When someone requests a song on a set you own or collaborate on.',
+                'category' => 'sets',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SONG_REQUEST_ACCEPTED => [
+                'label' => 'Song request accepted',
+                'description' => 'When one of your requested songs is added to a set.',
                 'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],

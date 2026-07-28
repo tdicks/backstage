@@ -6,6 +6,7 @@ use App\Models\Set;
 use App\Models\Song;
 use App\Models\SongRequest;
 use App\Models\User;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -46,6 +47,8 @@ test('a non-owner can request a song and the owner can approve it', function () 
     expect($songRequest->refresh()->status)->toBe(SongRequest::STATUS_ACCEPTED);
     expect($songRequest->song_id)->not->toBeNull();
     expect(Song::query()->where('set_id', $set->id)->where('title', 'Just Like Heaven')->exists())->toBeTrue();
+    expect($requester->notifications()->latest()->first()?->data['type_key'])->toBe(NotificationTypeCatalog::SONG_REQUEST_ACCEPTED);
+    expect($requester->notifications()->latest()->first()?->data['body'])->toContain('Just Like Heaven');
 });
 
 test('an owner can choose a band template when approving a song request', function () {
@@ -271,4 +274,31 @@ test('a non-owner can request a song via ajax and receive json success', functio
         ->assertOk()
         ->assertSee('@submit.prevent="submitSongRequest($event)"', false)
         ->assertSee('songRequestStoreUrl', false);
+});
+
+test('request a song modal selects the title from Deezer suggestion objects', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+    $session = JamSession::create([
+        'name' => 'Autocomplete Request Jam',
+        'date' => now()->addDays(7),
+        'description' => null,
+    ]);
+    $set = Set::create([
+        'name' => 'Autocomplete Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee(':key="`request-title-${track.title}`"', false)
+        ->assertSee('@click="selectRequestTitleSuggestion(track.title)"', false)
+        ->assertSee('x-text="track.title"', false);
 });
