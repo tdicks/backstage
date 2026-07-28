@@ -147,6 +147,10 @@ final class NotificationSettings
         $groupedOptions = [];
 
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
+            if (($definition['admin_only'] ?? false) && ! $user->is_admin) {
+                continue;
+            }
+
             $admin = $adminPreferences[$type];
 
             if (! $admin['enabled']) {

@@ -17,9 +17,15 @@
 
         <div class="space-y-6">
             @forelse ($notificationOptions as $group)
-                <div class="overflow-hidden rounded-xl border border-slate-200">
-                    <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                        <h3 class="font-semibold text-slate-900">{{ $group['label'] }}</h3>
+                @php($isAdminNotificationGroup = $group['category'] === 'admin')
+                <div class="overflow-hidden rounded-xl border {{ $isAdminNotificationGroup ? 'border-sky-400' : 'border-slate-200' }}">
+                    <div class="border-b {{ $isAdminNotificationGroup ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-slate-50' }} px-4 py-3">
+                        <h3 class="flex items-center gap-2 font-semibold {{ $isAdminNotificationGroup ? 'text-sky-900' : 'text-slate-900' }}">
+                            @if ($isAdminNotificationGroup)
+                                <x-admin-shield-icon class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                            @endif
+                            {{ $group['label'] }}
+                        </h3>
                     </div>
                     <div class="border-b border-slate-200 bg-white">
                         <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">

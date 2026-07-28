@@ -1,11 +1,14 @@
 <?php
 
 use App\Models\JamSession;
+use App\Models\User;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 test('registration from a jam register quick code returns to that page', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
     $session = JamSession::query()->create([
         'name' => 'Friday Jam',
         'date' => now()->toDateString(),
@@ -27,4 +30,6 @@ test('registration from a jam register quick code returns to that page', functio
     ])->assertRedirect($returnTo);
 
     $this->assertAuthenticated();
+    expect($admin->notifications()->latest()->first()?->data['type_key'])
+        ->toBe(NotificationTypeCatalog::ADMIN_USER_REGISTERED);
 });

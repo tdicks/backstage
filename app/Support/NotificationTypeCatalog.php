@@ -12,6 +12,8 @@ final class NotificationTypeCatalog
 
     public const SLOT_RECOMMENDATION_RECEIVED = 'slot_recommendation_received';
 
+    public const SLOT_RECOMMENDATION_ACCEPTED = 'slot_recommendation_accepted';
+
     public const SLOT_DROPPED_FROM_SET = 'slot_dropped_from_set';
 
     public const SLOT_MANUALLY_ASSIGNED = 'slot_manually_assigned';
@@ -30,8 +32,10 @@ final class NotificationTypeCatalog
 
     public const SET_UPDATED = 'set_updated';
 
+    public const ADMIN_USER_REGISTERED = 'admin_user_registered';
+
     /**
-     * @return array<string, array{label: string, description: string, category: string, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
+     * @return array<string, array{label: string, description: string, category: string, admin_only?: bool, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
      */
     public static function definitions(): array
     {
@@ -57,6 +61,12 @@ final class NotificationTypeCatalog
             self::SLOT_RECOMMENDATION_RECEIVED => [
                 'label' => 'Slot recommendation received',
                 'description' => 'When someone recommends you for a slot.',
+                'category' => 'slots',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SLOT_RECOMMENDATION_ACCEPTED => [
+                'label' => 'Slot recommendation accepted',
+                'description' => 'When someone accepts your recommendation for a slot.',
                 'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
@@ -114,6 +124,13 @@ final class NotificationTypeCatalog
                 'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
+            self::ADMIN_USER_REGISTERED => [
+                'label' => 'New user registered',
+                'description' => 'When a new user registers for Backstage.',
+                'category' => 'admin',
+                'admin_only' => true,
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
         ];
     }
 
@@ -126,6 +143,7 @@ final class NotificationTypeCatalog
             'slots' => 'Slots',
             'sets' => 'Sets',
             'jam_sessions' => 'Jam Sessions',
+            'admin' => 'Admin',
         ];
     }
 

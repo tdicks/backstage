@@ -36,6 +36,9 @@ test('admin can view settings page', function () {
         ->assertSee('Notifications')
         ->assertSee('Slot Types')
         ->assertSee('Slot request accepted')
+        ->assertSee('Slot recommendation accepted')
+        ->assertSee('New user registered')
+        ->assertSee('Admin')
         ->assertSee('Enable Social Logins')
         ->assertSee('enable_social_logins');
 });

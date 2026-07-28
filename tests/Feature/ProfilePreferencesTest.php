@@ -87,6 +87,17 @@ test('profile page shows notification preferences section', function () {
         ->assertSee('Notification Preferences');
 });
 
+test('admin profile shows the admin notification group with blue admin styling', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($admin)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertSee('Admin')
+        ->assertSee('border-sky-400', false)
+        ->assertSee('h-4 w-4 text-sky-500', false);
+});
+
 test('profile edit highlights selected slot coverage chips', function () {
     $user = User::factory()->create(['slot_coverage' => ['vocals', 'bass']]);
 

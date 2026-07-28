@@ -103,6 +103,68 @@ test('slot requests notify set managers and accepted requests notify the request
     expect($requester->notifications()->latest()->first()?->data['type_key'])->toBe(NotificationTypeCatalog::SLOT_REQUEST_ACCEPTED);
 });
 
+test('accepted slot recommendations notify the recommender but rejected recommendations do not', function () {
+    $owner = User::factory()->create(['name' => 'Owner']);
+    $recommender = User::factory()->create(['name' => 'Recommender']);
+    $acceptedTarget = User::factory()->create(['name' => 'Accepted Target']);
+    $rejectedTarget = User::factory()->create(['name' => 'Rejected Target']);
+    $session = JamSession::create([
+        'name' => 'Recommendation Notifications',
+        'date' => now()->addWeek(),
+        'description' => null,
+    ]);
+    $set = Set::create([
+        'name' => 'Recommendation Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Recommendation Band',
+        'title' => 'Recommendation Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+    $acceptedSlot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+    $rejectedSlot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 2,
+    ]);
+
+    $this->actingAs($recommender)
+        ->postJson(route('slot-assignments.propose', $acceptedSlot), ['target_user_id' => $acceptedTarget->id])
+        ->assertCreated();
+    $acceptedRecommendation = SlotAssignment::query()->where('slot_id', $acceptedSlot->id)->firstOrFail();
+
+    $this->actingAs($acceptedTarget)
+        ->patchJson(route('slot-assignments.respond', $acceptedRecommendation), ['status' => SlotAssignment::STATUS_ACCEPTED])
+        ->assertOk();
+
+    expect($recommender->notifications()->latest()->first()?->data['type_key'])
+        ->toBe(NotificationTypeCatalog::SLOT_RECOMMENDATION_ACCEPTED);
+
+    $this->actingAs($recommender)
+        ->postJson(route('slot-assignments.propose', $rejectedSlot), ['target_user_id' => $rejectedTarget->id])
+        ->assertCreated();
+    $rejectedRecommendation = SlotAssignment::query()->where('slot_id', $rejectedSlot->id)->firstOrFail();
+
+    $this->actingAs($rejectedTarget)
+        ->patchJson(route('slot-assignments.respond', $rejectedRecommendation), ['status' => SlotAssignment::STATUS_REJECTED])
+        ->assertOk();
+
+    expect($recommender->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_RECOMMENDATION_ACCEPTED)->count())
+        ->toBe(1);
+});
+
 test('notification feed excludes dismissed items and can mark notifications seen', function () {
     $user = User::factory()->create();
 

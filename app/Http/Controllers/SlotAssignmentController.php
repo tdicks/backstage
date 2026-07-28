@@ -6,8 +6,8 @@ use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\User;
 use App\Services\NotificationService;
-use App\Support\NotificationTypeCatalog;
 use App\Services\SlotCompatibility;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -146,6 +146,20 @@ class SlotAssignmentController extends Controller
                     $this->assignSlotAndReleaseConflicts($slotAssignment);
                 }
             });
+
+            if ($targetAccepted && $slotAssignment->target_user_id === $user->id) {
+                app(NotificationService::class)->notifyUsers(
+                    NotificationTypeCatalog::SLOT_RECOMMENDATION_ACCEPTED,
+                    $slotAssignment->actor ? [$slotAssignment->actor] : [],
+                    $user,
+                    [
+                        'title' => 'Slot recommendation accepted',
+                        'body' => $user->name.' accepted your recommendation for the '.(Slot::options()[$slotAssignment->slot->name] ?? $slotAssignment->slot->name).' slot on '.$slotAssignment->slot->song->artist.' - '.$slotAssignment->slot->song->title.'.',
+                        'action_url' => route('sessions.show', $slotAssignment->slot->song->set->session).'#slot-'.$slotAssignment->slot->id,
+                        'action_label' => 'Open slot',
+                    ]
+                );
+            }
 
             if ($request->expectsJson()) {
                 $slotAssignment->slot->load('user');
