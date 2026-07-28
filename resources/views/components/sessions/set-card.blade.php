@@ -680,7 +680,7 @@
                                 <option value="{{ $template->id }}">{{ $template->name }}</option>
                             @endforeach
                         </select>
-                        <p class="mt-2 text-xs leading-5 text-slate-600">A band template is your usual lineup in one click, so you can get the right players on the song without rebuilding the band every time.</p>
+                        <p class="mt-2 text-xs leading-5 text-slate-600">A band template creates necessary slots in one click, so that you don't need to manually select slots every time.</p>
                     </div>
                     <div x-show="songSlotAdditionMode === 'manual'" x-cloak>
                         <p class="text-sm font-medium text-slate-700">Choose slots manually</p>

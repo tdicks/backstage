@@ -80,9 +80,8 @@
         @if ($slotOptions)
             <div>
                 <x-input-label :value="__('Slot Coverage')" />
-                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover.</p>
                 <input type="hidden" name="slot_coverage_present" value="1">
-                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover. This lets others see what you can play.</p>
+                <p class="mt-1 text-xs text-gray-500">Select the slot types you are able to cover. This lets others see what you can play, and will tailor your Set Finder recommendations.</p>
                 <div class="mt-2 flex flex-wrap gap-2">
                     @foreach ($slotOptions as $key => $name)
                         @php $checked = in_array($key, old('slot_coverage', $user->slot_coverage ?? []), true); @endphp
