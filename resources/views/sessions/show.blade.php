@@ -204,12 +204,13 @@
                                         <x-input-label for="set_description" value="Description" />
                                         <x-textarea-input id="set_description" name="description" rows="4" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                                     </div>
-                                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                                    <label class="flex items-center gap-3 rounded-lg border border-sky-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-[inset_0_0_6px_rgb(125_211_252_/_0.45),inset_0_0_14px_rgb(186_230_253_/_0.35)]">
                                         <input type="hidden" name="is_hidden" value="0">
                                         <input type="checkbox" name="is_hidden" value="1" class="rounded border-slate-300 text-slate-600 shadow-sm focus:ring-slate-500">
                                         <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
-                                        Hide this set from other users (admins can still see it).
+                                        Hide this set from other users.
                                     </label>
+                                    <p class="-mt-1 text-xs text-slate-600">Only collaborators and admins will see the set.</p>
                                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                         <input type="hidden" name="free_for_all" value="0">
                                         <input type="checkbox" name="free_for_all" value="1" x-model="free_for_all_create" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">

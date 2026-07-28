@@ -10,6 +10,23 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+test('add and edit set hidden controls use the hidden set styling and visibility description', function () {
+    $hiddenControlClass = 'border-sky-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-[inset_0_0_6px_rgb(125_211_252_/_0.45),inset_0_0_14px_rgb(186_230_253_/_0.35)]';
+
+    foreach ([
+        resource_path('views/sessions/show.blade.php'),
+        resource_path('views/components/sessions/set-card.blade.php'),
+    ] as $viewPath) {
+        $view = file_get_contents($viewPath);
+
+        expect($view)
+            ->toContain($hiddenControlClass)
+            ->toContain('Hide this set from other users.')
+            ->toContain('Only collaborators and admins will see the set.')
+            ->not->toContain('Hide this set from other users (admins can still see it).');
+    }
+});
+
 test('lazy session sets endpoint renders slot rows without a blade error', function () {
     $owner = User::factory()->create();
 
@@ -360,6 +377,7 @@ test('hidden sets stay visible to the owner but hidden from other users', functi
         'performed' => false,
         'signups_open' => true,
         'is_hidden' => true,
+        'feature_set' => true,
     ]);
 
     Song::query()->create([
@@ -375,7 +393,8 @@ test('hidden sets stay visible to the owner but hidden from other users', functi
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
-        ->assertSee('Hidden Set');
+        ->assertSee('Hidden Set')
+        ->assertSee('border-sky-400 bg-amber-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]', false);
 
     $this->actingAs($other)
         ->get(route('sessions.sets', $session), [

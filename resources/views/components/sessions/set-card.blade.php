@@ -31,6 +31,12 @@
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
+    $setCardClass = match (true) {
+        $set->feature_set && $set->is_hidden => 'border-sky-400 bg-amber-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
+        $set->feature_set => 'border-amber-400 bg-amber-50/95 shadow-sm',
+        $set->is_hidden => 'border-sky-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
+        default => 'border-slate-200 bg-slate-50/95 shadow-sm',
+    };
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner && ! $isCollaborator;
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
@@ -60,7 +66,7 @@
     id="set-{{ $set->id }}"
     data-session-set-card
     data-set-id="{{ $set->id }}"
-    class="rounded-xl border {{ $set->feature_set ? 'border-amber-400 bg-amber-50/95' : 'border-slate-200 bg-slate-50/95' }} p-6 shadow-sm"
+    class="rounded-xl border {{ $setCardClass }} p-6"
     x-bind:data-set-open="(!setCollapsed).toString()"
     x-data="sessionSetCard(@js([
         'setId' => $set->id,
@@ -504,12 +510,13 @@
                         <input type="checkbox" name="song_requests" value="1" x-model="songRequestsDraft" @checked($set->song_requests) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
                         Accept song requests.
                     </label>
-                    <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                    <label class="flex items-center gap-3 rounded-lg border border-sky-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-[inset_0_0_6px_rgb(125_211_252_/_0.45),inset_0_0_14px_rgb(186_230_253_/_0.35)]">
                         <input type="hidden" name="is_hidden" value="0">
                         <input type="checkbox" name="is_hidden" value="1" @checked($set->is_hidden) class="rounded border-slate-300 text-slate-600 shadow-sm focus:ring-slate-500">
                         <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
-                        Hide this set from other users (admins can still see it).
+                        Hide this set from other users.
                     </label>
+                    <p class="-mt-1 text-xs text-slate-600">Only collaborators and admins will see the set.</p>
                     <p
                         x-show="initialSongRequestsEnabled && !songRequestsDraft"
                         x-cloak
