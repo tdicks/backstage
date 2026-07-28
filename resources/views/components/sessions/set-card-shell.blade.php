@@ -17,6 +17,7 @@
     $canManageCollaborators = $isAdmin || $isSetOwner;
     $setLocked = $set->performed;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
+    $canRequestSong = ! $sessionLocked && ! $setLocked && $set->song_requests && ! $isSetOwner && ! $isCollaborator;
     $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
     $filledSlots = $set->songs->sum(fn ($song) => $song->slots->filter(fn ($slot) => $slot->user_id !== null || filled($slot->manual_performer_name))->count());
     $healthRatio = $totalSlots > 0 ? $filledSlots / $totalSlots : 0;
@@ -225,7 +226,7 @@
                                 Add Song
                             </span>
                         </button>
-                    @elseif (!$sessionLocked && !($isSetOwner || $isCollaborator) && $set->song_requests && !$setLocked)
+                    @elseif ($canRequestSong)
                         <button
                             type="button"
                             @click="openActionMenu = false; openSongRequestModal()"
@@ -310,6 +311,10 @@
             </div>
         </div>
     </div>
+
+    @if ($canRequestSong)
+        <x-sessions.song-request-modal :set="$set" />
+    @endif
 
     <p x-show="contentLoadError" x-text="contentLoadError" class="mt-4 text-sm text-rose-700" x-cloak></p>
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>

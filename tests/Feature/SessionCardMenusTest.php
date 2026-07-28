@@ -168,6 +168,39 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('sr-only"> Admin action</span>', false);
 });
 
+test('an admin can request a song from another user\'s set', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $owner = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Admin Song Request Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Admin Song Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.sets', $session), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee('Request Song')
+        ->assertSee('openSongRequestModal()', false)
+        ->assertSee('Request a Song for '.$set->name);
+});
+
 test('non-manager still sees song actions menu with direct link action', function () {
     $owner = User::factory()->create();
     $guest = User::factory()->create();
