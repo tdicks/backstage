@@ -80,7 +80,13 @@
         aria-label="Toggle song details"
     >
         <div class="min-w-0 flex-1">
-            <h4 class="text-base font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h4>
+            <h4 class="flex items-center gap-2 text-base font-semibold text-slate-900">
+                <span class="min-w-0">{{ $song->artist }} - {{ $song->title }}</span>
+                <span class="inline-flex shrink-0 items-center text-slate-500">
+                    <x-heroicon-m-chevron-up x-show="!songCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
+                    <x-heroicon-m-chevron-down x-show="songCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
+                </span>
+            </h4>
             @if ($song->notes)
                 <p class="mt-1 text-sm leading-6 text-slate-600">{{ $song->notes }}</p>
             @endif

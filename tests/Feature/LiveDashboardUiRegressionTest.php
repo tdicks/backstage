@@ -328,11 +328,17 @@ test('song cards use the song reorder capability for drag and ordering controls'
 
 test('management set cards collapse from the full card surface', function () {
     $view = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+    $songCard = file_get_contents(resource_path('views/components/sessions/song-card.blade.php'));
     $manageView = file_get_contents(resource_path('views/sessions/live/manage.blade.php'));
 
     expect($view)->toContain('@click.stop="setCollapsed = !setCollapsed"');
     expect($view)->toContain('role="button"');
     expect($view)->toContain('x-show="!setCollapsed" x-transition');
+    expect($view)->toContain('<x-heroicon-m-chevron-up x-show="!setCollapsed"');
+    expect($view)->toContain('<x-heroicon-m-chevron-down x-show="setCollapsed"');
+    expect($view)->toContain('<span class="inline-flex shrink-0 items-center">');
+    expect($songCard)->toContain('<x-heroicon-m-chevron-up x-show="!songCollapsed"');
+    expect($songCard)->toContain('<x-heroicon-m-chevron-down x-show="songCollapsed"');
     expect($manageView)->toContain('@dragstart.self="onSetDragStart($event, set)"');
     expect($manageView)->toContain('@click="toggleSetSongs(set)"');
     expect($manageView)->toContain('x-show="set.songs.length > 0"');

@@ -118,6 +118,10 @@
         <div>
             <h3 class="flex items-center gap-2 text-lg font-semibold {{ $setTitleTextClass }}">
                 {{ $set->name }}
+                <span class="inline-flex shrink-0 items-center">
+                    <x-heroicon-m-chevron-up x-show="!setCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
+                    <x-heroicon-m-chevron-down x-show="setCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
+                </span>
                 @if ($set->feature_set)
                     <span title="Feature set" class="inline-flex items-center">
                         <x-heroicon-m-star class="h-4 w-4 text-amber-500" aria-hidden="true" />
