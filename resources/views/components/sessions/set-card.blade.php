@@ -10,7 +10,7 @@
     $currentUser = auth()->user();
     $isAdmin = $currentUser?->is_admin;
     $isSetOwner = $set->owner_id === auth()->id();
-    $isCollaborator = ! $isAdmin && ! $isSetOwner && $set->isCollaborator($currentUser);
+    $isCollaborator = ! $isSetOwner && $set->isCollaborator($currentUser);
     $canManageSet = $isAdmin || $isSetOwner || $isCollaborator;
     $canEditSet = $isAdmin || $isSetOwner;
     $canManageCollaborators = $isAdmin || $isSetOwner;
@@ -31,7 +31,7 @@
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
-    $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner;
+    $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner && ! $isCollaborator;
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';

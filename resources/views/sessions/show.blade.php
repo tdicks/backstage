@@ -20,15 +20,6 @@
                 <p class="text-sm text-gray-500">{{ $session->date->format('l, F j, Y') }}</p>
             </div>
 
-            @if ($session->is_live && ! auth()->user()?->is_admin)
-                <div class="w-full text-center sm:flex-1">
-                    <span class="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-emerald-300 shadow-sm">
-                        <x-live-status-icon size="h-4 w-4" title="This jam session is live" />
-                        This jam session is now live
-                    </span>
-                </div>
-            @endif
-
             <div class="ml-auto flex items-center gap-2">
                 <span class="relative inline-flex">
                     <button
@@ -249,6 +240,17 @@
             x-on:refresh-session-activity.window="$store.approvals.refresh()"
             x-on:session-song-opened.window="$store.approvals.refresh()"
         >
+            @if ($session->is_live && ! auth()->user()?->is_admin)
+                <section class="grid w-full grid-cols-[1fr_auto_1fr] items-center rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-3 text-emerald-300 shadow-sm">
+                    <x-live-status-icon size="h-5 w-5" title="This jam session is live" class="justify-self-start" />
+                    <div class="text-center">
+                        <p class="text-xs font-semibold uppercase tracking-widest">This jam session is now live</p>
+                        <p class="mt-1 text-xs text-emerald-200">Any changes to sets will update here in real time.</p>
+                    </div>
+                    <span class="h-5 w-5 justify-self-end" aria-hidden="true"></span>
+                </section>
+            @endif
+
             @if ($session->sets_count > 0)
                 <p x-show="error" x-text="error" class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700 shadow-sm" x-cloak></p>
             @endif

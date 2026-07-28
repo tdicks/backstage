@@ -37,7 +37,7 @@
                 <button
                     type="button"
                     @disabled($jamSessionClosed && !auth()->user()?->is_admin)
-                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $isAdminManagingOtherSet ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50' : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100' }}"
                     x-show="slotIsOpen && !assignedToCurrentUser"
                     @click="openActionMenu = false; takeSlot()"
                     x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
@@ -45,9 +45,15 @@
                     @if ($set->free_for_all)
                         <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
                     @else
-                        <x-heroicon-m-arrow-down-on-square class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <x-heroicon-m-arrow-down-on-square class="h-4 w-4 {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-500' }}" aria-hidden="true" />
                     @endif
-                    <span>Take this slot</span>
+                    <span>
+                        @if ($isAdminManagingOtherSet)
+                            <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                            <span class="sr-only"> Admin action</span>
+                        @endif
+                        Take this slot
+                    </span>
                 </button>
             @elseif ($set->signups_open && $set->free_for_all && $slotModel->user_id !== auth()->id())
                 <button
@@ -60,7 +66,8 @@
                     <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
                     <span>Take this slot</span>
                 </button>
-            @elseif ($set->signups_open && $slotModel->user_id !== auth()->id())
+            @endif
+            @if ($set->signups_open && $slotModel->user_id !== auth()->id() && ! $set->free_for_all)
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"

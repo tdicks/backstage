@@ -148,6 +148,12 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         'position' => 1,
     ]);
 
+    Slot::query()->create([
+        'song_id' => $set->songs()->sole()->id,
+        'name' => 'guitar',
+        'position' => 1,
+    ]);
+
     $this->actingAs($admin)
         ->get(route('sessions.sets', $session))
         ->assertOk()
@@ -156,6 +162,7 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertSee('Add Song')
         ->assertSee('Edit Song')
         ->assertSee('Add Slot')
+        ->assertSee('Take this slot')
         ->assertSee('mr-1 inline h-4 w-4 text-sky-500', false)
         ->assertDontSee('🛡️')
         ->assertSee('sr-only"> Admin action</span>', false);
