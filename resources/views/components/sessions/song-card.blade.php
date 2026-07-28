@@ -2,6 +2,7 @@
     'song',
     'set',
     'users',
+    'templates',
     'slotOptions',
     'pendingSlotAssignments' => [],
     'jamSessionClosed' => false,
@@ -249,15 +250,38 @@
                 <h5 class="text-lg font-semibold {{ $isAdminManagingOtherSet ? 'text-sky-700' : 'text-slate-900' }}">
                     {{ $isAdminManagingOtherSet ? 'Add Slot to '.$set->owner->name.'\'s Song' : 'Add Slot' }}
                 </h5>
-                <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4" @submit.prevent="submitAddSlot($event)">
+                <form method="POST" action="{{ route('slots.store', $song) }}" class="mt-4 space-y-4" x-data="{ slotAdditionMode: 'individual' }" @submit.prevent="submitAddSlot($event)">
                     @csrf
-                    <div>
+                    <div class="space-y-2">
+                        <span class="block text-sm font-medium text-slate-700">Add slots by</span>
+                        <div class="flex gap-4 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="addition_mode" value="individual" x-model="slotAdditionMode" class="border-slate-300 text-amber-600 focus:ring-amber-500">
+                                Individual slot
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="addition_mode" value="template" x-model="slotAdditionMode" class="border-slate-300 text-amber-600 focus:ring-amber-500">
+                                Band template
+                            </label>
+                        </div>
+                    </div>
+                    <div x-show="slotAdditionMode === 'individual'" x-cloak>
                         <x-input-label :value="'Slot Name'" />
-                        <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
+                        <select name="name" x-bind:disabled="slotAdditionMode !== 'individual'" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
                             @foreach ($slotOptions as $slotValue => $slotLabel)
                                 <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div x-show="slotAdditionMode === 'template'" x-cloak>
+                        <x-input-label :value="'Band Template'" />
+                        <select name="band_template_id" x-bind:disabled="slotAdditionMode !== 'template'" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required>
+                            <option value="">Choose a band template</option>
+                            @foreach ($templates as $template)
+                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-2 text-xs leading-5 text-slate-600">Apply the slots from a band template to this song. Existing slots are kept, and slots of the same type will not be duplicated.</p>
                     </div>
                     <div class="flex justify-end gap-2">
                         <x-modal-secondary-button type="button" @click="openAddSlot = false">Cancel</x-modal-secondary-button>

@@ -403,10 +403,19 @@ test('edit set modal keeps its header and original actions outside the scrollabl
 
 test('add song modal keeps its actions outside the scrollable form body', function () {
     $setCard = file_get_contents(resource_path('views/components/sessions/set-card.blade.php'));
+    $sessionCards = file_get_contents(resource_path('js/components/sessionCards.js'));
 
-    expect($setCard)->toContain('class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitAddSong($event)"');
+    expect($setCard)->toContain('class="flex min-h-0 flex-1 flex-col" x-data="{ songSlotAdditionMode: \'template\' }" @submit.prevent="submitAddSong($event)"');
     expect($setCard)->toContain('class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4"');
     expect($setCard)->toContain('class="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-6 py-4"');
+    expect($setCard)->toContain("x-data=\"{ songSlotAdditionMode: 'template' }\"");
+    expect($setCard)->toContain('Add slots by');
+    expect($setCard)->toContain('Choose slots manually');
+    expect($setCard)->toContain("x-show=\"songSlotAdditionMode === 'template'\"");
+    expect($setCard)->toContain("x-show=\"songSlotAdditionMode === 'manual'\"");
+    expect($sessionCards)->toContain("const hasBandTemplate = Boolean(formData.get('band_template_id'));");
+    expect($sessionCards)->toContain("const hasManualSlots = formData.getAll('slot_names[]').length > 0;");
+    expect($sessionCards)->toContain("No slots will be added to this song now. You can add slots later. Continue?");
 });
 
 test('live management normalizes stack order and queues saves after each mutation', function () {

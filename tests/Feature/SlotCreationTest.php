@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\BandTemplate;
 use App\Models\JamSession;
 use App\Models\Set;
 use App\Models\Slot;
@@ -49,6 +50,53 @@ test('set owner can add a keys slot to a song', function () {
         ->where('name', 'keys')
         ->exists())
         ->toBeTrue();
+});
+
+test('set owner can apply a band template without duplicating existing slot types', function () {
+    $owner = User::factory()->create();
+    $session = JamSession::create([
+        'name' => 'Template Slot Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+    $set = Set::create([
+        'name' => 'Template Slot Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'The Band',
+        'title' => 'The Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+    $template = BandTemplate::create(['name' => 'Rock Band']);
+    $template->slots()->createMany([
+        ['name' => 'vocals'],
+        ['name' => 'bass'],
+        ['name' => 'drums'],
+    ]);
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->postJson(route('slots.store', $song), [
+            'addition_mode' => 'template',
+            'band_template_id' => $template->id,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('message', 'Band template applied.');
+
+    expect($song->slots()->orderBy('position')->pluck('name')->all())
+        ->toBe(['vocals', 'bass', 'drums']);
 });
 
 test('user receives notification when manually assigned to a slot', function () {

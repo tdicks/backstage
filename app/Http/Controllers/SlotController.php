@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BandTemplate;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
@@ -22,9 +23,38 @@ class SlotController extends Controller
         $this->authorize('update', $song);
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
+            'addition_mode' => ['nullable', 'string', 'in:individual,template'],
+            'name' => ['nullable', 'string', 'in:'.implode(',', Slot::keys()), 'required_unless:addition_mode,template', 'prohibited_if:addition_mode,template'],
+            'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id', 'required_if:addition_mode,template', 'prohibited_unless:addition_mode,template'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        if (($validated['addition_mode'] ?? 'individual') === 'template') {
+            $template = BandTemplate::query()
+                ->with('slots')
+                ->findOrFail($validated['band_template_id']);
+            $existingSlotNames = $song->slots()->pluck('name')->all();
+            $slotNames = $template->slots
+                ->pluck('name')
+                ->unique()
+                ->reject(fn (string $slotName) => in_array($slotName, $existingSlotNames, true));
+            $nextPosition = ((int) $song->slots()->max('position')) + 1;
+
+            foreach ($slotNames as $slotName) {
+                $song->slots()->create([
+                    'name' => $slotName,
+                    'position' => $nextPosition++,
+                ]);
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Band template applied.',
+                ], 201);
+            }
+
+            return back()->with('status', 'Band template applied.');
+        }
 
         if (! empty($validated['user_id'])) {
             SlotCompatibility::ensureUserCanPerformSlotInSong((int) $validated['user_id'], $song, $validated['name']);

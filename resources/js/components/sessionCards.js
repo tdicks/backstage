@@ -603,6 +603,14 @@ export function sessionSetCard(config) {
             }
         },
         async submitAddSong(event) {
+            const formData = new FormData(event.target);
+            const hasBandTemplate = Boolean(formData.get('band_template_id'));
+            const hasManualSlots = formData.getAll('slot_names[]').length > 0;
+
+            if (!hasBandTemplate && !hasManualSlots && !window.confirm('No slots will be added to this song now. You can add slots later. Continue?')) {
+                return;
+            }
+
             this.addSongBusy = true;
             this.addSongError = '';
 
@@ -614,7 +622,7 @@ export function sessionSetCard(config) {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': config.csrfToken,
                     },
-                    body: new FormData(event.target),
+                    body: formData,
                 });
 
                 if (!response.ok) {

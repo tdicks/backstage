@@ -581,7 +581,7 @@
                         {{ $isAdminManagingOtherSet ? 'Add Song to '.$set->owner->name.'\'s Set' : 'Add Song to '.$set->name }}
                     </h4>
                 </div>
-                <form method="POST" action="{{ route('songs.store', $set) }}" class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitAddSong($event)">
+                <form method="POST" action="{{ route('songs.store', $set) }}" class="flex min-h-0 flex-1 flex-col" x-data="{ songSlotAdditionMode: 'template' }" @submit.prevent="submitAddSong($event)">
                     @csrf
                     <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
                         <p x-show="addSongError" x-text="addSongError" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" x-cloak></p>
@@ -659,21 +659,35 @@
                         <x-input-label :value="'Notes'" />
                         <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                     </div>
-                    <div>
-                        <x-input-label :value="'Band Template (optional)'" />
-                        <select name="band_template_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
-                            <option value="">None</option>
+                    <div class="space-y-2">
+                        <span class="block text-sm font-medium text-slate-700">Add slots by</span>
+                        <div class="flex flex-wrap gap-4 text-sm text-slate-700">
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="song_slot_addition_mode" value="template" x-model="songSlotAdditionMode" class="border-slate-300 text-amber-600 focus:ring-amber-500">
+                                Band template
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input type="radio" name="song_slot_addition_mode" value="manual" x-model="songSlotAdditionMode" class="border-slate-300 text-amber-600 focus:ring-amber-500">
+                                Choose slots manually
+                            </label>
+                        </div>
+                    </div>
+                    <div x-show="songSlotAdditionMode === 'template'" x-cloak>
+                        <x-input-label :value="'Band Template'" />
+                        <select name="band_template_id" x-bind:disabled="songSlotAdditionMode !== 'template'" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                            <option value="">Choose a band template</option>
                             @foreach ($templates as $template)
                                 <option value="{{ $template->id }}">{{ $template->name }}</option>
                             @endforeach
                         </select>
+                        <p class="mt-2 text-xs leading-5 text-slate-600">A band template is your usual lineup in one click, so you can get the right players on the song without rebuilding the band every time.</p>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-slate-700">Or choose manual slots</p>
+                    <div x-show="songSlotAdditionMode === 'manual'" x-cloak>
+                        <p class="text-sm font-medium text-slate-700">Choose slots manually</p>
                         <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                             @foreach ($slotOptions as $slotValue => $slotLabel)
                                 <label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
-                                    <input type="checkbox" name="slot_names[]" value="{{ $slotValue }}" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
+                                    <input type="checkbox" name="slot_names[]" value="{{ $slotValue }}" x-bind:disabled="songSlotAdditionMode !== 'manual'" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
                                     {{ $slotLabel }}
                                 </label>
                             @endforeach
@@ -807,6 +821,7 @@
                     :song="$song"
                     :set="$set"
                     :users="$users"
+                    :templates="$templates"
                     :slot-options="$slotOptions"
                     :pending-slot-assignments="$pendingSlotAssignments"
                     :is-set-owner="$isSetOwner"
