@@ -207,6 +207,67 @@ test('my sets count endpoint returns pending approval count', function () {
         ]);
 });
 
+test('my sets approvals include pending work for collaborator sets', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $requester = User::factory()->create();
+    $session = JamSession::create([
+        'name' => 'Collaborator Approval Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+    $set = Set::create([
+        'name' => 'Collaborator Approval Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'collaborator_ids' => [$collaborator->id],
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Collaborator Band',
+        'title' => 'Collaborator Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    SlotAssignment::create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $requester->id,
+        'target_user_id' => $requester->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+    SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Requested Collaborator Artist',
+        'title' => 'Requested Collaborator Song',
+        'notes' => null,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($collaborator)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertSee('Collaborator Approval Set')
+        ->assertSee('Collaborator Band - Collaborator Song')
+        ->assertSee('Requested Collaborator Artist - Requested Collaborator Song');
+
+    $this->actingAs($collaborator)
+        ->getJson(route('my-sets.count'))
+        ->assertOk()
+        ->assertJson(['count' => 2]);
+});
+
 test('my sets approval card warns when approval will move a player from a conflicting slot', function () {
     $owner = User::factory()->create();
     $player = User::factory()->create(['name' => 'Conflicted Player']);

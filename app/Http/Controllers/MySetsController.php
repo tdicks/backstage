@@ -26,14 +26,16 @@ class MySetsController extends Controller
         $pendingSongRequestCount = SongRequest::query()
             ->where('status', SongRequest::STATUS_PENDING)
             ->whereHas('set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id);
+                $query->where('owner_id', $user->id)
+                    ->orWhereJsonContains('collaborator_ids', $user->id);
             })
             ->count();
 
         return $pendingSlotProposalCount + $pendingSongRequestCount + SlotAssignment::query()
             ->where('status', SlotAssignment::STATUS_PENDING)
             ->whereHas('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id);
+                $query->where('owner_id', $user->id)
+                    ->orWhereJsonContains('collaborator_ids', $user->id);
             })
             ->count();
     }
@@ -105,7 +107,8 @@ class MySetsController extends Controller
                     ->orWhere('target_user_id', $user->id);
             })
             ->whereDoesntHave('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id);
+                $query->where('owner_id', $user->id)
+                    ->orWhereJsonContains('collaborator_ids', $user->id);
             })
             ->whereHas('slot.song.set.session', function ($query): void {
                 $query->where('is_hidden', false)
@@ -126,7 +129,8 @@ class MySetsController extends Controller
         $pendingApprovals = SlotAssignment::query()
             ->where('status', SlotAssignment::STATUS_PENDING)
             ->whereHas('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id);
+                $query->where('owner_id', $user->id)
+                    ->orWhereJsonContains('collaborator_ids', $user->id);
             })
             ->with(['actor', 'target', 'slot.song.set.session'])
             ->orderByDesc('created_at')
@@ -147,7 +151,8 @@ class MySetsController extends Controller
         $pendingSongRequests = SongRequest::query()
             ->where('status', SongRequest::STATUS_PENDING)
             ->whereHas('set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id);
+                $query->where('owner_id', $user->id)
+                    ->orWhereJsonContains('collaborator_ids', $user->id);
             })
             ->with(['requester', 'set.session'])
             ->orderByDesc('created_at')
