@@ -89,7 +89,7 @@
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <div
-        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
+        class="flex cursor-pointer items-start justify-between gap-3"
         x-bind:aria-expanded="(!setCollapsed).toString()"
         x-bind:title="setCollapsed ? 'Click to show set songs and assignments' : 'Click to hide set songs and assignments'"
         aria-label="Toggle set details"
@@ -99,7 +99,7 @@
         @keydown.enter.prevent="setCollapsed = !setCollapsed; if (!setCollapsed) loadSetBody()"
         @keydown.space.prevent="setCollapsed = !setCollapsed; if (!setCollapsed) loadSetBody()"
     >
-        <div>
+        <div class="min-w-0 flex-1">
             <h3 class="flex items-center gap-2 text-lg font-semibold {{ $setTitleTextClass }}">
                 {{ $set->name }}
                 <span class="inline-flex shrink-0 items-center">
@@ -174,22 +174,22 @@
             @endif
         </div>
 
-        <div class="flex items-center gap-2" @click.stop>
-            <div class="flex h-8 w-8 items-center justify-center">
+        <div class="shrink-0" @click.stop>
+            <div class="relative flex h-8 w-8 items-center justify-center">
                 <span
                     x-show="contentLoading && !contentLoaded"
                     x-cloak
-                    class="inline-flex items-center justify-center text-slate-500"
-                >
-                    <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-amber-400"></span>
-                    <span class="sr-only">Loading details</span>
-                </span>
-            </div>
-
-            <div class="relative">
+                    class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-amber-400"
+                    aria-hidden="true"
+                ></span>
                 <button
                     type="button"
                     x-ref="actionMenuButton"
+                    x-show="contentLoaded || contentLoadError"
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="-rotate-12 scale-75 opacity-0"
+                    x-transition:enter-end="rotate-0 scale-100 opacity-100"
                     @click="toggleActionMenu()"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     x-bind:aria-expanded="openActionMenu.toString()"
