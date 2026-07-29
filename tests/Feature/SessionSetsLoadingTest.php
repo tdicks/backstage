@@ -67,7 +67,11 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         ])
         ->assertOk()
         ->assertSee('Lazy Song')
-        ->assertSee('Bass');
+        ->assertSee('Bass')
+        ->assertSee('x-show="openSong"', false)
+        ->assertSee('x-show="openSetEdit"', false)
+        ->assertSee('x-show="openCollaborators"', false)
+        ->assertSee('x-show="openSummary"', false);
 });
 
 test('set card bodies load through the viewport observer or an explicit expansion', function () {

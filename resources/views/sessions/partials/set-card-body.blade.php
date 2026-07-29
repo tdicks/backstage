@@ -225,3 +225,30 @@
         </div>
     @endif
 </div>
+
+@if (! $setLocked)
+    <x-sessions.set-summary-modal :set="$set" />
+@endif
+
+@if ($canEditSet)
+    <x-sessions.set-edit-modal
+        :set="$set"
+        :sessions="$sessions"
+        :users="$users"
+        :is-admin="$isAdmin"
+        :is-admin-managing-other-set="$isAdminManagingOtherSet"
+    />
+@endif
+
+@if ($canManageSet && ! $setLocked)
+    <x-sessions.add-song-modal
+        :set="$set"
+        :templates="$templates"
+        :slot-options="$slotOptions"
+        :is-admin-managing-other-set="$isAdminManagingOtherSet"
+    />
+@endif
+
+@if ($canManageCollaborators)
+    <x-sessions.manage-collaborators-modal :set="$set" />
+@endif
