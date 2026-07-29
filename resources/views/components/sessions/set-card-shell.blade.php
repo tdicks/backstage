@@ -285,12 +285,12 @@
                     @endif
                     <button
                         type="button"
-                        @click="openActionMenu = false; copySummaryImage()"
+                        @click="openActionMenu = false; openSnapshotModal()"
                         x-bind:disabled="summaryImageBusy"
                         class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-wait disabled:opacity-50"
                     >
                         <x-heroicon-m-photo class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                        <span x-text="summaryImageBusy ? 'Copying image...' : 'Copy as Image'">Copy as Image</span>
+                        <span x-text="summaryImageBusy ? 'Creating snapshot...' : 'Set Snapshot'">Set Snapshot</span>
                     </button>
                     <button
                         type="button"
@@ -311,14 +311,14 @@
                     </div>
                 </template>
                 <div
-                    x-show="shareCopied || directLinkCopied || summaryImageCopied"
+                    x-show="shareCopied || directLinkCopied"
                     x-transition.opacity.duration.150ms
                     x-cloak
                     role="status"
                     aria-live="polite"
                     class="absolute right-0 top-full z-[80] mt-2 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900 shadow-lg"
                 >
-                    <span x-text="summaryImageCopied ? 'Set table image copied' : (directLinkCopied ? 'Direct link copied' : 'Share link copied')">Share link copied</span>
+                    <span x-text="directLinkCopied ? 'Direct link copied' : 'Share link copied'">Share link copied</span>
                 </div>
                 <p x-show="summaryImageError" x-text="summaryImageError" x-cloak class="absolute right-0 top-full z-[80] mt-2 w-64 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800 shadow-lg"></p>
             </div>
@@ -331,4 +331,6 @@
 
     <p x-show="contentLoadError" x-text="contentLoadError" class="mt-4 text-sm text-rose-700" x-cloak></p>
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>
+
+    <x-sessions.set-snapshot-modal />
 </article>

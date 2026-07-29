@@ -191,11 +191,7 @@ function drawAssignmentPill(context, assignment, left, top, maxWidth) {
     context.fillText(label, left + 9, top + 17.5);
 }
 
-async function copySetSummaryImage(summary, setName, ownerName, sessionDate) {
-    if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
-        throw new Error('Image copying is not supported by this browser.');
-    }
-
+async function renderSetSummaryImage(summary, setName, ownerName, sessionDate) {
     const slots = summary.slot_names ?? [];
     const songs = summary.songs ?? [];
     const scale = 2;
@@ -205,33 +201,43 @@ async function copySetSummaryImage(summary, setName, ownerName, sessionDate) {
     const headerHeight = 108;
     const tableHeaderHeight = 42;
     const rowHeight = 56;
+    const footerHeight = 40;
+    const headerPanelTop = 16;
+    const headerPanelHeight = 78;
     const width = (padding * 2) + songColumnWidth + (slots.length * slotColumnWidth);
-    const height = headerHeight + tableHeaderHeight + Math.max(1, songs.length) * rowHeight + padding;
+    const height = headerHeight + tableHeaderHeight + Math.max(1, songs.length) * rowHeight + footerHeight;
     const canvas = document.createElement('canvas');
     canvas.width = width * scale;
     canvas.height = height * scale;
 
     const context = canvas.getContext('2d');
     context.scale(scale, scale);
-    context.fillStyle = '#fffdf7';
+    context.fillStyle = '#e2e8f0';
     context.fillRect(0, 0, width, height);
     context.fillStyle = '#0ea5e9';
     context.fillRect(0, 0, width, 8);
+    context.fillStyle = '#ffffff';
+    context.beginPath();
+    context.roundRect(padding, headerPanelTop, width - (padding * 2), headerPanelHeight, 10);
+    context.fill();
+    context.strokeStyle = '#cbd5e1';
+    context.lineWidth = 1;
+    context.stroke();
     context.fillStyle = '#0369a1';
     context.font = '700 10px Instrument Sans, sans-serif';
-    context.fillText('SETLIST', padding, 27);
+    context.fillText('SETLIST', padding + 14, 33);
     context.fillStyle = '#0f172a';
     context.font = '700 24px Instrument Sans, sans-serif';
-    context.fillText(setName, padding, 53);
+    context.fillText(setName, padding + 14, 59);
     drawBackstageLogo(context, width - padding, 26);
     context.fillStyle = '#475569';
     context.font = '14px Instrument Sans, sans-serif';
-    drawPersonIcon(context, padding, 66);
-    context.fillText(ownerName, padding + 19, 81);
+    drawPersonIcon(context, padding + 14, 69);
+    context.fillText(ownerName, padding + 33, 84);
     const ownerWidth = context.measureText(ownerName).width;
-    const calendarLeft = padding + 19 + ownerWidth + 22;
-    drawCalendarIcon(context, calendarLeft, 66);
-    context.fillText(sessionDate, calendarLeft + 19, 81);
+    const calendarLeft = padding + 33 + ownerWidth + 22;
+    drawCalendarIcon(context, calendarLeft, 69);
+    context.fillText(sessionDate, calendarLeft + 19, 84);
 
     const tableTop = headerHeight;
     context.fillStyle = '#0f172a';
@@ -271,8 +277,14 @@ async function copySetSummaryImage(summary, setName, ownerName, sessionDate) {
         });
     });
 
-    const blob = await canvasBlob(canvas);
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const footerTop = height - footerHeight;
+    context.fillStyle = '#64748b';
+    context.font = '500 11px Instrument Sans, sans-serif';
+    context.textAlign = 'center';
+    context.fillText(window.location.hostname, width / 2, footerTop + 25);
+    context.textAlign = 'start';
+
+    return canvasBlob(canvas);
 }
 
 function queueLazySetBody(rootElement, load) {
@@ -374,6 +386,10 @@ export function sessionSetCard(config) {
         summaryImageBusy: false,
         summaryImageError: '',
         summaryImageCopied: false,
+        openSnapshot: false,
+        snapshotImageBlob: null,
+        snapshotImageUrl: '',
+        snapshotCanShare: false,
         setCollapsed: false,
         songRequestsCollapsed: false,
         setId: config.setId,
@@ -526,6 +542,7 @@ export function sessionSetCard(config) {
         },
         closeSessionModals() {
             this.closeSummaryModal();
+            this.closeSnapshotModal();
             this.openSetEdit = false;
             this.openSong = false;
             this.openSongRequest = false;
@@ -771,7 +788,7 @@ export function sessionSetCard(config) {
             this.loadSummary(true);
             this.startSummaryPolling();
         },
-        async copySummaryImage() {
+        async openSnapshotModal() {
             if (this.summaryImageBusy) {
                 return;
             }
@@ -793,13 +810,78 @@ export function sessionSetCard(config) {
                 }
 
                 const summary = await response.json();
-                await copySetSummaryImage(summary, config.setName, config.ownerName, config.sessionDate);
+                const blob = await renderSetSummaryImage(summary, config.setName, config.ownerName, config.sessionDate);
+
+                this.closeSnapshotModal();
+                this.snapshotImageBlob = blob;
+                this.snapshotImageUrl = URL.createObjectURL(blob);
+                this.snapshotCanShare = typeof navigator.canShare === 'function'
+                    && navigator.canShare({ files: [new File([blob], this.snapshotFileName(), { type: 'image/png' })] });
+                this.openSnapshot = true;
+            } catch (e) {
+                this.summaryImageError = e.message || 'Could not create the set snapshot.';
+            } finally {
+                this.summaryImageBusy = false;
+            }
+        },
+        snapshotFileName() {
+            const normalizedName = config.setName
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+
+            return `${normalizedName || 'set'}-snapshot.png`;
+        },
+        async copySnapshotImage() {
+            if (!this.snapshotImageBlob || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+                this.summaryImageError = 'Image copying is not supported by this browser.';
+                return;
+            }
+
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': this.snapshotImageBlob })]);
                 this.summaryImageCopied = true;
                 setTimeout(() => this.summaryImageCopied = false, 2400);
             } catch (e) {
-                this.summaryImageError = e.message || 'Could not copy the set image.';
-            } finally {
-                this.summaryImageBusy = false;
+                this.summaryImageError = e.message || 'Could not copy the set snapshot.';
+            }
+        },
+        downloadSnapshotImage() {
+            if (!this.snapshotImageUrl) {
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = this.snapshotImageUrl;
+            link.download = this.snapshotFileName();
+            link.click();
+        },
+        async shareSnapshotImage() {
+            if (!this.snapshotImageBlob || !this.snapshotCanShare) {
+                return;
+            }
+
+            try {
+                await navigator.share({
+                    title: `${config.setName} set snapshot`,
+                    text: `A set snapshot from ${config.setName}.`,
+                    files: [new File([this.snapshotImageBlob], this.snapshotFileName(), { type: 'image/png' })],
+                });
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    this.summaryImageError = e.message || 'Could not share the set snapshot.';
+                }
+            }
+        },
+        closeSnapshotModal() {
+            this.openSnapshot = false;
+            this.summaryImageCopied = false;
+            this.snapshotCanShare = false;
+            this.snapshotImageBlob = null;
+
+            if (this.snapshotImageUrl) {
+                URL.revokeObjectURL(this.snapshotImageUrl);
+                this.snapshotImageUrl = '';
             }
         },
         closeSummaryModal() {

@@ -17,7 +17,7 @@
                 <p class="text-sm text-slate-600">No songs in this set yet.</p>
             </template>
             <div class="space-y-3" x-show="summaryLoaded && summaryData?.songs?.length > 0">
-                <template x-for="song in summaryData.songs" :key="song.id">
+                <template x-for="song in summaryData?.songs ?? []" :key="song.id">
                     <article class="rounded-lg border border-slate-200 bg-white p-4">
                         <h5 class="font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></h5>
                         <div class="mt-3 grid gap-2 sm:grid-cols-2">

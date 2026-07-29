@@ -79,23 +79,49 @@ test('set and song cards render dropdown menu controls', function () {
 test('set action menu offers a table image export', function () {
     $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
     $script = file_get_contents(resource_path('js/components/sessionCards.js'));
+    $summaryModal = file_get_contents(resource_path('views/components/sessions/set-summary-modal.blade.php'));
+    $snapshotModal = file_get_contents(resource_path('views/components/sessions/set-snapshot-modal.blade.php'));
 
     expect($shell)
-        ->toContain('Copy as Image')
+        ->toContain('Set Snapshot')
         ->toContain('x-heroicon-m-photo')
-        ->toContain('copySummaryImage()')
+        ->toContain('openSnapshotModal()')
+        ->toContain('<x-sessions.set-snapshot-modal />')
         ->toContain("'sessionDate' => \$set->session->date->format('M j, Y')");
 
     expect($script)
-        ->toContain('copySetSummaryImage')
+        ->toContain('renderSetSummaryImage')
+        ->toContain('copySnapshotImage')
+        ->toContain('downloadSnapshotImage')
+        ->toContain('shareSnapshotImage')
+        ->toContain('this.closeSnapshotModal()')
+        ->toContain('this.snapshotImageUrl = URL.createObjectURL(blob)')
         ->toContain('drawPersonIcon')
         ->toContain('drawCalendarIcon')
         ->toContain('drawBackstageLogo')
         ->toContain('drawAssignmentPill')
+        ->toContain('const footerHeight = 40')
+        ->toContain('const footerTop = height - footerHeight')
+        ->toContain('const headerPanelHeight = 78')
+        ->toContain('context.roundRect(padding, headerPanelTop')
+        ->toContain('context.fillText(window.location.hostname')
+        ->toContain("context.fillStyle = '#e2e8f0'")
         ->toContain("context.fillStyle = '#0ea5e9'")
         ->toContain("rowIndex % 2 === 0 ? '#ffffff' : '#f8fafc'")
         ->toContain("'image/png'")
         ->toContain('new ClipboardItem');
+
+    expect($script)->not->toContain('context.moveTo(padding, footerTop)');
+
+    expect($summaryModal)->toContain('summaryData?.songs ?? []');
+
+    expect($shell)
+        ->toContain('x-show="shareCopied || directLinkCopied"')
+        ->not->toContain('Set table image copied');
+
+    expect($snapshotModal)
+        ->toContain('aria-label="Set snapshot"')
+        ->not->toContain('Ready for the group chat');
 });
 
 test('set summary exports actual assignee names for the viewing performer', function () {
