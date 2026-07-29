@@ -51,6 +51,11 @@ class User extends Authenticatable
         return $this->hasMany(SocialAccount::class);
     }
 
+    public function uploadedAttachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class, 'uploader_user_id');
+    }
+
     public function activeNotifications(): MorphMany
     {
         return $this->notifications()->whereNull('dismissed_at');

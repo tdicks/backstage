@@ -23,6 +23,7 @@
     $slotManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
+    $canManageSlotAttachments = $canManageSet || (int) $slotModel->user_id === (int) auth()->id();
 @endphp
 
 <tr
@@ -59,6 +60,9 @@
         'updateSlotUrl' => route('slots.update', $slotModel),
         'destroySlotUrl' => route('slots.destroy', $slotModel),
         'slotDirectUrl' => route('sessions.show', $set->session).'#slot-'.$slotModel->id,
+        'attachmentsListUrl' => route('slots.attachments.index', $slotModel),
+        'attachmentsStoreUrl' => route('slots.attachments.store', $slotModel),
+        'canManageAttachments' => $canManageSlotAttachments,
         'slotName' => $slotModel->name,
         'slotPosition' => $slotModel->position,
         'noProposableUsersMessage' => $noProposableUsersMessage,
@@ -77,7 +81,23 @@
     x-on:slot-conflict-toast.window="if ($event.detail.slotId === {{ $slotModel->id }}) showToast('error', $event.detail.message)"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
-    <td class="px-3 py-3 font-medium text-slate-700" x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</td>
+    <td class="px-3 py-3 font-medium text-slate-700">
+        <span class="inline-flex items-center gap-2">
+            <span x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</span>
+            @if (($slotModel->attachments_count ?? 0) > 0)
+                <button
+                    type="button"
+                    @click.stop="openAttachmentsModal()"
+                    class="inline-flex items-center rounded-sm text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Open slot attachments"
+                    title="Open slot attachments"
+                >
+                    <x-heroicon-m-paper-clip class="h-3.5 w-3.5" aria-hidden="true" />
+                    <span class="sr-only">Slot has attachments</span>
+                </button>
+            @endif
+        </span>
+    </td>
     <td class="px-3 py-3">
         <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canEditSlot" />
     </td>
@@ -159,6 +179,8 @@
             :slot-options="$slotOptions"
             :users="$users"
         />
+
+        <x-sessions.attachments-modal />
 
         <div class="mt-2 hidden flex-wrap justify-start gap-1.5 text-left md:flex">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>

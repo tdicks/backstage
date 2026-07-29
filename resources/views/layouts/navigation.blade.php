@@ -240,6 +240,9 @@
                                 <x-dropdown-link :href="route('admin.settings.index')">
                                     {{ __('Settings') }}
                                 </x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.attachments.index')">
+                                    {{ __('Attachments') }}
+                                </x-dropdown-link>
                                 <x-dropdown-link :href="route('band-templates.index')">
                                     {{ __('Band Templates') }}
                                 </x-dropdown-link>
@@ -388,6 +391,9 @@
                         </x-responsive-nav-link>
                         <x-responsive-nav-link :href="route('admin.settings.index')">
                             {{ __('Settings') }}
+                        </x-responsive-nav-link>
+                        <x-responsive-nav-link :href="route('admin.attachments.index')">
+                            {{ __('Attachments') }}
                         </x-responsive-nav-link>
                         <x-responsive-nav-link :href="route('band-templates.index')">
                             {{ __('Band Templates') }}

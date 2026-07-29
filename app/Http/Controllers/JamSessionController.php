@@ -146,6 +146,7 @@ class JamSessionController extends Controller
             'sets' => fn ($query) => $query
                 ->visibleTo($request->user())
                 ->with('owner')
+                ->withCount('attachments')
                 ->orderBy('position'),
         ]);
 
@@ -164,10 +165,17 @@ class JamSessionController extends Controller
             'songRequests.requester',
             'songRequests.responder',
             'songRequests.bandTemplate',
-            'songs.slots.user',
-            'songs.slots.assignments.actor',
-            'songs.slots.assignments.target',
+            'songs' => fn ($query) => $query
+                ->withCount('attachments')
+                ->with([
+                    'slots.user',
+                    'slots.assignments.actor',
+                    'slots.assignments.target',
+                ]),
         ]);
+        $set->loadCount('attachments');
+        $set->songs->each(fn (Song $song) => $song->loadCount('attachments'));
+        $set->songs->each(fn (Song $song) => $song->slots->each(fn (Slot $slot) => $slot->loadCount('attachments')));
 
         return view('sessions.partials.set-card-body', [
             ...$this->sessionSetsViewData($jamSession),
@@ -200,13 +208,17 @@ class JamSessionController extends Controller
                 ->with([
                     'set.session',
                     'set.owner',
+                    'attachments',
                     'slots.user',
+                    'slots.attachments',
                     'slots.assignments.actor',
                     'slots.assignments.target',
                 ])
                 ->orderBy('position')
                 ->orderBy('id')
                 ->get();
+        $songs->each(fn (Song $song) => $song->loadCount('attachments'));
+        $songs->each(fn (Song $song) => $song->slots->each(fn (Slot $slot) => $slot->loadCount('attachments')));
 
         return response()->json([
             'approval_count' => MySetsController::pendingApprovalCount($request->user()),

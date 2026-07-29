@@ -18,6 +18,8 @@ class SessionCardFragment
             'set.session',
             'set.owner',
         ]);
+        $song->loadCount('attachments');
+        $song->slots->each(fn (Slot $slot) => $slot->loadCount('attachments'));
 
         $set = $song->set;
         $isSetOwner = $set->owner_id === $viewer->id;
@@ -48,6 +50,7 @@ class SessionCardFragment
             'assignments.target',
             'song.set.session',
         ]);
+        $slot->loadCount('attachments');
 
         $set = $slot->song->set;
         $isSetOwner = $set->owner_id === $viewer->id;

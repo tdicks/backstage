@@ -21,6 +21,7 @@
     $songActionMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
+    $canManageSongAttachments = $canManageSet || $song->slots->contains(fn ($slot) => (int) $slot->user_id === (int) auth()->id());
 @endphp
 
 <article
@@ -44,6 +45,10 @@
         'songsReorderUrl' => route('songs.reorder', $set),
         'slotsReorderUrl' => route('slots.reorder', $song),
         'slotsStoreUrl' => route('slots.store', $song),
+        'attachmentsListUrl' => route('songs.attachments.index', $song),
+        'attachmentsStoreUrl' => route('songs.attachments.store', $song),
+        'canManageAttachments' => $canManageSongAttachments,
+        'initialAttachmentCount' => $song->attachments_count ?? 0,
         'csrfToken' => csrf_token(),
     ]))"
     x-init="songCollapsed = localStorage.getItem(songKey) === '1'"
@@ -92,6 +97,18 @@
                     <x-heroicon-m-chevron-up x-show="!songCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
                     <x-heroicon-m-chevron-down x-show="songCollapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
                 </span>
+                <button
+                    type="button"
+                    x-show="attachmentCount > 0"
+                    x-cloak
+                    @click.stop="openAttachmentsModal()"
+                    class="inline-flex items-center rounded-sm text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Open song attachments"
+                    title="Open song attachments"
+                >
+                    <x-heroicon-m-paper-clip class="h-4 w-4" aria-hidden="true" />
+                    <span class="sr-only">Song has attachments</span>
+                </button>
             </h4>
             @if ($song->notes)
                 <p class="mt-1 text-sm leading-6 text-slate-600">{{ $song->notes }}</p>
@@ -180,6 +197,14 @@
                             </span>
                         </button>
                     @endif
+                    <button
+                        type="button"
+                        @click="openActionMenu = false; openAttachmentsModal()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                    >
+                        <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Attachments</span>
+                    </button>
                     <button
                         type="button"
                         @click="openActionMenu = false; copySongDirectLink()"
@@ -302,6 +327,8 @@
             </div>
         </div>
     @endif
+
+    <x-sessions.attachments-modal />
 
     <div class="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white/80" x-show="!songCollapsed" x-transition>
         <table class="min-w-full text-sm">

@@ -143,6 +143,14 @@
             @endif
             <button
                 type="button"
+                @click="openActionMenu = false; openAttachmentsModal()"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+            >
+                <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <span>Attachments</span>
+            </button>
+            <button
+                type="button"
                 @click="openActionMenu = false; copySlotDirectLink()"
                 class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
             >

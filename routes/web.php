@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\AttachmentAdministrationController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SlotTypeConflictController;
 use App\Http\Controllers\Admin\SlotTypeController;
 use App\Http\Controllers\Admin\UserAdministrationController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeezerLookupController;
@@ -74,6 +76,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/users/{user}', [UserAdministrationController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/role', [UserAdministrationController::class, 'toggleRole'])->name('users.toggle-role');
         Route::post('/users/{user}/password-reset', [UserAdministrationController::class, 'sendPasswordResetLink'])->name('users.password-reset');
+        Route::get('/attachments', [AttachmentAdministrationController::class, 'index'])->name('attachments.index');
+        Route::delete('/attachments/{attachment}', [AttachmentAdministrationController::class, 'destroy'])->name('attachments.destroy');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -110,11 +114,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/sets/{set}/collaborators/users', [SetCollaboratorController::class, 'users'])->name('sets.collaborators.users');
     Route::put('/sets/{set}/collaborators', [SetCollaboratorController::class, 'update'])->name('sets.collaborators.update');
     Route::post('/sets/{set}/song-requests', [SongRequestController::class, 'store'])->name('song-requests.store');
+    Route::get('/sets/{set}/attachments', [AttachmentController::class, 'setIndex'])->name('sets.attachments.index');
+    Route::post('/sets/{set}/attachments', [AttachmentController::class, 'setStore'])->name('sets.attachments.store');
 
     Route::post('/sets/{set}/songs', [SongController::class, 'store'])->name('songs.store');
     Route::patch('/sets/{set}/songs/reorder', [SongController::class, 'reorder'])->name('songs.reorder');
     Route::patch('/songs/{song}', [SongController::class, 'update'])->name('songs.update');
     Route::delete('/songs/{song}', [SongController::class, 'destroy'])->name('songs.destroy');
+    Route::get('/songs/{song}/attachments', [AttachmentController::class, 'songIndex'])->name('songs.attachments.index');
+    Route::post('/songs/{song}/attachments', [AttachmentController::class, 'songStore'])->name('songs.attachments.store');
 
     Route::patch('/song-requests/{songRequest}/respond', [SongRequestController::class, 'respond'])->name('song-requests.respond');
 
@@ -124,6 +132,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/slots/{slot}/release', [SlotController::class, 'release'])->name('slots.release');
     Route::patch('/slots/{slot}', [SlotController::class, 'update'])->name('slots.update');
     Route::delete('/slots/{slot}', [SlotController::class, 'destroy'])->name('slots.destroy');
+    Route::get('/slots/{slot}/attachments', [AttachmentController::class, 'slotIndex'])->name('slots.attachments.index');
+    Route::post('/slots/{slot}/attachments', [AttachmentController::class, 'slotStore'])->name('slots.attachments.store');
+
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
+    Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
 
     Route::post('/slots/{slot}/requests', [SlotAssignmentController::class, 'request'])->name('slot-assignments.request');
     Route::post('/slots/{slot}/proposals', [SlotAssignmentController::class, 'propose'])->name('slot-assignments.propose');

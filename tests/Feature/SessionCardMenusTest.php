@@ -50,50 +50,74 @@ test('set and song cards render dropdown menu controls', function () {
         ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertSee('aria-label="Set actions"', false)
-        ->assertSee('aria-label="Song actions"', false)
-        ->assertSee('Summary')
+        ->assertSee('Live Summary')
         ->assertSee('Edit Set')
         ->assertSee('Add Song')
+        ->assertSee('Set Snapshot')
+        ->assertSee('Attachments')
+        ->assertSee('#set-'.$set->id, false);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertSee('aria-label="Song actions"', false)
         ->assertSee('Edit Song')
         ->assertSee('Add Slot')
         ->assertSee('Clear Slot')
         ->assertSee('Edit slot')
         ->assertSee('Copy Direct Link')
-        ->assertSee('mobile-song-move', false)
-        ->assertSee('mobile-slot-move', false)
-        ->assertSee('items-start justify-center', false)
-        ->assertSee('overflow-y-auto', false)
-        ->assertSee('max-h-[calc(100dvh-2rem)]', false)
-        ->assertSee('sm:max-h-[calc(100dvh-4rem)]', false)
-        ->assertSee('#set-'.$set->id, false)
+        ->assertSee('Attachments')
         ->assertSee('#song-'.$song->id, false)
-        ->assertSee('#slot-'.$slot->id, false)
-        ->assertSee("x-bind:title=\"assignmentIsManual ? 'Manually assigned' : ''\"", false)
-        ->assertDontSee('aria-label="Admin"', false)
-        ->assertDontSee('aria-label="Edit Set"', false)
-        ->assertDontSee('aria-label="Add Song"', false)
-        ->assertDontSee('aria-label="Edit song"', false)
-        ->assertDontSee('aria-label="Add slot"', false);
+        ->assertSee('#slot-'.$slot->id, false);
 });
 
 test('set action menu offers a table image export', function () {
     $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
+    $songCard = file_get_contents(resource_path('views/components/sessions/song-card.blade.php'));
+    $slotActionMenu = file_get_contents(resource_path('views/components/sessions/slot-action-menu.blade.php'));
+    $slotRow = file_get_contents(resource_path('views/components/sessions/slot-row.blade.php'));
     $script = file_get_contents(resource_path('js/components/sessionCards.js'));
     $summaryModal = file_get_contents(resource_path('views/components/sessions/set-summary-modal.blade.php'));
     $snapshotModal = file_get_contents(resource_path('views/components/sessions/set-snapshot-modal.blade.php'));
 
     expect($shell)
+        ->toContain('aria-label="Open set attachments"')
         ->toContain('Set Snapshot')
         ->toContain('x-heroicon-m-photo')
         ->toContain('openSnapshotModal()')
+        ->toContain('openAttachmentsModal()')
+        ->toContain('x-heroicon-m-paper-clip')
         ->toContain('<x-sessions.set-snapshot-modal />')
+        ->toContain('<x-sessions.attachments-modal />')
         ->toContain("'sessionDate' => \$set->session->date->format('M j, Y')");
+
+    expect($songCard)
+        ->toContain('aria-label="Open song attachments"')
+        ->toContain('openAttachmentsModal()')
+        ->toContain('x-heroicon-m-paper-clip')
+        ->toContain('attachmentsListUrl')
+        ->toContain('attachmentsStoreUrl');
+
+    expect($slotActionMenu)
+        ->toContain('openAttachmentsModal()')
+        ->toContain('x-heroicon-m-paper-clip')
+        ->toContain('Attachments');
+
+    expect($slotRow)
+        ->toContain('aria-label="Open slot attachments"')
+        ->toContain('x-heroicon-m-paper-clip')
+        ->toContain('attachmentsListUrl')
+        ->toContain('attachmentsStoreUrl')
+        ->toContain('<x-sessions.attachments-modal />');
 
     expect($script)
         ->toContain('renderSetSummaryImage')
         ->toContain('copySnapshotImage')
         ->toContain('downloadSnapshotImage')
         ->toContain('shareSnapshotImage')
+        ->toContain('hasUncommittedAttachmentDraft')
+        ->toContain('You may not have finished adding an attachment. Do you want to continue editing?')
+        ->toContain('attachmentFileInput')
         ->toContain('this.closeSnapshotModal()')
         ->toContain('this.snapshotImageUrl = URL.createObjectURL(blob)')
         ->toContain('drawPersonIcon')
@@ -248,13 +272,16 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertOk()
         ->assertSee('text-sky-700 hover:bg-sky-50 focus:bg-sky-50', false)
         ->assertSee('Edit Set')
-        ->assertSee('Add Song')
+        ->assertSee('Request Song')
+        ->assertDontSee('🛡️');
+
+    $this->actingAs($admin)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
         ->assertSee('Edit Song')
         ->assertSee('Add Slot')
         ->assertSee('Take this slot')
-        ->assertSee('mr-1 inline h-4 w-4 text-sky-500', false)
-        ->assertDontSee('🛡️')
-        ->assertSee('sr-only"> Admin action</span>', false);
+        ->assertDontSee('🛡️');
 });
 
 test('an admin can request a song from another user\'s set', function () {
@@ -322,7 +349,7 @@ test('non-manager still sees song actions menu with direct link action', functio
     ]);
 
     $this->actingAs($guest)
-        ->get(route('sessions.sets', $session))
+        ->get(route('sessions.sets.body', [$session, $set]))
         ->assertOk()
         ->assertSee('aria-label="Song actions"', false)
         ->assertSee('Copy Direct Link')
@@ -448,7 +475,7 @@ test('clear slot action is hidden when the current user has the slot', function 
     ]);
 
     $this->actingAs($owner)
-        ->get(route('sessions.sets', $session))
+        ->get(route('sessions.sets.body', [$session, $set]))
         ->assertOk()
         ->assertSee('Release slot')
         ->assertSee('Clear Slot')

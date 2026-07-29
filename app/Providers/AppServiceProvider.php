@@ -141,6 +141,7 @@ class AppServiceProvider extends ServiceProvider
             'profile' => 'Profile',
             'admin' => 'Admin',
             'users' => 'Users',
+            'attachments' => 'Attachments',
             'settings' => 'Settings',
             'slot-conflicts' => 'Slot Conflicts',
             'slot_conflicts' => 'Slot Conflicts',

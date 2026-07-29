@@ -77,6 +77,10 @@
         'songStoreUrl' => route('songs.store', $set),
         'songRequestStoreUrl' => route('song-requests.store', $set),
         'setSummaryUrl' => route('sets.summary', $set),
+        'attachmentsListUrl' => route('sets.attachments.index', $set),
+        'attachmentsStoreUrl' => route('sets.attachments.store', $set),
+        'canManageAttachments' => $canManageSet,
+        'initialAttachmentCount' => $set->attachments_count ?? 0,
         'collaboratorsUrl' => ($isAdmin || $isSetOwner) ? route('sets.collaborators.update', $set) : null,
         'collaboratorsUsersUrl' => ($isAdmin || $isSetOwner) ? route('sets.collaborators.users', $set) : null,
         'initialCollaborators' => $users->whereIn('id', $set->collaboratorUserIds())->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),
@@ -162,6 +166,19 @@
                         <span class="sr-only">Hidden set</span>
                     </span>
                 @endif
+
+                <button
+                    type="button"
+                    x-show="attachmentCount > 0"
+                    x-cloak
+                    @click.stop="openAttachmentsModal()"
+                    class="inline-flex items-center rounded-sm text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    aria-label="Open set attachments"
+                    title="Open set attachments"
+                >
+                    <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    <span class="sr-only">Set has attachments</span>
+                </button>
 
                 @if ($isAdmin && ! $set->performed && ! $sessionLocked)
                     <span
@@ -294,6 +311,14 @@
                     </button>
                     <button
                         type="button"
+                        @click="openActionMenu = false; openAttachmentsModal()"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                    >
+                        <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                        <span>Attachments</span>
+                    </button>
+                    <button
+                        type="button"
                         @click="openActionMenu = false; copySetShareLink()"
                         class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
                     >
@@ -333,4 +358,5 @@
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>
 
     <x-sessions.set-snapshot-modal />
+    <x-sessions.attachments-modal />
 </article>

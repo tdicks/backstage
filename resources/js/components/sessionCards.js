@@ -75,6 +75,32 @@ function appendSessionFragment(container, html) {
     return elements;
 }
 
+function initialAttachmentFormState() {
+    return {
+        type: 'link',
+        label: '',
+        url: '',
+        file: null,
+    };
+}
+
+function humanAttachmentSize(sizeBytes) {
+    if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+        return '';
+    }
+
+    if (sizeBytes < 1024) {
+        return `${sizeBytes} B`;
+    }
+
+    const kilobytes = sizeBytes / 1024;
+    if (kilobytes < 1024) {
+        return `${kilobytes.toFixed(1)} KB`;
+    }
+
+    return `${(kilobytes / 1024).toFixed(1)} MB`;
+}
+
 function canvasBlob(canvas) {
     return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
@@ -390,6 +416,20 @@ export function sessionSetCard(config) {
         snapshotImageBlob: null,
         snapshotImageUrl: '',
         snapshotCanShare: false,
+        openAttachments: false,
+        attachments: [],
+        attachmentsLoading: false,
+        attachmentsLoaded: false,
+        attachmentsError: '',
+        attachmentsFeedback: '',
+        attachmentCount: Number(config.initialAttachmentCount ?? 0),
+        attachmentForm: initialAttachmentFormState(),
+        attachmentFormBusy: false,
+        attachmentFormError: '',
+        deletingAttachmentId: null,
+        canManageAttachments: config.canManageAttachments,
+        attachmentsListUrl: config.attachmentsListUrl,
+        attachmentsStoreUrl: config.attachmentsStoreUrl,
         setCollapsed: false,
         songRequestsCollapsed: false,
         setId: config.setId,
@@ -543,6 +583,7 @@ export function sessionSetCard(config) {
         closeSessionModals() {
             this.closeSummaryModal();
             this.closeSnapshotModal();
+            this.closeAttachmentsModal();
             this.openSetEdit = false;
             this.openSong = false;
             this.openSongRequest = false;
@@ -578,6 +619,169 @@ export function sessionSetCard(config) {
             await window.copyShareLink(config.setDirectUrl);
             this.directLinkCopied = true;
             setTimeout(() => this.directLinkCopied = false, 1800);
+        },
+        async failedResponseMessage(response, fallback) {
+            let message = fallback;
+
+            try {
+                const payload = await response.json();
+                const validationErrors = Object.values(payload.errors || {}).flat();
+                message = validationErrors[0] || payload.message || fallback;
+            } catch (e) {
+                message = fallback;
+            }
+
+            return message;
+        },
+        async openAttachmentsModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openAttachments = true;
+            await this.loadAttachments();
+        },
+        hasUncommittedAttachmentDraft() {
+            const label = (this.attachmentForm?.label || '').trim();
+            const url = (this.attachmentForm?.url || '').trim();
+            const hasFile = Boolean(this.attachmentForm?.file);
+
+            return label !== '' || url !== '' || hasFile;
+        },
+        closeAttachmentsModal(force = false) {
+            if (this.openAttachments && !force && this.hasUncommittedAttachmentDraft()) {
+                const continueEditing = window.confirm('You may not have finished adding an attachment. Do you want to continue editing?');
+                if (continueEditing) {
+                    return;
+                }
+            }
+
+            this.openAttachments = false;
+            this.attachmentsFeedback = '';
+            this.attachmentFormError = '';
+            this.attachmentFormBusy = false;
+            this.deletingAttachmentId = null;
+            this.attachmentForm = initialAttachmentFormState();
+            if (this.$refs.attachmentFileInput) {
+                this.$refs.attachmentFileInput.value = '';
+            }
+        },
+        attachmentSizeLabel(sizeBytes) {
+            return humanAttachmentSize(Number(sizeBytes));
+        },
+        async loadAttachments() {
+            if (!this.attachmentsListUrl) {
+                return;
+            }
+
+            this.attachmentsLoading = true;
+            this.attachmentsError = '';
+
+            try {
+                const response = await fetch(this.attachmentsListUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load attachments right now.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsLoaded = true;
+            } catch (error) {
+                this.attachmentsError = error.message || 'Could not load attachments right now.';
+            } finally {
+                this.attachmentsLoading = false;
+            }
+        },
+        onAttachmentFileSelected(event) {
+            const [selectedFile] = event.target.files ?? [];
+            this.attachmentForm.file = selectedFile ?? null;
+        },
+        async submitAttachmentForm() {
+            if (!this.attachmentsStoreUrl || this.attachmentFormBusy || !this.canManageAttachments) {
+                return;
+            }
+
+            this.attachmentFormBusy = true;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const body = new FormData();
+                body.append('type', this.attachmentForm.type);
+                body.append('label', this.attachmentForm.label || '');
+
+                if (this.attachmentForm.type === 'link') {
+                    body.append('url', this.attachmentForm.url || '');
+                } else if (this.attachmentForm.file) {
+                    body.append('file', this.attachmentForm.file);
+                }
+
+                const response = await fetch(this.attachmentsStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body,
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not add attachment. Try again.');
+                    throw new Error(message || 'Could not add attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentForm = initialAttachmentFormState();
+                this.attachmentsFeedback = payload.message || 'Attachment added.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not add attachment. Try again.';
+            } finally {
+                this.attachmentFormBusy = false;
+            }
+        },
+        async removeAttachment(attachmentId) {
+            if (this.deletingAttachmentId || !this.canManageAttachments) {
+                return;
+            }
+
+            this.deletingAttachmentId = attachmentId;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const response = await fetch(`/attachments/${attachmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not remove attachment. Try again.');
+                    throw new Error(message || 'Could not remove attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsFeedback = payload.message || 'Attachment removed.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not remove attachment. Try again.';
+            } finally {
+                this.deletingAttachmentId = null;
+            }
         },
         ensureDropPlaceholder(container, draggedEl) {
             if (!this.dropPlaceholderEl) {
@@ -1424,6 +1628,7 @@ export function sessionSongCard(config) {
     return {
         openEditSong: false,
         openAddSlot: false,
+        openAttachments: false,
         openActionMenu: false,
         actionMenuStyle: '',
         directLinkCopied: false,
@@ -1438,10 +1643,23 @@ export function sessionSongCard(config) {
         mobileSongReorderBusy: false,
         reorderError: '',
         reorderFeedback: '',
+        attachments: [],
+        attachmentsLoading: false,
+        attachmentsLoaded: false,
+        attachmentsError: '',
+        attachmentsFeedback: '',
+        attachmentCount: Number(config.initialAttachmentCount ?? 0),
+        attachmentForm: initialAttachmentFormState(),
+        attachmentFormBusy: false,
+        attachmentFormError: '',
+        deletingAttachmentId: null,
         toast: { visible: false, type: 'error', message: '' },
         toastTimer: null,
         canReorderSlots: config.canReorderSlots,
         canReorderSongs: config.canReorderSongs,
+        canManageAttachments: config.canManageAttachments,
+        attachmentsListUrl: config.attachmentsListUrl,
+        attachmentsStoreUrl: config.attachmentsStoreUrl,
         isAdminUser: config.isAdminUser,
         jamSessionClosed: config.jamSessionClosed,
         ...baseDragState(),
@@ -1521,6 +1739,7 @@ export function sessionSongCard(config) {
         closeSessionModals() {
             this.openEditSong = false;
             this.openAddSlot = false;
+            this.closeAttachmentsModal();
         },
         closeSessionActionMenus() {
             this.openActionMenu = false;
@@ -1565,6 +1784,156 @@ export function sessionSongCard(config) {
             await window.copyShareLink(config.songDirectUrl);
             this.directLinkCopied = true;
             setTimeout(() => this.directLinkCopied = false, 1800);
+        },
+        async openAttachmentsModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openAttachments = true;
+            await this.loadAttachments();
+        },
+        hasUncommittedAttachmentDraft() {
+            const label = (this.attachmentForm?.label || '').trim();
+            const url = (this.attachmentForm?.url || '').trim();
+            const hasFile = Boolean(this.attachmentForm?.file);
+
+            return label !== '' || url !== '' || hasFile;
+        },
+        closeAttachmentsModal(force = false) {
+            if (this.openAttachments && !force && this.hasUncommittedAttachmentDraft()) {
+                const continueEditing = window.confirm('You may not have finished adding an attachment. Do you want to continue editing?');
+                if (continueEditing) {
+                    return;
+                }
+            }
+
+            this.openAttachments = false;
+            this.attachmentsFeedback = '';
+            this.attachmentFormError = '';
+            this.attachmentFormBusy = false;
+            this.deletingAttachmentId = null;
+            this.attachmentForm = initialAttachmentFormState();
+            if (this.$refs.attachmentFileInput) {
+                this.$refs.attachmentFileInput.value = '';
+            }
+        },
+        attachmentSizeLabel(sizeBytes) {
+            return humanAttachmentSize(Number(sizeBytes));
+        },
+        async loadAttachments() {
+            if (!this.attachmentsListUrl) {
+                return;
+            }
+
+            this.attachmentsLoading = true;
+            this.attachmentsError = '';
+
+            try {
+                const response = await fetch(this.attachmentsListUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load attachments right now.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsLoaded = true;
+            } catch (error) {
+                this.attachmentsError = error.message || 'Could not load attachments right now.';
+            } finally {
+                this.attachmentsLoading = false;
+            }
+        },
+        onAttachmentFileSelected(event) {
+            const [selectedFile] = event.target.files ?? [];
+            this.attachmentForm.file = selectedFile ?? null;
+        },
+        async submitAttachmentForm() {
+            if (!this.attachmentsStoreUrl || this.attachmentFormBusy || !this.canManageAttachments) {
+                return;
+            }
+
+            this.attachmentFormBusy = true;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const body = new FormData();
+                body.append('type', this.attachmentForm.type);
+                body.append('label', this.attachmentForm.label || '');
+
+                if (this.attachmentForm.type === 'link') {
+                    body.append('url', this.attachmentForm.url || '');
+                } else if (this.attachmentForm.file) {
+                    body.append('file', this.attachmentForm.file);
+                }
+
+                const response = await fetch(this.attachmentsStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body,
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not add attachment. Try again.');
+                    throw new Error(message || 'Could not add attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentForm = initialAttachmentFormState();
+                this.attachmentsFeedback = payload.message || 'Attachment added.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not add attachment. Try again.';
+            } finally {
+                this.attachmentFormBusy = false;
+            }
+        },
+        async removeAttachment(attachmentId) {
+            if (this.deletingAttachmentId || !this.canManageAttachments) {
+                return;
+            }
+
+            this.deletingAttachmentId = attachmentId;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const response = await fetch(`/attachments/${attachmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not remove attachment. Try again.');
+                    throw new Error(message || 'Could not remove attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.attachmentCount = this.attachments.length;
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsFeedback = payload.message || 'Attachment removed.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not remove attachment. Try again.';
+            } finally {
+                this.deletingAttachmentId = null;
+            }
         },
         clearSlotDropPlaceholder() {
             this.$refs.slotDropPlaceholder?.classList.add('hidden');
@@ -1841,6 +2210,7 @@ export function sessionSlotRow(config) {
     return {
         openPropose: false,
         openEditSlot: false,
+        openAttachments: false,
         openActionMenu: false,
         actionMenuStyle: '',
         assignedUserName: config.assignedUserName,
@@ -1864,11 +2234,23 @@ export function sessionSlotRow(config) {
         assignmentConflictPending: false,
         assignmentConflictCooldown: false,
         assignmentConflictTimer: null,
+        attachments: [],
+        attachmentsLoading: false,
+        attachmentsLoaded: false,
+        attachmentsError: '',
+        attachmentsFeedback: '',
+        attachmentForm: initialAttachmentFormState(),
+        attachmentFormBusy: false,
+        attachmentFormError: '',
+        deletingAttachmentId: null,
         toast: { visible: false, type: 'error', message: '' },
         toastStyle: '',
         toastTimer: null,
         proposalUserOptions: config.proposalUserOptions,
         users: config.users,
+        canManageAttachments: config.canManageAttachments,
+        attachmentsListUrl: config.attachmentsListUrl,
+        attachmentsStoreUrl: config.attachmentsStoreUrl,
         ...baseDragState(),
         proposeTargetUserId: '',
         proposeTargetUserQuery: '',
@@ -2025,6 +2407,7 @@ export function sessionSlotRow(config) {
         closeSessionModals() {
             this.openPropose = false;
             this.openEditSlot = false;
+            this.closeAttachmentsModal();
         },
         closeSessionActionMenus() {
             this.openActionMenu = false;
@@ -2262,6 +2645,153 @@ export function sessionSlotRow(config) {
                     this.actionFeedback = '';
                 }
             }, 1800);
+        },
+        async openAttachmentsModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openAttachments = true;
+            await this.loadAttachments();
+        },
+        hasUncommittedAttachmentDraft() {
+            const label = (this.attachmentForm?.label || '').trim();
+            const url = (this.attachmentForm?.url || '').trim();
+            const hasFile = Boolean(this.attachmentForm?.file);
+
+            return label !== '' || url !== '' || hasFile;
+        },
+        closeAttachmentsModal(force = false) {
+            if (this.openAttachments && !force && this.hasUncommittedAttachmentDraft()) {
+                const continueEditing = window.confirm('You may not have finished adding an attachment. Do you want to continue editing?');
+                if (continueEditing) {
+                    return;
+                }
+            }
+
+            this.openAttachments = false;
+            this.attachmentsFeedback = '';
+            this.attachmentFormError = '';
+            this.attachmentFormBusy = false;
+            this.deletingAttachmentId = null;
+            this.attachmentForm = initialAttachmentFormState();
+            if (this.$refs.attachmentFileInput) {
+                this.$refs.attachmentFileInput.value = '';
+            }
+        },
+        attachmentSizeLabel(sizeBytes) {
+            return humanAttachmentSize(Number(sizeBytes));
+        },
+        async loadAttachments() {
+            if (!this.attachmentsListUrl) {
+                return;
+            }
+
+            this.attachmentsLoading = true;
+            this.attachmentsError = '';
+
+            try {
+                const response = await fetch(this.attachmentsListUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load attachments right now.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsLoaded = true;
+            } catch (error) {
+                this.attachmentsError = error.message || 'Could not load attachments right now.';
+            } finally {
+                this.attachmentsLoading = false;
+            }
+        },
+        onAttachmentFileSelected(event) {
+            const [selectedFile] = event.target.files ?? [];
+            this.attachmentForm.file = selectedFile ?? null;
+        },
+        async submitAttachmentForm() {
+            if (!this.attachmentsStoreUrl || this.attachmentFormBusy || !this.canManageAttachments) {
+                return;
+            }
+
+            this.attachmentFormBusy = true;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const body = new FormData();
+                body.append('type', this.attachmentForm.type);
+                body.append('label', this.attachmentForm.label || '');
+
+                if (this.attachmentForm.type === 'link') {
+                    body.append('url', this.attachmentForm.url || '');
+                } else if (this.attachmentForm.file) {
+                    body.append('file', this.attachmentForm.file);
+                }
+
+                const response = await fetch(this.attachmentsStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body,
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not add attachment. Try again.');
+                    throw new Error(message || 'Could not add attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentForm = initialAttachmentFormState();
+                this.attachmentsFeedback = payload.message || 'Attachment added.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not add attachment. Try again.';
+            } finally {
+                this.attachmentFormBusy = false;
+            }
+        },
+        async removeAttachment(attachmentId) {
+            if (this.deletingAttachmentId || !this.canManageAttachments) {
+                return;
+            }
+
+            this.deletingAttachmentId = attachmentId;
+            this.attachmentFormError = '';
+            this.attachmentsFeedback = '';
+
+            try {
+                const response = await fetch(`/attachments/${attachmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not remove attachment. Try again.');
+                    throw new Error(message || 'Could not remove attachment. Try again.');
+                }
+
+                const payload = await response.json();
+                this.attachments = payload.attachments ?? [];
+                this.canManageAttachments = Boolean(payload.can_manage);
+                this.attachmentsFeedback = payload.message || 'Attachment removed.';
+            } catch (error) {
+                this.attachmentFormError = error.message || 'Could not remove attachment. Try again.';
+            } finally {
+                this.deletingAttachmentId = null;
+            }
         },
         async submitEditSlot(event) {
             if (this.setLocked) {
