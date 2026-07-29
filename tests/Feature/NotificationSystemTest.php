@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\AppActivityNotification;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
@@ -230,13 +231,13 @@ test('notification feed polls only notifications created after the browser curso
         ->assertJsonPath('notifications.0.id', $latestNotification->id);
 });
 
-    test('authenticated navigation renders the initial notification feed', function () {
-        $user = User::factory()->create();
+test('authenticated navigation renders the initial notification feed', function () {
+    $user = User::factory()->create();
 
-        $this->actingAs($user)
+    $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk();
-    });
+});
 
 test('notification popup is positioned in the bottom right on desktop', function () {
     $user = User::factory()->create();
@@ -311,4 +312,111 @@ test('dismiss all method dismisses all notifications', function () {
         ->getJson(route('notifications.index'))
         ->assertJsonPath('unread_count', 0)
         ->assertJsonCount(0, 'notifications');
+});
+
+test('creating a visible set sends a new set created notification to users who can see the session', function () {
+    $owner = User::factory()->create(['name' => 'Set Owner']);
+    $viewer = User::factory()->create(['name' => 'Set Viewer']);
+
+    $session = JamSession::query()->create([
+        'name' => 'Visible Session',
+        'date' => now()->addWeek(),
+        'description' => null,
+        'is_hidden' => false,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('sets.store', $session), [
+            'name' => 'Fresh Set',
+            'description' => null,
+            'is_hidden' => false,
+            'free_for_all' => false,
+        ])
+        ->assertRedirect();
+
+    expect($owner->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->count())->toBe(0);
+    expect($viewer->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->count())->toBe(1);
+
+    $notification = $viewer->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->latest()->first();
+
+    expect((string) ($notification?->data['title'] ?? ''))->toBe('New set created');
+    expect((string) ($notification?->data['action_url'] ?? ''))->toContain('#set-');
+});
+
+test('creating a hidden set defers notification until first unhide and only sends once', function () {
+    $owner = User::factory()->create(['name' => 'Owner']);
+    $viewer = User::factory()->create(['name' => 'Viewer']);
+
+    $session = JamSession::query()->create([
+        'name' => 'Deferred Session',
+        'date' => now()->addWeek(),
+        'description' => null,
+        'is_hidden' => false,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('sets.store', $session), [
+            'name' => 'Deferred Hidden Set',
+            'description' => null,
+            'is_hidden' => true,
+            'free_for_all' => false,
+        ])
+        ->assertRedirect();
+
+    $set = Set::query()->latest('id')->firstOrFail();
+    $cacheKey = 'notifications:set_created:deferred:'.$set->id;
+
+    expect(Cache::get($cacheKey))->toBeTrue();
+    expect($viewer->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->count())->toBe(0);
+
+    $this->actingAs($owner)
+        ->patch(route('sets.update', $set), [
+            'name' => $set->name,
+            'description' => $set->description,
+            'position' => $set->position,
+            'performed' => false,
+            'signups_open' => true,
+            'is_hidden' => false,
+            'song_requests' => true,
+            'free_for_all' => false,
+            'jam_session_id' => $session->id,
+        ])
+        ->assertRedirect();
+
+    expect(Cache::get($cacheKey))->toBeNull();
+    expect($viewer->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->count())->toBe(1);
+
+    $this->actingAs($owner)
+        ->patch(route('sets.update', $set), [
+            'name' => $set->name,
+            'description' => $set->description,
+            'position' => $set->position,
+            'performed' => false,
+            'signups_open' => true,
+            'is_hidden' => true,
+            'song_requests' => true,
+            'free_for_all' => false,
+            'jam_session_id' => $session->id,
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($owner)
+        ->patch(route('sets.update', $set), [
+            'name' => $set->name,
+            'description' => $set->description,
+            'position' => $set->position,
+            'performed' => false,
+            'signups_open' => true,
+            'is_hidden' => false,
+            'song_requests' => true,
+            'free_for_all' => false,
+            'jam_session_id' => $session->id,
+        ])
+        ->assertRedirect();
+
+    expect($viewer->notifications()->where('data->type_key', NotificationTypeCatalog::SET_CREATED)->count())->toBe(1);
 });

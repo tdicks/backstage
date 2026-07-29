@@ -19,6 +19,7 @@ test('notification types are categorized correctly', function () {
 
     expect($definitions['set_collaborator_added']['category'])->toBe('sets');
     expect($definitions['set_collaborator_removed']['category'])->toBe('sets');
+    expect($definitions['set_created']['category'])->toBe('sets');
     expect($definitions['set_updated']['category'])->toBe('sets');
     expect($definitions['song_request_received']['category'])->toBe('sets');
     expect($definitions['song_request_accepted']['category'])->toBe('sets');

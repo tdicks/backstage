@@ -12,6 +12,7 @@ use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SetController extends Controller
 {
@@ -123,7 +124,7 @@ class SetController extends Controller
 
         $nextPosition = ((int) $jamSession->sets()->max('position')) + 1;
 
-        $jamSession->sets()->create([
+        $set = $jamSession->sets()->create([
             ...$validated,
             'owner_id' => $request->user()->id,
             'position' => $nextPosition,
@@ -132,6 +133,12 @@ class SetController extends Controller
             'free_for_all' => (bool) ($validated['free_for_all'] ?? false),
             'song_requests' => true,
         ]);
+
+        if ($set->is_hidden) {
+            Cache::forever(self::newSetDeferredNotificationCacheKey($set), true);
+        } else {
+            $this->notifySetCreated($set, $request);
+        }
 
         return back()->with('status', 'Set created.');
     }
@@ -164,6 +171,7 @@ class SetController extends Controller
         $validated = $request->validate($rules);
 
         $wasAcceptingSongRequests = (bool) $set->song_requests;
+        $wasHidden = (bool) $set->is_hidden;
 
         $updateData = [
             'name' => $validated['name'],
@@ -210,6 +218,15 @@ class SetController extends Controller
             );
         }
 
+        $isNowVisible = ! $set->is_hidden;
+        $canFireDeferredCreatedNotification = $wasHidden
+            && $isNowVisible
+            && Cache::pull(self::newSetDeferredNotificationCacheKey($set), false);
+
+        if ($canFireDeferredCreatedNotification) {
+            $this->notifySetCreated($set, $request);
+        }
+
         return back()->with('status', 'Set updated.');
     }
 
@@ -223,5 +240,27 @@ class SetController extends Controller
         $set->delete();
 
         return back()->with('status', 'Set removed.');
+    }
+
+    private function notifySetCreated(Set $set, Request $request): void
+    {
+        $set->loadMissing('session');
+
+        app(NotificationService::class)->notifyUsers(
+            NotificationTypeCatalog::SET_CREATED,
+            app(NotificationService::class)->visibleUsersForSession($set->session),
+            $request->user(),
+            [
+                'title' => 'New set created',
+                'body' => $request->user()->name.' created '.$set->name.' in '.$set->session->name.'.',
+                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_label' => 'Open set',
+            ]
+        );
+    }
+
+    private static function newSetDeferredNotificationCacheKey(Set $set): string
+    {
+        return 'notifications:set_created:deferred:'.$set->id;
     }
 }

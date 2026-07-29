@@ -32,6 +32,8 @@ final class NotificationTypeCatalog
 
     public const JAM_SESSION_DATE_CHANGED = 'jam_session_date_changed';
 
+    public const SET_CREATED = 'set_created';
+
     public const SET_UPDATED = 'set_updated';
 
     public const ADMIN_USER_REGISTERED = 'admin_user_registered';
@@ -132,6 +134,12 @@ final class NotificationTypeCatalog
                 'label' => 'Jam session date changed',
                 'description' => 'When the date changes on a jam session you are involved in.',
                 'category' => 'jam_sessions',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SET_CREATED => [
+                'label' => 'New set created',
+                'description' => 'When a new set becomes visible to you on a jam session.',
+                'category' => 'sets',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::SET_UPDATED => [

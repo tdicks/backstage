@@ -116,6 +116,17 @@ class NotificationService
     }
 
     /**
+     * @return EloquentCollection<int, User>
+     */
+    public function visibleUsersForSession(JamSession $session): EloquentCollection
+    {
+        return User::query()
+            ->when(! $session->is_hidden, fn ($query) => $query, fn ($query) => $query->where('is_admin', true))
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * @return array{notifications: list<array{id: string, type_key: string, title: string, body: string, action_url: string|null, action_label: string, should_popup: bool, seen: bool, created_at: string|null, created_at_human: string|null}>, unread_count: int}
      */
     public function feedForUser(User $user, int $limit = 25, ?CarbonInterface $after = null, array $knownIds = []): array
