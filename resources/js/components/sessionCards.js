@@ -55,6 +55,26 @@ function lazySetBodyDistanceFromViewport(element) {
     return top > window.innerHeight ? top - window.innerHeight : 0;
 }
 
+function appendSessionFragment(container, html) {
+    if (!container || !html) {
+        return [];
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = html.trim();
+    const elements = Array.from(template.content.children);
+
+    elements.forEach((element) => {
+        container.appendChild(element);
+
+        if (window.Alpine) {
+            window.Alpine.initTree(element);
+        }
+    });
+
+    return elements;
+}
+
 function queueLazySetBody(rootElement, load) {
     queuedLazySetBodies.set(rootElement, load);
     processLazySetBodyQueue();
@@ -682,7 +702,6 @@ export function sessionSetCard(config) {
                 this.collaboratorNames = updated.map((c) => c.name);
                 this.openCollaborators = false;
                 this.resetCollaboratorModal();
-                this.refreshSessionSets();
             } catch (e) {
                 this.collaboratorSaveError = e.message || 'Could not save collaborators. Try again.';
             } finally {
@@ -737,7 +756,6 @@ export function sessionSetCard(config) {
                 this.openSongRequest = false;
                 this.resetSongRequestAutocomplete();
                 event.target.reset();
-                this.refreshSessionSets();
             } catch (e) {
                 this.requestSongError = e.message || 'Could not submit song request. Try again.';
             } finally {
@@ -771,9 +789,14 @@ export function sessionSetCard(config) {
                     throw new Error('Request failed');
                 }
 
+                const payload = await response.json();
+                this.$refs.songsContainer?.querySelector('[data-empty-songs-state]')?.remove();
+                appendSessionFragment(this.$refs.songsContainer, payload.html);
+                window.dispatchEvent(new CustomEvent('song-order-changed', {
+                    detail: { setId: this.setId },
+                }));
                 this.openSong = false;
                 this.resetSongAutocomplete();
-                this.refreshSessionSets();
             } catch (e) {
                 this.addSongError = 'Could not add song. Try again.';
             } finally {
@@ -1121,7 +1144,6 @@ export function sessionSongCard(config) {
         },
         canDragSlots() {
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
-                this.refreshSessionSets();
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets'));
@@ -1426,8 +1448,12 @@ export function sessionSongCard(config) {
                     throw new Error(message);
                 }
 
+                const payload = await response.json();
+                (payload.html ?? []).forEach((html) => appendSessionFragment(this.$refs.slotsContainer, html));
+                window.dispatchEvent(new CustomEvent('slot-order-changed', {
+                    detail: { songId: config.songId },
+                }));
                 this.openAddSlot = false;
-                this.refreshSessionSets();
             } catch (e) {
                 this.actionError = e.message || 'Could not add slot. Try again.';
             } finally {
@@ -1625,8 +1651,27 @@ export function sessionSlotRow(config) {
                 manual_performer_name: query,
             };
         },
-        refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+        applySlotPayload(slot) {
+            if (!slot || Number(slot.id) !== Number(config.slotId)) {
+                return;
+            }
+
+            this.slotLabel = slot.label;
+            this.slotIsOpen = slot.is_open;
+            this.assignmentIsManual = !slot.user_id && Boolean(slot.manual_performer_name);
+            this.assignedToCurrentUser = Number(slot.user_id) === Number(this.currentUserId);
+            this.assignedUserName = this.assignedToCurrentUser ? 'You' : (slot.user_name || 'Open');
+            this.initialEditAssignedUserId = slot.user_id ? String(slot.user_id) : '';
+            this.initialEditAssignedUserName = slot.user_id ? (slot.user_name || '') : '';
+            this.initialEditManualPerformerName = slot.manual_performer_name || '';
+            this.editAssignedUserId = this.initialEditAssignedUserId;
+            this.editAssignedUserName = this.initialEditAssignedUserName;
+            this.editAssignedUserQuery = this.initialEditAssignedUserName || this.initialEditManualPerformerName;
+            this.hasPendingOwnRequest = false;
+        },
+        syncSlot(slot) {
+            this.applySlotPayload(slot);
+            window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot } }));
         },
         showToast(type, message) {
             const anchorRect = (this.$refs.toastAnchor || this.$refs.actionMenuButton || this.$el).getBoundingClientRect();
@@ -1727,7 +1772,6 @@ export function sessionSlotRow(config) {
 
                 this.actionFeedback = 'Request sent.';
                 this.hasPendingOwnRequest = true;
-                this.refreshSessionSets();
             } catch (e) {
                 this.actionError = 'Could not send request. Try again.';
             } finally {
@@ -1764,7 +1808,9 @@ export function sessionSlotRow(config) {
                     throw new Error(message);
                 }
 
-                this.refreshSessionSets();
+                const payload = await response.json();
+                this.syncSlot(payload.slot);
+                this.actionFeedback = payload.message || 'Slot assigned to you.';
             } catch (e) {
                 this.actionError = e.message || 'Could not take slot. Try again.';
             } finally {
@@ -1807,7 +1853,6 @@ export function sessionSlotRow(config) {
                 this.actionFeedback = 'Recommendation sent.';
                 this.openPropose = false;
                 this.proposeMessage = '';
-                this.refreshSessionSets();
             } catch (e) {
                 this.actionError = 'Could not send recommendation. Try again.';
             } finally {
@@ -1839,7 +1884,9 @@ export function sessionSlotRow(config) {
                     throw new Error('Request failed');
                 }
 
-                this.refreshSessionSets();
+                const payload = await response.json();
+                this.syncSlot(payload.slot);
+                this.actionFeedback = payload.message || 'Slot released.';
             } catch (e) {
                 this.actionError = 'Could not release slot. Try again.';
             } finally {
@@ -1882,7 +1929,9 @@ export function sessionSlotRow(config) {
                 }
 
                 this.openEditSlot = false;
-                this.refreshSessionSets();
+                const payload = await response.json();
+                this.syncSlot(payload.slot);
+                this.actionFeedback = payload.message || 'Slot cleared.';
             } catch (e) {
                 this.actionError = 'Could not clear slot. Try again.';
             } finally {
@@ -1941,7 +1990,9 @@ export function sessionSlotRow(config) {
                 }
 
                 this.openEditSlot = false;
-                this.refreshSessionSets();
+                const payload = await response.json();
+                this.syncSlot(payload.slot);
+                this.actionFeedback = payload.message || 'Slot updated.';
             } catch (e) {
                 this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {
@@ -1979,7 +2030,6 @@ export function sessionSlotRow(config) {
 
                 this.openEditSlot = false;
                 this.$el.remove();
-                this.refreshSessionSets();
             } catch (e) {
                 this.actionError = 'Could not delete slot. Try again.';
             } finally {

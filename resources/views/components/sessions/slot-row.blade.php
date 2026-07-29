@@ -38,6 +38,7 @@
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
     x-data="sessionSlotRow(@js([
+        'slotId' => $slotModel->id,
         'assignedUserName' => $slotModel->user_id === $currentUserId ? 'You' : $slotModel->assignedPerformerName(),
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,
         'slotIsOpen' => $slotModel->isOpen(),
@@ -72,6 +73,7 @@
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
     x-on:slot-order-changed.window="if ($event.detail.songId === {{ $slotModel->song_id }}) syncMobileSlotOrder()"
+    x-on:slot-updated.window="applySlotPayload($event.detail.slot)"
     x-on:slot-conflict-toast.window="if ($event.detail.slotId === {{ $slotModel->id }}) showToast('error', $event.detail.message)"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >

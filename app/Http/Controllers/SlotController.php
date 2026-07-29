@@ -9,6 +9,7 @@ use App\Models\Song;
 use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\SlotCompatibility;
+use App\SessionCardFragment;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -40,16 +41,19 @@ class SlotController extends Controller
                 ->reject(fn (string $slotName) => in_array($slotName, $existingSlotNames, true));
             $nextPosition = ((int) $song->slots()->max('position')) + 1;
 
-            foreach ($slotNames as $slotName) {
-                $song->slots()->create([
+            $createdSlots = $slotNames->map(function (string $slotName) use ($song, &$nextPosition) {
+                return $song->slots()->create([
                     'name' => $slotName,
                     'position' => $nextPosition++,
                 ]);
-            }
+            });
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Band template applied.',
+                    'html' => $createdSlots
+                        ->map(fn (Slot $slot) => app(SessionCardFragment::class)->slot($slot, $request->user()))
+                        ->values(),
                 ], 201);
             }
 
@@ -62,7 +66,7 @@ class SlotController extends Controller
 
         $nextPosition = ((int) $song->slots()->max('position')) + 1;
 
-        $song->slots()->create([
+        $slot = $song->slots()->create([
             ...$validated,
             'position' => $nextPosition,
         ]);
@@ -70,6 +74,7 @@ class SlotController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Slot added.',
+                'html' => [app(SessionCardFragment::class)->slot($slot, $request->user())],
             ], 201);
         }
 

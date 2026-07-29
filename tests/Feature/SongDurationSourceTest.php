@@ -38,7 +38,8 @@ test('set owner can add a song with deezer duration and source', function () {
             'duration' => 208,
             'source' => 'deezer',
         ])
-        ->assertOk();
+        ->assertOk()
+        ->assertJsonPath('html', fn (string $html) => str($html)->contains('data-session-song-card'));
 
     $song = Song::query()->where('set_id', $set->id)->first();
 

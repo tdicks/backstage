@@ -7,6 +7,7 @@ use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
 use App\Services\NotificationService;
+use App\SessionCardFragment;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -85,6 +86,7 @@ class SongController extends Controller
                     'artist' => $song->artist,
                     'title' => $song->title,
                 ],
+                'html' => app(SessionCardFragment::class)->song($song, $request->user()),
             ]);
         }
 

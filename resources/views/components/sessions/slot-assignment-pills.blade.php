@@ -55,15 +55,9 @@
                         throw new Error(message);
                     }
 
-                    if (status === 'accepted' && targetName) {
-                        assignedUserName = targetIsCurrentUser ? 'You' : targetName;
-                        slotIsOpen = false;
-                        assignedToCurrentUser = targetIsCurrentUser;
-                        assignmentIsManual = false;
-                    }
-
+                    const payload = await response.json();
                     this.hidden = true;
-                    this.refreshSessionSets();
+                    window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot: payload.slot } }));
                 } catch (e) {
                     this.error = e.message || 'Could not update assignment. Try again.';
                 } finally {

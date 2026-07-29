@@ -5,6 +5,7 @@ use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
+use App\Models\SongRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -45,6 +46,7 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         'position' => 1,
         'performed' => false,
         'signups_open' => true,
+        'song_requests' => true,
     ]);
 
     $song = Song::query()->create([
@@ -61,6 +63,15 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         'position' => 1,
     ]);
 
+    $songRequest = SongRequest::query()->create([
+        'set_id' => $set->id,
+        'requester_user_id' => $owner->id,
+        'artist' => 'Requested Artist',
+        'title' => 'Requested Song',
+        'notes' => null,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
     $this->actingAs($owner)
         ->get(route('sessions.sets.body', [$session, $set]), [
             'X-Requested-With' => 'XMLHttpRequest',
@@ -71,7 +82,10 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         ->assertSee('x-show="openSong"', false)
         ->assertSee('x-show="openSetEdit"', false)
         ->assertSee('x-show="openCollaborators"', false)
-        ->assertSee('x-show="openSummary"', false);
+        ->assertSee('x-show="openSummary"', false)
+        ->assertSee('Song requests')
+        ->assertSee('data-song-request-id="'.$songRequest->id.'"', false)
+        ->assertSee('x-show="songRequestsPendingCount > 0"', false);
 });
 
 test('set card bodies load through the viewport observer or an explicit expansion', function () {
@@ -200,7 +214,17 @@ test('lazy session sets endpoint renders mobile slot activity card for pending s
         ->assertOk()
         ->assertSee('Slot requests &amp; recommendations', false)
         ->assertSee('pendingSlotActivityCount', false)
-        ->assertSee('md:hidden', false);
+        ->assertSee('md:hidden', false)
+        ->assertSee('class="hidden"', false);
+});
+
+test('mobile song activity cards render a cancel control for a requester', function () {
+    $view = file_get_contents(resource_path('views/components/sessions/song-card.blade.php'));
+
+    expect($view)
+        ->toContain('@if ($canCancel && ! $setLocked)')
+        ->toContain('@click="respond(\'rejected\')"')
+        ->toContain('aria-label="Cancel slot request"');
 });
 
 test('session routes use descriptive slugs but resolve by stable id', function () {

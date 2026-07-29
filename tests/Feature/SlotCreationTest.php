@@ -93,7 +93,9 @@ test('set owner can apply a band template without duplicating existing slot type
             'band_template_id' => $template->id,
         ])
         ->assertCreated()
-        ->assertJsonPath('message', 'Band template applied.');
+        ->assertJsonPath('message', 'Band template applied.')
+        ->assertJsonCount(2, 'html')
+        ->assertJsonPath('html.0', fn (string $html) => str($html)->contains('data-slot-id'));
 
     expect($song->slots()->orderBy('position')->pluck('name')->all())
         ->toBe(['vocals', 'bass', 'drums']);

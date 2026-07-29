@@ -397,8 +397,9 @@
                                     throw new Error(message);
                                 }
 
+                                const payload = await response.json();
                                 this.hidden = true;
-                                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                                window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot: payload.slot } }));
                             } catch (e) {
                                 this.error = e.message || 'Could not update assignment. Try again.';
                             } finally {
@@ -445,6 +446,19 @@
                             >
                                 <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
                                 <span>Decline</span>
+                            </button>
+                        @endif
+                        @if ($canCancel && ! $setLocked)
+                            <button
+                                type="button"
+                                @click="respond('rejected')"
+                                x-bind:disabled="busy"
+                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40"
+                                aria-label="Cancel slot request"
+                                title="Cancel slot request"
+                            >
+                                <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
+                                <span>Cancel</span>
                             </button>
                         @endif
                     </div>

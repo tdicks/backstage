@@ -60,13 +60,21 @@
                 :jam-session-closed="$sessionLocked"
             />
         @empty
-            <p class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>
+            <p data-empty-songs-state class="rounded border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs in this set yet.</p>
         @endforelse
     </div>
 
+    <x-sessions.song-requests-panel
+        :set="$set"
+        :templates="$templates"
+        :can-manage-set="$canManageSet"
+        :is-set-owner="$isSetOwner"
+        :set-locked="$setLocked"
+    />
+
     @if ($pendingSlotAssignments->isNotEmpty())
         <div
-            class="rounded-md border border-amber-200 bg-amber-50/80 p-4 hidden md:block"
+            class="hidden"
             x-data="{ slotActivityCollapsed: false, pendingSlotActivityCount: {{ $pendingSlotAssignments->count() }}, slotActivityKey: 'backstage:u{{ auth()->id() }}:set:{{ $set->id }}:slot-activity' }"
             x-init="slotActivityCollapsed = localStorage.getItem(slotActivityKey) === '1'"
             x-effect="localStorage.setItem(slotActivityKey, slotActivityCollapsed ? '1' : '0')"
@@ -153,9 +161,10 @@
                                         throw new Error(message);
                                     }
 
+                                    const payload = await response.json();
                                     this.hidden = true;
                                     pendingSlotActivityCount = Math.max(0, pendingSlotActivityCount - 1);
-                                    window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                                    window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot: payload.slot } }));
                                 } catch (e) {
                                     this.error = e.message || 'Could not update assignment. Try again.';
                                 } finally {
