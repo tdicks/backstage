@@ -101,17 +101,19 @@ test('set card bodies load through the viewport observer or an explicit expansio
     expect($shell)
         ->toContain('initLazySetCard($el)')
         ->toContain('@click.stop="setCollapsed = !setCollapsed; if (!setCollapsed) loadSetBody()"')
+        ->toContain('x-show="!setCollapsed && !contentLoaded && !contentLoadError"')
+        ->toContain('Loading songs...')
         ->toContain('class="flex cursor-pointer items-start justify-between gap-3"')
         ->toContain('class="min-w-0 flex-1"')
         ->toContain('class="shrink-0" @click.stop')
         ->toContain('class="relative flex h-8 w-8 items-center justify-center"')
         ->toContain('class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-amber-400"')
+        ->toContain('animate-pulse')
         ->toContain('x-show="contentLoading && !contentLoaded"')
         ->toContain('x-show="contentLoaded || contentLoadError"')
         ->toContain('x-transition:enter="transition ease-out duration-200"')
         ->toContain('x-transition:enter-start="-rotate-12 scale-75 opacity-0"')
         ->toContain('x-transition:enter-end="rotate-0 scale-100 opacity-100"')
-        ->not->toContain('animate-pulse')
         ->not->toContain('syncLazySetCard($el)');
 });
 

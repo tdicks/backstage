@@ -355,6 +355,31 @@
     @endif
 
     <p x-show="contentLoadError" x-text="contentLoadError" class="mt-4 text-sm text-rose-700" x-cloak></p>
+    <div x-show="!setCollapsed && !contentLoaded && !contentLoadError" x-cloak x-transition.opacity.duration.150ms class="mt-5">
+        <div class="rounded-xl border border-dashed border-slate-300 bg-white/80 p-4 text-slate-500" aria-hidden="true">
+            <p class="text-sm">Loading songs...</p>
+
+            <div class="mt-3 rounded-lg border border-slate-200 bg-white/90 p-3 animate-pulse">
+                <div class="h-4 w-56 rounded bg-slate-200/70"></div>
+                <div class="mt-2 h-3 w-36 rounded bg-slate-100"></div>
+
+                <div class="mt-3 space-y-2">
+                    <div class="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-3">
+                        <div class="h-6 w-20 rounded-full bg-amber-100"></div>
+                        <div class="h-6 rounded bg-slate-100"></div>
+                    </div>
+                    <div class="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-3">
+                        <div class="h-6 w-20 rounded-full bg-amber-100"></div>
+                        <div class="h-6 rounded bg-slate-100"></div>
+                    </div>
+                    <div class="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-3">
+                        <div class="h-6 w-20 rounded-full bg-amber-100"></div>
+                        <div class="h-6 rounded bg-slate-100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>
 
     <x-sessions.set-snapshot-modal />
