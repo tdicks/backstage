@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="backstage-app-name" content="{{ config('app.name', 'Backstage') }}">
         <meta name="backstage-page-name" content="{{ $pageName ?? 'Backstage' }}">
         <meta name="backstage-unread-count" content="{{ $unreadNotificationCount ?? 0 }}">
         <meta name="backstage-approval-count" content="{{ $pendingApprovalCount ?? 0 }}">

@@ -64,6 +64,7 @@ test('authenticated layout title includes pending notifications and approvals to
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('<title>(2) Dashboard | Backstage</title>', false)
+        ->assertSee('name="backstage-app-name" content="Backstage"', false)
         ->assertSee('name="backstage-page-name" content="Dashboard"', false)
         ->assertSee('name="backstage-unread-count" content="1"', false)
         ->assertSee('name="backstage-approval-count" content="1"', false)
@@ -85,6 +86,7 @@ test('guest layout title is page aware without notification prefix', function ()
     $this->get(route('login'))
         ->assertOk()
         ->assertSee('<title>Login | Backstage</title>', false)
+        ->assertSee('name="backstage-app-name" content="Backstage"', false)
         ->assertSee('name="backstage-authenticated" content="0"', false);
 });
 
@@ -100,5 +102,7 @@ test('frontend title sync reacts to seen notifications and approval processing e
         ->toContain("window.addEventListener('approvals-count-changed'")
         ->toContain("window.addEventListener('approvals-count-refreshed'")
         ->toContain("window.addEventListener('target-consent-processed'")
-        ->toContain("window.addEventListener('pending-approval-processed'");
+        ->toContain("window.addEventListener('pending-approval-processed'")
+        ->toContain('const appName = document.querySelector(\'meta[name="backstage-app-name"]\')?.content?.trim() || \'Backstage\';')
+        ->toContain('sameName ? `${prefix}${appName}` : `${prefix}${pageName} | ${appName}`');
 });

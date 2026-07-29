@@ -17,13 +17,15 @@ function readMetaCount(metaName) {
 }
 
 function syncDocumentTitle(pendingTotal = null) {
-	const pageName = document.querySelector('meta[name="backstage-page-name"]')?.content?.trim() || 'Backstage';
+	const appName = document.querySelector('meta[name="backstage-app-name"]')?.content?.trim() || 'Backstage';
+	const pageName = document.querySelector('meta[name="backstage-page-name"]')?.content?.trim() || appName;
 	const isAuthenticated = document.querySelector('meta[name="backstage-authenticated"]')?.content === '1';
 	const metaPendingTotal = readMetaCount('backstage-pending-total');
 	const total = Number.isFinite(pendingTotal) ? Math.max(0, Number(pendingTotal)) : metaPendingTotal;
 	const prefix = isAuthenticated && total > 0 ? `(${total}) ` : '';
+	const sameName = pageName.localeCompare(appName, undefined, { sensitivity: 'accent' }) === 0;
 
-	document.title = `${prefix}${pageName} | Backstage`;
+	document.title = sameName ? `${prefix}${appName}` : `${prefix}${pageName} | ${appName}`;
 }
 
 function syncPendingTitleFromStores() {
