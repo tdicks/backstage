@@ -21,6 +21,18 @@ test('admin can search and sort users', function () {
         ->assertDontSee('Zoe Zebra');
 });
 
+test('user administration uses a compact mobile table layout', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    User::factory()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index'))
+        ->assertOk()
+        ->assertSee('w-full table-fixed divide-y divide-slate-200 md:table-auto', false)
+        ->assertSee('hidden px-6 py-3 md:table-cell', false)
+        ->assertSee('break-all px-3 py-4 text-sm text-slate-700 md:px-6', false);
+});
+
 test('admin can update user details', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $user = User::factory()->create([

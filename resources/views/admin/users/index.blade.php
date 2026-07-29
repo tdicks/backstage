@@ -76,35 +76,35 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200">
+                    <table class="w-full table-fixed divide-y divide-slate-200 md:table-auto">
                         <thead class="bg-slate-100/70">
                             <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 @php
                                     $query = request()->except('page');
                                     $nextDirection = $sort === 'name' && $direction === 'asc' ? 'desc' : 'asc';
                                 @endphp
-                                <th class="px-6 py-3">
+                                <th class="w-[28%] px-3 py-3 md:w-auto md:px-6">
                                     <a href="{{ route('admin.users.index', array_merge($query, ['sort' => 'name', 'direction' => $nextDirection])) }}">{{ __('Name') }}</a>
                                 </th>
                                 @php
                                     $nextDirection = $sort === 'email' && $direction === 'asc' ? 'desc' : 'asc';
                                 @endphp
-                                <th class="px-6 py-3">
+                                <th class="w-[34%] px-3 py-3 md:w-auto md:px-6">
                                     <a href="{{ route('admin.users.index', array_merge($query, ['sort' => 'email', 'direction' => $nextDirection])) }}">{{ __('Email') }}</a>
                                 </th>
                                 @php
                                     $nextDirection = $sort === 'is_admin' && $direction === 'asc' ? 'desc' : 'asc';
                                 @endphp
-                                <th class="px-6 py-3">
+                                <th class="w-[20%] px-3 py-3 md:w-auto md:px-6">
                                     <a href="{{ route('admin.users.index', array_merge($query, ['sort' => 'is_admin', 'direction' => $nextDirection])) }}">{{ __('Role') }}</a>
                                 </th>
                                 @php
                                     $nextDirection = $sort === 'created_at' && $direction === 'asc' ? 'desc' : 'asc';
                                 @endphp
-                                <th class="px-6 py-3">
+                                <th class="hidden px-6 py-3 md:table-cell">
                                     <a href="{{ route('admin.users.index', array_merge($query, ['sort' => 'created_at', 'direction' => $nextDirection])) }}">{{ __('Joined') }}</a>
                                 </th>
-                                <th class="px-6 py-3">{{ __('Actions') }}</th>
+                                <th class="w-[18%] px-3 py-3 md:w-auto md:px-6">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 bg-white/95">
@@ -141,28 +141,28 @@
                                         },
                                     }"
                                 >
-                                    <td class="whitespace-nowrap px-6 py-4">
+                                    <td class="break-words px-3 py-4 md:px-6">
                                         <div class="font-medium text-slate-900">{{ $user->name }}</div>
                                         @if ($user->id === auth()->id())
                                             <span class="mt-1 inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">{{ __('You') }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-slate-700">
+                                    <td class="break-all px-3 py-4 text-sm text-slate-700 md:px-6">
                                         {{ $user->email }}
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4">
+                                    <td class="px-3 py-4 md:px-6">
                                         @if ($user->is_admin)
                                             <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800" @if($user->id === auth()->id()) title="You cannot change your own role" @endif>{{ __('Admin') }}</span>
                                         @else
                                             <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700" @if($user->id === auth()->id()) title="You cannot change your own role" @endif>{{ __('User') }}</span>
                                         @endif
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+                                    <td class="hidden whitespace-nowrap px-6 py-4 text-sm text-slate-600 md:table-cell">
                                         {{ $user->created_at->format('M j, Y') }}
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4">
+                                    <td class="px-3 py-4 md:px-6">
                                         @if ($user->id !== auth()->id())
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-1 md:gap-2">
                                                 <button
                                                     type="button"
                                                     @click="openEditUser = true"
