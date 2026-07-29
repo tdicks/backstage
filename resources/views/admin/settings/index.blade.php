@@ -73,13 +73,46 @@
 
                             <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
                 <div class="border-b border-slate-200 px-6 py-4">
-                    <h3 class="text-lg font-semibold text-slate-900">Notifications</h3>
-                    <p class="mt-1 text-sm text-slate-600">Admin notification controls always override individual user preferences.</p>
+                                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between" x-data="{ busy: false, message: '', error: '', timer: null, async sendTestPush() { this.busy = true; this.message = ''; this.error = ''; clearTimeout(this.timer); try { const response = await fetch(@js(route('admin.settings.push-test')), { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': @js(csrf_token()) } }); const payload = await response.json(); if (!response.ok) { this.error = payload.message || 'Could not send test push.'; return; } this.message = payload.message || 'Test push sent.'; this.timer = setTimeout(() => this.message = '', 4000); } catch (e) { this.error = 'Could not send test push.'; } finally { this.busy = false; } } }">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-slate-900">Notifications</h3>
+                                            <p class="mt-1 text-sm text-slate-600">Admin notification controls always override individual user preferences.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click="sendTestPush()"
+                                            :disabled="busy"
+                                            class="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <span x-show="!busy">Send Test Push Notification</span>
+                                            <span x-show="busy" x-cloak>Sending...</span>
+                                        </button>
+                                    </div>
+                                    <p x-show="message" x-text="message" x-cloak class="mt-2 text-sm text-emerald-700"></p>
+                                    <p x-show="error" x-text="error" x-cloak class="mt-2 text-sm text-rose-700"></p>
                 </div>
 
                 <div class="space-y-6 px-6 py-6">
                     @forelse ($notificationSettings as $group)
-                        <div class="space-y-3">
+                        <div
+                            class="space-y-3"
+                            x-data="{
+                                applyToColumn(channel, value) {
+                                    const selector = 'input[type=checkbox][data-notification-target=true][data-notification-channel=' + channel + ']';
+
+                                    this.$refs.rows
+                                        .querySelectorAll(selector)
+                                        .forEach((input) => {
+                                            if (input.disabled || input.checked === value) {
+                                                return;
+                                            }
+
+                                            input.checked = value;
+                                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                                        });
+                                },
+                            }"
+                        >
                             <div>
                                 <h4 class="font-semibold text-slate-900">{{ $group['label'] }}</h4>
                             </div>
@@ -91,17 +124,31 @@
                                             <th class="px-4 py-3 text-center font-semibold">Enabled</th>
                                             <th class="px-4 py-3 text-center font-semibold">Popups</th>
                                             <th class="px-4 py-3 text-center font-semibold">Email</th>
+                                            <th class="px-4 py-3 text-center font-semibold">Push</th>
                                             <th class="px-4 py-3 text-center font-semibold">Text</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-200 bg-white">
+                                    <tbody x-ref="rows" class="divide-y divide-slate-200 bg-white">
+                                        <tr class="bg-slate-50/80">
+                                            <td class="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Apply to all</td>
+                                            @foreach (['enabled', 'popup', 'email', 'push', 'text'] as $channel)
+                                                <td class="px-4 py-3 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        @change="applyToColumn(@js($channel), $event.target.checked)"
+                                                        class="rounded border-slate-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                                        aria-label="Apply {{ $channel }} to all {{ strtolower($group['label']) }} notifications"
+                                                    >
+                                                </td>
+                                            @endforeach
+                                        </tr>
                                         @foreach ($group['options'] as $notificationSetting)
                                             <tr>
                                                 <td class="px-6 py-4 align-top">
                                                     <p class="font-semibold text-slate-900">{{ $notificationSetting['label'] }}</p>
                                                     <p class="mt-1 text-sm text-slate-500">{{ $notificationSetting['description'] }}</p>
                                                 </td>
-                                                @foreach (['enabled', 'popup', 'email', 'text'] as $channel)
+                                                @foreach (['enabled', 'popup', 'email', 'push', 'text'] as $channel)
                                                     @php $setting = $notificationSetting['settings'][$channel]; @endphp
                                                     <td class="px-4 py-4 align-top">
                                                         <div
@@ -136,7 +183,7 @@
                                                             }"
                                                         >
                                                             <label class="inline-flex items-center">
-                                                                <input type="checkbox" x-model="value" @change="save()" :disabled="busy" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                                                <input type="checkbox" x-model="value" @change="save()" :disabled="busy" data-notification-target="true" data-notification-channel="{{ $channel }}" class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
                                                             </label>
                                                         </div>
                                                     </td>

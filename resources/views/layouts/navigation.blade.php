@@ -73,7 +73,7 @@
             }
         },
     }"
-    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) }); $store.notifications.init({ items: @js($navNotificationFeed['notifications']), unreadCount: @js($navNotificationFeed['unread_count']), indexUrl: @js(route('notifications.index')), seenUrlTemplate: @js(route('notifications.seen', '__NOTIFICATION_ID__')), dismissUrlTemplate: @js(route('notifications.dismiss', '__NOTIFICATION_ID__')) })"
+    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) }); $store.notifications.init({ items: @js($navNotificationFeed['notifications']), unreadCount: @js($navNotificationFeed['unread_count']), indexUrl: @js(route('notifications.index')), seenUrlTemplate: @js(route('notifications.seen', '__NOTIFICATION_ID__')), dismissUrlTemplate: @js(route('notifications.dismiss', '__NOTIFICATION_ID__')), pushPublicKey: @js(config('services.webpush.vapid.public_key')), pushServiceWorkerUrl: @js('/push-sw.js'), pushSubscribeUrl: @js(route('notifications.push-subscriptions.store')), pushUnsubscribeUrl: @js(route('notifications.push-subscriptions.destroy')) })"
     @visibilitychange.window="$store.approvals.refresh(); $store.notifications.refresh({ showPopups: false })"
     @notifications-updated.window="if (notificationsOpen) { syncNotificationObserver() }"
     @target-consent-processed.window="$store.approvals.decrement()"

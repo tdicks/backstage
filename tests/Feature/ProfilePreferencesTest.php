@@ -69,6 +69,7 @@ test('profile update stores mobile number and notification preferences', functio
                     'enabled' => '0',
                     'popup' => '1',
                     'email' => '0',
+                    'push' => '1',
                 ],
             ],
         ])
@@ -78,6 +79,7 @@ test('profile update stores mobile number and notification preferences', functio
     expect($user->notification_preferences['slot_request_received']['enabled'])->toBeFalse();
     expect($user->notification_preferences['slot_request_received']['popup'])->toBeTrue();
     expect($user->notification_preferences['slot_request_received']['email'])->toBeFalse();
+    expect($user->notification_preferences['slot_request_received']['push'])->toBeTrue();
 });
 
 test('profile page shows notification preferences section', function () {
@@ -86,7 +88,9 @@ test('profile page shows notification preferences section', function () {
     $this->actingAs($user)
         ->get(route('profile.edit'))
         ->assertOk()
-        ->assertSee('Notification Preferences');
+        ->assertSee('Notification Preferences')
+        ->assertSee('Apply to all')
+        ->assertSee('Enable Push Notifications');
 });
 
 test('admin profile shows the admin notification group with blue admin styling', function () {
@@ -126,6 +130,7 @@ test('profile update ignores non-user-configurable notification preference chang
                     'enabled' => '0',
                     'popup' => '0',
                     'email' => '0',
+                    'push' => '0',
                 ],
             ],
         ])
@@ -136,4 +141,5 @@ test('profile update ignores non-user-configurable notification preference chang
     expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['enabled'])->toBeTrue();
     expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['popup'])->toBeTrue();
     expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['email'])->toBeTrue();
+    expect($stored[NotificationTypeCatalog::ACCOUNT_ADMIN_ACCESS_GRANTED]['push'])->toBeFalse();
 });

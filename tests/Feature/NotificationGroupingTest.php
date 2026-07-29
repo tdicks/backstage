@@ -64,7 +64,7 @@ test('profile options are grouped by category', function () {
 
         // Verify each option has required fields
         foreach ($group['options'] as $option) {
-            expect($option)->toHaveKeys(['type', 'label', 'description', 'enabled', 'popup', 'email', 'popup_available', 'email_available']);
+            expect($option)->toHaveKeys(['type', 'label', 'description', 'enabled', 'popup', 'email', 'push', 'popup_available', 'email_available', 'push_available']);
         }
     }
 });

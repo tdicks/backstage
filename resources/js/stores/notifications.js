@@ -1,6 +1,19 @@
 const REFRESH_INTERVAL_MS = 30000;
 const TOAST_DISPLAY_DURATION_MS = 5000;
 
+function urlBase64ToUint8Array(base64String) {
+	const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+	const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+	const rawData = window.atob(base64);
+	const outputArray = new Uint8Array(rawData.length);
+
+	for (let i = 0; i < rawData.length; ++i) {
+		outputArray[i] = rawData.charCodeAt(i);
+	}
+
+	return outputArray;
+}
+
 export function registerNotificationsStore(Alpine) {
 	Alpine.store('notifications', {
 		items: [],
@@ -14,6 +27,11 @@ export function registerNotificationsStore(Alpine) {
 		notificationCursorIds: [],
 		toasts: [],
 		toastTimers: {},
+		pushPublicKey: null,
+		pushServiceWorkerUrl: '/push-sw.js',
+		pushSubscribeUrl: null,
+		pushUnsubscribeUrl: null,
+		pushSyncAttempted: false,
 
 		async init({
 			items = [],
@@ -21,10 +39,18 @@ export function registerNotificationsStore(Alpine) {
 			indexUrl = null,
 			seenUrlTemplate = null,
 			dismissUrlTemplate = null,
+			pushPublicKey = null,
+			pushServiceWorkerUrl = '/push-sw.js',
+			pushSubscribeUrl = null,
+			pushUnsubscribeUrl = null,
 		} = {}) {
 			this.indexUrl = indexUrl || this.indexUrl;
 			this.seenUrlTemplate = seenUrlTemplate || this.seenUrlTemplate;
 			this.dismissUrlTemplate = dismissUrlTemplate || this.dismissUrlTemplate;
+			this.pushPublicKey = pushPublicKey || this.pushPublicKey;
+			this.pushServiceWorkerUrl = pushServiceWorkerUrl || this.pushServiceWorkerUrl;
+			this.pushSubscribeUrl = pushSubscribeUrl || this.pushSubscribeUrl;
+			this.pushUnsubscribeUrl = pushUnsubscribeUrl || this.pushUnsubscribeUrl;
 			this.items = items;
 			this.unreadCount = Number(unreadCount || 0);
 			this.updateCursor(items);
@@ -35,6 +61,128 @@ export function registerNotificationsStore(Alpine) {
 			}
 
 			await this.refresh({ showPopups: false });
+			await this.syncPushSubscription();
+		},
+
+		canUsePush() {
+			if (!this.pushPublicKey || !this.pushSubscribeUrl || !this.pushUnsubscribeUrl) {
+				return false;
+			}
+
+			if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+				return false;
+			}
+
+			if (!(window.isSecureContext || window.location.hostname === 'localhost')) {
+				return false;
+			}
+
+			return true;
+		},
+
+		pushPermissionState() {
+			if (!('Notification' in window)) {
+				return 'unsupported';
+			}
+
+			return Notification.permission;
+		},
+
+		canRequestPushPermission() {
+			return this.canUsePush() && this.pushPermissionState() === 'default';
+		},
+
+		async requestPushPermissionAndSync() {
+			if (!this.canUsePush()) {
+				return 'unsupported';
+			}
+
+			if (this.pushPermissionState() === 'granted') {
+				this.pushSyncAttempted = false;
+				await this.syncPushSubscription();
+				return 'granted';
+			}
+
+			if (this.pushPermissionState() === 'denied') {
+				return 'denied';
+			}
+
+			try {
+				const permission = await Notification.requestPermission();
+
+				if (permission === 'granted') {
+					this.pushSyncAttempted = false;
+					await this.syncPushSubscription();
+				}
+
+				return permission;
+			} catch (e) {
+				return 'default';
+			}
+		},
+
+		async syncPushSubscription() {
+			if (this.pushSyncAttempted || !this.canUsePush()) {
+				return;
+			}
+
+			this.pushSyncAttempted = true;
+
+			try {
+				const registration = await navigator.serviceWorker.register(this.pushServiceWorkerUrl);
+				const subscription = await registration.pushManager.getSubscription();
+
+				if (Notification.permission === 'granted') {
+					const activeSubscription = subscription || await registration.pushManager.subscribe({
+						userVisibleOnly: true,
+						applicationServerKey: urlBase64ToUint8Array(this.pushPublicKey),
+					});
+
+					await this.storePushSubscription(activeSubscription);
+					return;
+				}
+
+				if (subscription) {
+					await this.removePushSubscription(subscription.endpoint);
+					await subscription.unsubscribe();
+				}
+			} catch (e) {}
+		},
+
+		async storePushSubscription(subscription) {
+			if (!subscription || !this.pushSubscribeUrl) {
+				return;
+			}
+
+			const payload = subscription.toJSON();
+
+			await fetch(this.pushSubscribeUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					'X-Requested-With': 'XMLHttpRequest',
+					'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+				},
+				body: JSON.stringify(payload),
+			});
+		},
+
+		async removePushSubscription(endpoint) {
+			if (!endpoint || !this.pushUnsubscribeUrl) {
+				return;
+			}
+
+			await fetch(this.pushUnsubscribeUrl, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					'X-Requested-With': 'XMLHttpRequest',
+					'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+				},
+				body: JSON.stringify({ endpoint }),
+			});
 		},
 
 		async refresh({ showPopups = true } = {}) {

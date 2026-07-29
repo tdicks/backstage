@@ -13,6 +13,8 @@ use Illuminate\Notifications\DatabaseNotification;
 
 class NotificationService
 {
+    public function __construct(private readonly WebPushService $webPushService) {}
+
     /**
      * @param  iterable<User>  $users
      * @param  array{title: string, body: string, action_url: string|null, action_label?: string|null}  $content
@@ -30,7 +32,16 @@ class NotificationService
             ->filter(fn (User $user) => NotificationSettings::effectiveDeliveryPreferences($user, $type)['enabled']);
 
         foreach ($recipients as $recipient) {
+            $delivery = NotificationSettings::effectiveDeliveryPreferences($recipient, $type);
+
             $recipient->notify(new AppActivityNotification($type, $content, $actor?->id));
+
+            if ($delivery['push']) {
+                $this->webPushService->sendToUser($recipient, [
+                    ...$content,
+                    'type_key' => $type,
+                ]);
+            }
         }
     }
 

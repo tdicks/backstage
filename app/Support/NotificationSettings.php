@@ -13,19 +13,19 @@ final class NotificationSettings
      */
     public static function channels(): array
     {
-        return ['enabled', 'popup', 'email', 'text'];
+        return ['enabled', 'popup', 'email', 'push', 'text'];
     }
 
     public static function ensureAdminSettingsExist(): void
     {
         foreach (NotificationTypeCatalog::definitions() as $type => $definition) {
             foreach (self::channels() as $channel) {
-                Setting::query()->updateOrCreate(
+                Setting::query()->firstOrCreate(
                     ['key' => NotificationTypeCatalog::adminSettingKey($type, $channel)],
                     [
                         'name' => $definition['label'].' '.str($channel)->replace('_', ' ')->title()->toString(),
                         'input_type' => 'checkbox',
-                        'value' => $definition['defaults'][$channel] ? '1' : '0',
+                        'value' => ($definition['defaults'][$channel] ?? false) ? '1' : '0',
                     ]
                 );
             }
@@ -38,7 +38,7 @@ final class NotificationSettings
     }
 
     /**
-     * @return array<string, array{enabled: bool, popup: bool, email: bool, text: bool}>
+     * @return array<string, array{enabled: bool, popup: bool, email: bool, push: bool, text: bool}>
      */
     public static function adminPreferences(): array
     {
@@ -58,7 +58,7 @@ final class NotificationSettings
                 $setting = $settings->get(NotificationTypeCatalog::adminSettingKey($type, $channel));
                 $preferences[$type][$channel] = $setting
                     ? $setting->isEnabled()
-                    : $definition['defaults'][$channel];
+                    : ($definition['defaults'][$channel] ?? false);
             }
         }
 
@@ -66,7 +66,7 @@ final class NotificationSettings
     }
 
     /**
-     * @return array{enabled: bool, popup: bool, email: bool, text: bool}
+     * @return array{enabled: bool, popup: bool, email: bool, push: bool, text: bool}
      */
     public static function adminPreferencesForType(string $type): array
     {
@@ -74,7 +74,7 @@ final class NotificationSettings
     }
 
     /**
-     * @return array<string, array{enabled: bool, popup: bool, email: bool, text: bool}>
+     * @return array<string, array{enabled: bool, popup: bool, email: bool, push: bool, text: bool}>
      */
     public static function userPreferences(User $user): array
     {
@@ -91,6 +91,7 @@ final class NotificationSettings
                 'enabled' => (bool) Arr::get($storedPreferences, $type.'.enabled', $defaults['enabled']),
                 'popup' => (bool) Arr::get($storedPreferences, $type.'.popup', $defaults['popup']),
                 'email' => (bool) Arr::get($storedPreferences, $type.'.email', $defaults['email']),
+                'push' => (bool) Arr::get($storedPreferences, $type.'.push', $defaults['push'] ?? false),
                 'text' => (bool) Arr::get($storedPreferences, $type.'.text', $defaults['text']),
             ];
         }
@@ -100,7 +101,7 @@ final class NotificationSettings
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array<string, array{enabled: bool, popup: bool, email: bool, text: bool}>
+     * @return array<string, array{enabled: bool, popup: bool, email: bool, push: bool, text: bool}>
      */
     public static function normalizeUserPreferences(User $user, array $input): array
     {
@@ -115,7 +116,7 @@ final class NotificationSettings
                 continue;
             }
 
-            foreach (['enabled', 'popup', 'email'] as $channel) {
+            foreach (['enabled', 'popup', 'email', 'push'] as $channel) {
                 if (array_key_exists($channel, $input[$type])) {
                     $preferences[$type][$channel] = filter_var($input[$type][$channel], FILTER_VALIDATE_BOOL);
                 }
@@ -126,7 +127,7 @@ final class NotificationSettings
     }
 
     /**
-     * @return array{enabled: bool, popup: bool, email: bool, text: bool}
+     * @return array{enabled: bool, popup: bool, email: bool, push: bool, text: bool}
      */
     public static function effectiveDeliveryPreferences(User $user, string $type): array
     {
@@ -137,12 +138,13 @@ final class NotificationSettings
             'enabled' => $admin['enabled'] && $userPreferences['enabled'],
             'popup' => $admin['enabled'] && $admin['popup'] && $userPreferences['enabled'] && $userPreferences['popup'],
             'email' => $admin['enabled'] && $admin['email'] && $userPreferences['enabled'] && $userPreferences['email'],
+            'push' => $admin['enabled'] && $admin['push'] && $userPreferences['enabled'] && $userPreferences['push'],
             'text' => $admin['enabled'] && $admin['text'] && $userPreferences['enabled'] && $userPreferences['text'],
         ];
     }
 
     /**
-     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, enabled: bool, popup: bool, email: bool, popup_available: bool, email_available: bool}>}>
+     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, enabled: bool, popup: bool, email: bool, push: bool, popup_available: bool, email_available: bool, push_available: bool}>}>
      */
     public static function profileOptions(User $user): array
     {
@@ -184,8 +186,10 @@ final class NotificationSettings
                 'enabled' => $preferences['enabled'],
                 'popup' => $preferences['popup'],
                 'email' => $preferences['email'],
+                'push' => $preferences['push'],
                 'popup_available' => $admin['popup'],
                 'email_available' => $admin['email'],
+                'push_available' => $admin['push'],
             ];
         }
 
@@ -193,7 +197,7 @@ final class NotificationSettings
     }
 
     /**
-     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, settings: array{enabled: Setting, popup: Setting, email: Setting, text: Setting}}>}>
+     * @return array<string, array{category: string, label: string, options: list<array{type: string, label: string, description: string, settings: array{enabled: Setting, popup: Setting, email: Setting, push: Setting, text: Setting}}>}>
      */
     public static function adminOptions(): array
     {
@@ -226,6 +230,7 @@ final class NotificationSettings
                     'enabled' => $settings->get(NotificationTypeCatalog::adminSettingKey($type, 'enabled')),
                     'popup' => $settings->get(NotificationTypeCatalog::adminSettingKey($type, 'popup')),
                     'email' => $settings->get(NotificationTypeCatalog::adminSettingKey($type, 'email')),
+                    'push' => $settings->get(NotificationTypeCatalog::adminSettingKey($type, 'push')),
                     'text' => $settings->get(NotificationTypeCatalog::adminSettingKey($type, 'text')),
                 ],
             ];

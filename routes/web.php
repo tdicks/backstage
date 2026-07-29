@@ -14,6 +14,7 @@ use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\LiveJamController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationPushSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SetCollaboratorController;
 use App\Http\Controllers\SetController;
@@ -66,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('/settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
+        Route::post('/settings/test-push', [SettingController::class, 'sendTestPush'])->name('settings.push-test');
         Route::post('/slot-types', [SlotTypeController::class, 'store'])->name('slot-types.store');
         Route::patch('/slot-types/{slotType}', [SlotTypeController::class, 'update'])->name('slot-types.update');
 
@@ -87,6 +89,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{notification}/seen', [NotificationController::class, 'markSeen'])->name('notifications.seen');
     Route::patch('/notifications/{notification}/dismiss', [NotificationController::class, 'dismiss'])->name('notifications.dismiss');
+    Route::post('/notifications/push-subscriptions', [NotificationPushSubscriptionController::class, 'store'])->name('notifications.push-subscriptions.store');
+    Route::delete('/notifications/push-subscriptions', [NotificationPushSubscriptionController::class, 'destroy'])->name('notifications.push-subscriptions.destroy');
 
     Route::get('/sessions/archive', [JamSessionController::class, 'archive'])->name('sessions.archive');
     Route::resource('sessions', JamSessionController::class)

@@ -47,7 +47,7 @@ final class NotificationTypeCatalog
     public const ACCOUNT_ADMIN_ACCESS_REVOKED = 'account_admin_access_revoked';
 
     /**
-     * @return array<string, array{label: string, description: string, category: string, admin_only?: bool, is_user_configurable?: bool, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}>
+     * @return array<string, array{label: string, description: string, category: string, admin_only?: bool, is_user_configurable?: bool, defaults: array{enabled: bool, popup: bool, email: bool, push?: bool, text: bool}}>
      */
     public static function definitions(): array
     {
@@ -213,7 +213,7 @@ final class NotificationTypeCatalog
     }
 
     /**
-     * @return array{label: string, description: string, defaults: array{enabled: bool, popup: bool, email: bool, text: bool}}
+     * @return array{label: string, description: string, defaults: array{enabled: bool, popup: bool, email: bool, push?: bool, text: bool}}
      */
     public static function definition(string $type): array
     {

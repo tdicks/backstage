@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\NotificationPushSubscription;
 use App\Models\Setting;
 use App\Models\SlotType;
 use App\Models\User;
+use App\Services\WebPushService;
 use Database\Seeders\SettingsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -39,6 +41,8 @@ test('admin can view settings page', function () {
         ->assertSee('Slot recommendation accepted')
         ->assertSee('New user registered')
         ->assertSee('Admin')
+        ->assertSee('Send Test Push Notification')
+        ->assertSee('Apply to all')
         ->assertSee('Enable Social Logins')
         ->assertSee('enable_social_logins');
 });
@@ -114,4 +118,38 @@ test('admin can add and update slot types from settings', function () {
 
     expect($slotType->refresh()->key)->toBe('trumpet')
         ->and($slotType->active)->toBeFalse();
+});
+
+test('admin can trigger a test push notification from settings', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    NotificationPushSubscription::query()->create([
+        'user_id' => $admin->id,
+        'endpoint' => 'https://push.example.test/subscriptions/admin-test',
+        'endpoint_hash' => hash('sha256', 'https://push.example.test/subscriptions/admin-test'),
+        'public_key' => 'public-key',
+        'auth_token' => 'auth-token',
+    ]);
+
+    $mock = Mockery::mock(WebPushService::class);
+    $mock->shouldReceive('isConfigured')->once()->andReturnTrue();
+    $mock->shouldReceive('sendToUser')
+        ->once()
+        ->withArgs(fn (User $user, array $content) => $user->is($admin) && ($content['title'] ?? null) === 'Backstage push test')
+        ->andReturnNull();
+
+    app()->instance(WebPushService::class, $mock);
+
+    $this->actingAs($admin)
+        ->postJson(route('admin.settings.push-test'))
+        ->assertOk()
+        ->assertJsonPath('message', 'Test push sent. If you do not receive it, check browser site permissions for notifications.');
+});
+
+test('non admin cannot trigger a test push notification from settings', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+
+    $this->actingAs($user)
+        ->postJson(route('admin.settings.push-test'))
+        ->assertForbidden();
 });

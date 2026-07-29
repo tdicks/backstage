@@ -19,8 +19,7 @@ class AppActivityNotification extends Notification
         private readonly string $typeKey,
         private readonly array $content,
         private readonly ?int $actorUserId = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @return list<string>
@@ -49,7 +48,7 @@ class AppActivityNotification extends Notification
     {
         $delivery = $notifiable instanceof User
             ? NotificationSettings::effectiveDeliveryPreferences($notifiable, $this->typeKey)
-            : ['popup' => false, 'email' => false, 'text' => false, 'enabled' => true];
+            : ['popup' => false, 'email' => false, 'push' => false, 'text' => false, 'enabled' => true];
 
         return [
             'type_key' => $this->typeKey,
@@ -59,6 +58,7 @@ class AppActivityNotification extends Notification
             'action_label' => $this->content['action_label'] ?? 'Open',
             'popup' => $delivery['popup'],
             'email' => $delivery['email'],
+            'push' => $delivery['push'],
             'text' => $delivery['text'],
             'actor_user_id' => $this->actorUserId,
         ];

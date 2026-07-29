@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\JamSession;
+use App\Models\NotificationPushSubscription;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SocialAccount;
@@ -28,6 +29,14 @@ test('deleting account anonymizes user and preserves related set data', function
         'provider_id' => 'google-123',
         'provider_email' => 'real@example.com',
         'provider_name' => 'Real Name',
+    ]);
+
+    NotificationPushSubscription::query()->create([
+        'user_id' => $user->id,
+        'endpoint' => 'https://push.example.test/subscriptions/deletion-case',
+        'endpoint_hash' => hash('sha256', 'https://push.example.test/subscriptions/deletion-case'),
+        'public_key' => 'public-key',
+        'auth_token' => 'auth-token',
     ]);
 
     $session = JamSession::query()->create([
@@ -94,6 +103,7 @@ test('deleting account anonymizes user and preserves related set data', function
     expect(Hash::check('password', $deletedUser->password))->toBeFalse();
 
     expect(SocialAccount::query()->where('user_id', $user->id)->count())->toBe(0);
+    expect(NotificationPushSubscription::query()->where('user_id', $user->id)->count())->toBe(0);
 
     expect(Set::query()->whereKey($set->id)->exists())->toBeTrue();
     expect(Song::query()->whereKey($song->id)->exists())->toBeTrue();

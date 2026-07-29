@@ -1,7 +1,7 @@
 <?php
 
-use App\Support\NotificationTypeCatalog;
 use App\Support\NotificationSettings;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +28,7 @@ return new class extends Migration
                     [
                         'name' => $definition['label'].' '.str($channel)->replace('_', ' ')->title()->toString(),
                         'input_type' => 'checkbox',
-                        'value' => $definition['defaults'][$channel] ? '1' : '0',
+                        'value' => ($definition['defaults'][$channel] ?? false) ? '1' : '0',
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]

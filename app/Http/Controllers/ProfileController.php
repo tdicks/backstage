@@ -79,6 +79,7 @@ class ProfileController extends Controller
         Auth::logout();
 
         $user->socialAccounts()->delete();
+        $user->pushSubscriptions()->delete();
 
         $user->forceFill([
             'name' => '[deleted user]',

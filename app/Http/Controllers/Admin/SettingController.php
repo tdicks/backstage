@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\SlotType;
+use App\Services\WebPushService;
 use App\Support\NotificationSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,37 @@ class SettingController extends Controller
                 'key' => $setting->key,
                 'value' => $setting->value,
             ],
+        ]);
+    }
+
+    public function sendTestPush(Request $request, WebPushService $webPushService): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $user = $request->user();
+
+        if (! $webPushService->isConfigured()) {
+            return response()->json([
+                'message' => 'Web push is not configured. Set WEBPUSH_VAPID_* values first.',
+            ], 422);
+        }
+
+        if (! $user || ! $user->pushSubscriptions()->exists()) {
+            return response()->json([
+                'message' => 'No push subscription found for your account on this browser.',
+            ], 422);
+        }
+
+        $webPushService->sendToUser($user, [
+            'title' => 'Backstage push test',
+            'body' => 'This is a test push notification from Admin Settings.',
+            'action_url' => route('notifications.index'),
+            'action_label' => 'Open notifications',
+            'type_key' => 'admin_push_test',
+        ]);
+
+        return response()->json([
+            'message' => 'Test push sent. If you do not receive it, check browser site permissions for notifications.',
         ]);
     }
 

@@ -36,6 +36,7 @@ class ProfileUpdateRequest extends FormRequest
             'notification_preferences.*.enabled' => ['nullable', 'boolean'],
             'notification_preferences.*.popup' => ['nullable', 'boolean'],
             'notification_preferences.*.email' => ['nullable', 'boolean'],
+            'notification_preferences.*.push' => ['nullable', 'boolean'],
         ];
     }
 }
