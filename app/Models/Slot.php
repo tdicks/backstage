@@ -67,7 +67,8 @@ class Slot extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 
     public function assignments(): HasMany

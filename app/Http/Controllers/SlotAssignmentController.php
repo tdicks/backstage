@@ -71,7 +71,9 @@ class SlotAssignmentController extends Controller
             'target_user_id' => [
                 'required',
                 'integer',
-                Rule::exists('users', 'id')->where(fn ($query) => $query->where('hide_from_slot_proposals', false)),
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('hide_from_slot_proposals', false)
+                    ->where('is_deleted_account', false)),
             ],
             'message' => ['nullable', 'string'],
         ]);

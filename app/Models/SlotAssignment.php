@@ -43,11 +43,13 @@ class SlotAssignment extends Model
 
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_user_id');
+        return $this->belongsTo(User::class, 'actor_user_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 
     public function target(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'target_user_id');
+        return $this->belongsTo(User::class, 'target_user_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 }

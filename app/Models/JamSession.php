@@ -134,6 +134,7 @@ class JamSession extends Model
 
     public function jamManager(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'jam_manager_id');
+        return $this->belongsTo(User::class, 'jam_manager_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 }

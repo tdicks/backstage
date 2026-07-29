@@ -8,6 +8,7 @@ use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SetCollaboratorController extends Controller
 {
@@ -46,7 +47,7 @@ class SetCollaboratorController extends Controller
 
         $validated = $request->validate([
             'collaborator_ids' => ['nullable', 'array'],
-            'collaborator_ids.*' => ['integer', 'exists:users,id'],
+            'collaborator_ids.*' => ['integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
         ]);
 
         $rawIds = array_values(array_map('intval', $validated['collaborator_ids'] ?? []));

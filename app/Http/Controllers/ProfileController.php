@@ -8,7 +8,9 @@ use App\Support\NotificationSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -76,7 +78,24 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        $user->socialAccounts()->delete();
+
+        $user->forceFill([
+            'name' => '[deleted user]',
+            'email' => 'deleted-user-'.$user->id.'@backstage.invalid',
+            'email_verified_at' => null,
+            'password' => Hash::make(Str::random(64)),
+            'remember_token' => null,
+            'is_admin' => false,
+            'is_deleted_account' => true,
+            'deleted_account_at' => now(),
+            'mobile_number' => null,
+            'bio' => null,
+            'hide_from_directory' => true,
+            'hide_from_slot_proposals' => true,
+            'slot_coverage' => [],
+            'notification_preferences' => null,
+        ])->save();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

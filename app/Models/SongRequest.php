@@ -40,12 +40,14 @@ class SongRequest extends Model
 
     public function requester(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'requester_user_id');
+        return $this->belongsTo(User::class, 'requester_user_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 
     public function responder(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'responded_by_user_id');
+        return $this->belongsTo(User::class, 'responded_by_user_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 
     public function song(): BelongsTo

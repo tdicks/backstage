@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SlotController extends Controller
@@ -27,7 +28,7 @@ class SlotController extends Controller
             'addition_mode' => ['nullable', 'string', 'in:individual,template'],
             'name' => ['nullable', 'string', 'in:'.implode(',', Slot::keys()), 'required_unless:addition_mode,template', 'prohibited_if:addition_mode,template'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id', 'required_if:addition_mode,template', 'prohibited_unless:addition_mode,template'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
         ]);
 
         if (($validated['addition_mode'] ?? 'individual') === 'template') {
@@ -87,7 +88,7 @@ class SlotController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
             'manual_performer_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
             'replace_conflicting_assignment' => ['nullable', 'boolean'],

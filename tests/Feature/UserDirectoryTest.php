@@ -13,7 +13,7 @@ test('user directory is searchable by name and bio', function () {
     $this->actingAs($viewer)
         ->get(route('directory.index', ['q' => 'funk']))
         ->assertOk()
-        ->assertSee('User Directory')
+        ->assertSee("Who's Who")
         ->assertSee('Alice Wonder')
         ->assertSee('Loves funk bass lines')
         ->assertDontSee('Bobby Drums');
@@ -53,4 +53,26 @@ test('user directory excludes users who hide themselves', function () {
         ->assertOk()
         ->assertSee('Visible User')
         ->assertDontSee('Hidden User');
+});
+
+test('user directory excludes deleted accounts', function () {
+    $viewer = User::factory()->create();
+
+    User::factory()->create([
+        'name' => 'Active User',
+        'hide_from_directory' => false,
+    ]);
+
+    User::factory()->create([
+        'name' => 'Deleted Directory User',
+        'is_deleted_account' => true,
+        'deleted_account_at' => now(),
+        'hide_from_directory' => false,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('directory.index'))
+        ->assertOk()
+        ->assertSee('Active User')
+        ->assertDontSee('Deleted Directory User');
 });

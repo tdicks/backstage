@@ -40,6 +40,7 @@ class Attachment extends Model
 
     public function uploader(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'uploader_user_id');
+        return $this->belongsTo(User::class, 'uploader_user_id')
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE);
     }
 }

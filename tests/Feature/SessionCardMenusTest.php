@@ -148,6 +148,54 @@ test('set action menu offers a table image export', function () {
         ->not->toContain('Ready for the group chat');
 });
 
+test('slot assignment user lists exclude deleted users', function () {
+    $owner = User::factory()->create();
+    $activePerformer = User::factory()->create(['name' => 'Active Performer']);
+    User::factory()->create([
+        'name' => 'Deleted Performer',
+        'is_deleted_account' => true,
+        'deleted_account_at' => now(),
+    ]);
+
+    $session = JamSession::query()->create([
+        'name' => 'Deleted User Filter Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Deleted User Filter Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Filter Artist',
+        'title' => 'Filter Song',
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertSee($activePerformer->name)
+        ->assertDontSee('Deleted Performer');
+});
+
 test('set summary exports actual assignee names for the viewing performer', function () {
     $owner = User::factory()->create();
     $performer = User::factory()->create(['name' => 'Actual Performer']);

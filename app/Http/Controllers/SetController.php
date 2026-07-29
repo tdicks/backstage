@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 class SetController extends Controller
 {
@@ -164,7 +165,7 @@ class SetController extends Controller
         ];
 
         if ($isAdmin) {
-            $rules['owner_id'] = ['required', 'integer', 'exists:users,id'];
+            $rules['owner_id'] = ['required', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))];
             $rules['feature_set'] = ['nullable', 'boolean'];
         }
 

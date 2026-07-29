@@ -199,6 +199,27 @@ test('owner is excluded from the collaborator user search results', function () 
     expect($ids)->toContain($collab->id);
 });
 
+test('deleted users are excluded from collaborator user search results', function () {
+    $owner = User::factory()->create(['name' => 'Owner Person']);
+    $activeMatch = User::factory()->create(['name' => 'Taylor Candidate']);
+    User::factory()->create([
+        'name' => 'Taylor Deleted',
+        'is_deleted_account' => true,
+        'deleted_account_at' => now(),
+    ]);
+
+    $session = makeSession();
+    $set = makeSet($owner, $session);
+
+    $response = $this->actingAs($owner)
+        ->getJson(route('sets.collaborators.users', $set).'?q=Taylor')
+        ->assertOk();
+
+    $names = collect($response->json('users'))->pluck('name');
+    expect($names)->toContain($activeMatch->name);
+    expect($names)->not->toContain('Taylor Deleted');
+});
+
 // ------- Policy: songs -------
 
 test('collaborator can add a song to the set', function () {

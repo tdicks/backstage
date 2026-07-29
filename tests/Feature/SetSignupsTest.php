@@ -166,6 +166,53 @@ test('cannot propose slots to users who hide from proposals', function () {
     expect(SlotAssignment::query()->count())->toBe(0);
 });
 
+test('cannot propose slots to deleted users', function () {
+    $owner = User::factory()->create();
+    $actor = User::factory()->create();
+    $deletedTarget = User::factory()->create([
+        'is_deleted_account' => true,
+        'deleted_account_at' => now(),
+        'hide_from_slot_proposals' => false,
+    ]);
+
+    $session = JamSession::create([
+        'name' => 'Proposal Deleted User Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Proposal Deleted User Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Lateralus',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($actor)
+        ->post(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $deletedTarget->id,
+            'message' => 'You should play this.',
+        ])
+        ->assertSessionHasErrors('target_user_id');
+
+    expect(SlotAssignment::query()->count())->toBe(0);
+});
+
 test('admin can change set owner from set update endpoint', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $owner = User::factory()->create();

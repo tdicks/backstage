@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class JamRegisterController extends Controller
@@ -56,7 +57,7 @@ class JamRegisterController extends Controller
         $this->abortIfCheckInsClosed($jamSession);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
         ]);
 
         $signIn = $this->signInUser($jamSession, (int) $validated['user_id']);
@@ -98,7 +99,7 @@ class JamRegisterController extends Controller
         $this->abortIfCheckInsClosed($jamSession);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
         ]);
 
         $signIn = $this->signInUser($jamSession, (int) $validated['user_id']);

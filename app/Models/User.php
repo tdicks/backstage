@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -13,15 +14,24 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 
-#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'bio', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences'])]
+#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'is_deleted_account', 'deleted_account_at', 'bio', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    public const ACTIVE_ACCOUNTS_SCOPE = 'activeAccounts';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasRelationships;
     use Notifiable;
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(self::ACTIVE_ACCOUNTS_SCOPE, function (Builder $builder): void {
+            $builder->where('is_deleted_account', false);
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -33,12 +43,19 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_admin' => 'boolean',
+            'is_deleted_account' => 'boolean',
+            'deleted_account_at' => 'datetime',
             'hide_from_directory' => 'boolean',
             'hide_from_slot_proposals' => 'boolean',
             'slot_coverage' => 'array',
             'notification_preferences' => 'array',
             'password' => 'hashed',
         ];
+    }
+
+    public function scopeWithDeletedAccounts(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope(self::ACTIVE_ACCOUNTS_SCOPE);
     }
 
     public function slots(): HasMany
