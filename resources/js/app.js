@@ -12,6 +12,32 @@ window.copyShareLink = copyShareLink;
 window.isInteractiveDragSource = isInteractiveDragSource;
 window.focusSessionFragmentTarget = focusSessionFragmentTarget;
 
+function readMetaCount(metaName) {
+	return Math.max(0, Number(document.querySelector(`meta[name="${metaName}"]`)?.content || 0));
+}
+
+function syncDocumentTitle(pendingTotal = null) {
+	const pageName = document.querySelector('meta[name="backstage-page-name"]')?.content?.trim() || 'Backstage';
+	const isAuthenticated = document.querySelector('meta[name="backstage-authenticated"]')?.content === '1';
+	const metaPendingTotal = readMetaCount('backstage-pending-total');
+	const total = Number.isFinite(pendingTotal) ? Math.max(0, Number(pendingTotal)) : metaPendingTotal;
+	const prefix = isAuthenticated && total > 0 ? `(${total}) ` : '';
+
+	document.title = `${prefix}${pageName} | Backstage`;
+}
+
+function syncPendingTitleFromStores() {
+	const unreadCount = Number(Alpine.store('notifications')?.unreadCount ?? readMetaCount('backstage-unread-count'));
+	const approvalCount = Number(Alpine.store('approvals')?.count ?? readMetaCount('backstage-approval-count'));
+	const pendingTotal = Math.max(0, unreadCount) + Math.max(0, approvalCount);
+
+	document.querySelector('meta[name="backstage-unread-count"]')?.setAttribute('content', String(Math.max(0, unreadCount)));
+	document.querySelector('meta[name="backstage-approval-count"]')?.setAttribute('content', String(Math.max(0, approvalCount)));
+	document.querySelector('meta[name="backstage-pending-total"]')?.setAttribute('content', String(pendingTotal));
+
+	syncDocumentTitle(pendingTotal);
+}
+
 function syncModalScrollLock() {
 	const hasOpenModal = Array.from(document.querySelectorAll('[data-modal-overlay]')).some((overlay) => {
 		return window.getComputedStyle(overlay).display !== 'none';
@@ -36,6 +62,28 @@ registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
 
+window.addEventListener('notifications-updated', () => {
+	syncPendingTitleFromStores();
+});
+
+window.addEventListener('approvals-count-changed', () => {
+	syncPendingTitleFromStores();
+});
+
+window.addEventListener('approvals-count-refreshed', () => {
+	syncPendingTitleFromStores();
+});
+
+window.addEventListener('target-consent-processed', () => {
+	window.setTimeout(() => syncPendingTitleFromStores(), 0);
+});
+
+window.addEventListener('pending-approval-processed', () => {
+	window.setTimeout(() => syncPendingTitleFromStores(), 0);
+});
+
 window.addEventListener('hashchange', () => window.focusSessionFragmentTarget());
 
 Alpine.start();
+
+syncPendingTitleFromStores();

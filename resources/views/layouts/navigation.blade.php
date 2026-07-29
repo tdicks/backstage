@@ -1,7 +1,3 @@
-@php
-    $mySetsApprovalCount = \App\Http\Controllers\MySetsController::pendingApprovalCount(Auth::user());
-@endphp
-
 <nav
     x-data="{
         open: false,

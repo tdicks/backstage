@@ -109,6 +109,7 @@ export function registerNotificationsStore(Alpine) {
 
 			notification.seen = true;
 			this.unreadCount = Math.max(0, this.unreadCount - 1);
+			window.dispatchEvent(new CustomEvent('notifications-updated'));
 
 			try {
 				await fetch(this.urlFor(this.seenUrlTemplate, id), {
