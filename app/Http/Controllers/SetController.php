@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\JamSession;
 use App\Models\JamSessionSignIn;
 use App\Models\Set;
-use App\Models\SongRequest;
 use App\Models\Slot;
+use App\Models\SongRequest;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -36,7 +36,7 @@ class SetController extends Controller
             ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
             ->values();
 
-        $songs = $set->songs->map(function ($song) use ($slotNames, $slotOptions, $checkedInUserIds, $viewerId) {
+        $songs = $set->songs->map(function ($song) use ($slotNames, $checkedInUserIds, $viewerId) {
             $slotMap = [];
 
             foreach ($slotNames as $slotName) {
@@ -50,6 +50,7 @@ class SetController extends Controller
                         'is_manual' => false,
                         'is_current_user' => false,
                     ];
+
                     continue;
                 }
 
@@ -58,11 +59,12 @@ class SetController extends Controller
 
                     $slotMap[$slotName] = [
                         'state' => 'user',
-                        'display' => $isCurrentUser ? 'You' : $slot->user->name,
+                        'display' => $slot->user->name,
                         'checked_in' => in_array($slot->user->id, $checkedInUserIds, true),
                         'is_manual' => false,
                         'is_current_user' => $isCurrentUser,
                     ];
+
                     continue;
                 }
 
@@ -74,6 +76,7 @@ class SetController extends Controller
                         'is_manual' => true,
                         'is_current_user' => false,
                     ];
+
                     continue;
                 }
 

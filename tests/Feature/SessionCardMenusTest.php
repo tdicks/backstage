@@ -76,6 +76,69 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertDontSee('aria-label="Add slot"', false);
 });
 
+test('set action menu offers a table image export', function () {
+    $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
+    $script = file_get_contents(resource_path('js/components/sessionCards.js'));
+
+    expect($shell)
+        ->toContain('Copy as Image')
+        ->toContain('x-heroicon-m-photo')
+        ->toContain('copySummaryImage()')
+        ->toContain("'sessionDate' => \$set->session->date->format('M j, Y')");
+
+    expect($script)
+        ->toContain('copySetSummaryImage')
+        ->toContain('drawPersonIcon')
+        ->toContain('drawCalendarIcon')
+        ->toContain('drawBackstageLogo')
+        ->toContain('drawAssignmentPill')
+        ->toContain("context.fillStyle = '#0ea5e9'")
+        ->toContain("rowIndex % 2 === 0 ? '#ffffff' : '#f8fafc'")
+        ->toContain("'image/png'")
+        ->toContain('new ClipboardItem');
+});
+
+test('set summary exports actual assignee names for the viewing performer', function () {
+    $owner = User::factory()->create();
+    $performer = User::factory()->create(['name' => 'Actual Performer']);
+    $session = JamSession::query()->create([
+        'name' => 'Shareable Setlist Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+    $set = Set::query()->create([
+        'name' => 'Shareable Setlist',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'The Performers',
+        'title' => 'Actual Names',
+        'notes' => null,
+        'position' => 1,
+    ]);
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'user_id' => $performer->id,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($performer)
+        ->getJson(route('sets.summary', $set))
+        ->assertOk()
+        ->assertJsonPath('songs.0.slot_map.vocals.display', 'Actual Performer')
+        ->assertJsonPath('songs.0.slot_map.vocals.is_current_user', true);
+});
+
 test('mobile set cards keep the organiser line concise', function () {
     $owner = User::factory()->create(['name' => 'Set Owner']);
     $collaboratorOne = User::factory()->create(['name' => 'First Collaborator']);

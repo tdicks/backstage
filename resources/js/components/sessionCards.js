@@ -75,6 +75,206 @@ function appendSessionFragment(container, html) {
     return elements;
 }
 
+function canvasBlob(canvas) {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+                return;
+            }
+
+            reject(new Error('Could not create the set image.'));
+        }, 'image/png');
+    });
+}
+
+function truncateCanvasText(context, value, maxWidth) {
+    if (context.measureText(value).width <= maxWidth) {
+        return value;
+    }
+
+    let text = value;
+    while (text.length > 0 && context.measureText(`${text}...`).width > maxWidth) {
+        text = text.slice(0, -1);
+    }
+
+    return `${text}...`;
+}
+
+function drawPersonIcon(context, left, top) {
+    context.strokeStyle = '#64748b';
+    context.lineWidth = 1.75;
+    context.beginPath();
+    context.arc(left + 7, top + 5, 3.25, 0, Math.PI * 2);
+    context.moveTo(left + 1.5, top + 15);
+    context.quadraticCurveTo(left + 7, top + 9.5, left + 12.5, top + 15);
+    context.stroke();
+}
+
+function drawCalendarIcon(context, left, top) {
+    context.strokeStyle = '#64748b';
+    context.lineWidth = 1.75;
+    context.strokeRect(left + 1.5, top + 3, 12, 11);
+    context.beginPath();
+    context.moveTo(left + 1.5, top + 7);
+    context.lineTo(left + 13.5, top + 7);
+    context.moveTo(left + 4.5, top + 1);
+    context.lineTo(left + 4.5, top + 5);
+    context.moveTo(left + 10.5, top + 1);
+    context.lineTo(left + 10.5, top + 5);
+    context.stroke();
+}
+
+function drawBackstageLogo(context, right, top) {
+    const size = 28;
+    const left = right - 106;
+    context.strokeStyle = '#0f172a';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.roundRect(left, top, size, size, 7);
+    context.moveTo(left + 8, top + 7);
+    context.lineTo(left + 8, top + 21);
+    context.moveTo(left + 8, top + 7);
+    context.lineTo(left + 16, top + 7);
+    context.quadraticCurveTo(left + 21, top + 7, left + 21, top + 11.5);
+    context.quadraticCurveTo(left + 21, top + 16, left + 16, top + 16);
+    context.lineTo(left + 8, top + 16);
+    context.moveTo(left + 8, top + 16);
+    context.lineTo(left + 16, top + 16);
+    context.quadraticCurveTo(left + 21, top + 16, left + 21, top + 20.5);
+    context.quadraticCurveTo(left + 21, top + 25, left + 16, top + 25);
+    context.lineTo(left + 8, top + 25);
+    context.stroke();
+    context.strokeStyle = '#f59e0b';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(left + 24, top + 3);
+    context.lineTo(left + 24, top + 25);
+    context.stroke();
+    context.fillStyle = '#0f172a';
+    context.font = '700 13px Instrument Sans, sans-serif';
+    context.fillText('Backstage', left + 36, top + 18);
+}
+
+function drawAssignmentPill(context, assignment, left, top, maxWidth) {
+    const isOpen = assignment?.state === 'open';
+    const isAssigned = assignment?.state === 'user';
+    const value = assignment?.display || (isOpen ? 'Open' : '-');
+    const availableTextWidth = maxWidth - 18;
+    const label = truncateCanvasText(context, value, availableTextWidth);
+    const textWidth = context.measureText(label).width;
+    const pillWidth = Math.min(maxWidth, textWidth + 18);
+
+    if (!isAssigned && !isOpen) {
+        context.fillStyle = '#94a3b8';
+        context.fillText(label, left + 10, top + 19);
+        return;
+    }
+
+    if (isOpen) {
+        context.fillStyle = '#fffbeb';
+        context.strokeStyle = '#fcd34d';
+    } else if (assignment.is_manual) {
+        context.fillStyle = '#fff7ed';
+        context.strokeStyle = '#fdba74';
+    } else {
+        context.fillStyle = '#ecfdf5';
+        context.strokeStyle = '#a7f3d0';
+    }
+
+    context.lineWidth = 1;
+    context.beginPath();
+    context.roundRect(left, top, pillWidth, 26, 13);
+    context.fill();
+    context.stroke();
+    context.fillStyle = isOpen ? '#92400e' : assignment.is_manual ? '#9a3412' : '#065f46';
+    context.fillText(label, left + 9, top + 17.5);
+}
+
+async function copySetSummaryImage(summary, setName, ownerName, sessionDate) {
+    if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+        throw new Error('Image copying is not supported by this browser.');
+    }
+
+    const slots = summary.slot_names ?? [];
+    const songs = summary.songs ?? [];
+    const scale = 2;
+    const padding = 32;
+    const songColumnWidth = 280;
+    const slotColumnWidth = 170;
+    const headerHeight = 108;
+    const tableHeaderHeight = 42;
+    const rowHeight = 56;
+    const width = (padding * 2) + songColumnWidth + (slots.length * slotColumnWidth);
+    const height = headerHeight + tableHeaderHeight + Math.max(1, songs.length) * rowHeight + padding;
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+
+    const context = canvas.getContext('2d');
+    context.scale(scale, scale);
+    context.fillStyle = '#fffdf7';
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = '#0ea5e9';
+    context.fillRect(0, 0, width, 8);
+    context.fillStyle = '#0369a1';
+    context.font = '700 10px Instrument Sans, sans-serif';
+    context.fillText('SETLIST', padding, 27);
+    context.fillStyle = '#0f172a';
+    context.font = '700 24px Instrument Sans, sans-serif';
+    context.fillText(setName, padding, 53);
+    drawBackstageLogo(context, width - padding, 26);
+    context.fillStyle = '#475569';
+    context.font = '14px Instrument Sans, sans-serif';
+    drawPersonIcon(context, padding, 66);
+    context.fillText(ownerName, padding + 19, 81);
+    const ownerWidth = context.measureText(ownerName).width;
+    const calendarLeft = padding + 19 + ownerWidth + 22;
+    drawCalendarIcon(context, calendarLeft, 66);
+    context.fillText(sessionDate, calendarLeft + 19, 81);
+
+    const tableTop = headerHeight;
+    context.fillStyle = '#0f172a';
+    context.beginPath();
+    context.roundRect(padding, tableTop, width - (padding * 2), tableHeaderHeight, 8);
+    context.fill();
+    context.font = '700 12px Instrument Sans, sans-serif';
+    context.fillStyle = '#f8fafc';
+    context.fillText('ARTIST / TITLE', padding + 14, tableTop + 26);
+
+    slots.forEach((slot, index) => {
+        const left = padding + songColumnWidth + (index * slotColumnWidth);
+        context.fillText(truncateCanvasText(context, slot.label.toUpperCase(), slotColumnWidth - 24), left + 12, tableTop + 26);
+    });
+
+    const rows = songs.length > 0 ? songs : [{ artist: 'No songs in this set yet.', title: '', slot_map: {} }];
+    rows.forEach((song, rowIndex) => {
+        const top = tableTop + tableHeaderHeight + (rowIndex * rowHeight);
+        context.fillStyle = rowIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
+        context.beginPath();
+        context.roundRect(padding, top + 2, width - (padding * 2), rowHeight - 4, 7);
+        context.fill();
+        context.strokeStyle = '#f1f5f9';
+        context.lineWidth = 1;
+        context.beginPath();
+        context.roundRect(padding, top + 2, width - (padding * 2), rowHeight - 4, 7);
+        context.stroke();
+        context.fillStyle = '#0f172a';
+        context.font = '600 13px Instrument Sans, sans-serif';
+        context.fillText(truncateCanvasText(context, `${song.artist}${song.title ? ` - ${song.title}` : ''}`, songColumnWidth - 26), padding + 14, top + 32);
+        context.font = '600 12px Instrument Sans, sans-serif';
+
+        slots.forEach((slot, slotIndex) => {
+            const assignment = song.slot_map?.[slot.name];
+            const left = padding + songColumnWidth + (slotIndex * slotColumnWidth);
+            drawAssignmentPill(context, assignment, left + 10, top + 15, slotColumnWidth - 20);
+        });
+    });
+
+    const blob = await canvasBlob(canvas);
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+}
+
 function queueLazySetBody(rootElement, load) {
     queuedLazySetBodies.set(rootElement, load);
     processLazySetBodyQueue();
@@ -171,6 +371,9 @@ export function sessionSetCard(config) {
         summaryError: '',
         summaryLastUpdated: '',
         summaryPollId: null,
+        summaryImageBusy: false,
+        summaryImageError: '',
+        summaryImageCopied: false,
         setCollapsed: false,
         songRequestsCollapsed: false,
         setId: config.setId,
@@ -567,6 +770,37 @@ export function sessionSetCard(config) {
             this.openSummary = true;
             this.loadSummary(true);
             this.startSummaryPolling();
+        },
+        async copySummaryImage() {
+            if (this.summaryImageBusy) {
+                return;
+            }
+
+            this.summaryImageBusy = true;
+            this.summaryImageError = '';
+            this.summaryImageCopied = false;
+
+            try {
+                const response = await fetch(config.setSummaryUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load the set table.');
+                }
+
+                const summary = await response.json();
+                await copySetSummaryImage(summary, config.setName, config.ownerName, config.sessionDate);
+                this.summaryImageCopied = true;
+                setTimeout(() => this.summaryImageCopied = false, 2400);
+            } catch (e) {
+                this.summaryImageError = e.message || 'Could not copy the set image.';
+            } finally {
+                this.summaryImageBusy = false;
+            }
         },
         closeSummaryModal() {
             this.openSummary = false;
