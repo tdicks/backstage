@@ -32,7 +32,7 @@
     $setMetaTextClass = $set->feature_set ? 'text-amber-800' : 'text-slate-600';
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
-    $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
+    $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-sky-500';
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner && ! $isCollaborator;
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'

@@ -49,7 +49,7 @@
                                     </span>
                                     @if ($session->is_hidden)
                                         <span class="inline-flex shrink-0 items-center" title="Jam session is hidden from non-admin users">
-                                            <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                                            <x-heroicon-m-eye-slash class="h-4 w-4 text-slate-500" aria-hidden="true" />
                                             <span class="sr-only">Hidden jam session</span>
                                         </span>
                                     @endif
