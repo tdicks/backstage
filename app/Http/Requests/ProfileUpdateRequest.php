@@ -31,7 +31,7 @@ class ProfileUpdateRequest extends FormRequest
             'hide_from_directory' => ['nullable', 'boolean'],
             'hide_from_slot_proposals' => ['nullable', 'boolean'],
             'slot_coverage' => ['nullable', 'array'],
-            'slot_coverage.*' => ['string'],
+            'slot_coverage.*' => ['string', Rule::in(array_keys(User::slotCoverageStates()))],
             'notification_preferences' => ['nullable', 'array'],
             'notification_preferences.*.enabled' => ['nullable', 'boolean'],
             'notification_preferences.*.popup' => ['nullable', 'boolean'],

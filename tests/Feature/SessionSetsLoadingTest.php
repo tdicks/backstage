@@ -102,7 +102,7 @@ test('set card bodies load through the viewport observer or an explicit expansio
         ->toContain('initLazySetCard($el)')
         ->toContain('@click.stop="setCollapsed = !setCollapsed; if (!setCollapsed) loadSetBody()"')
         ->toContain('x-show="!setCollapsed && !contentLoaded && !contentLoadError"')
-        ->toContain('Loading songs...')
+        ->toContain('h-4 w-44 max-w-full rounded-full bg-slate-200/80')
         ->toContain('class="flex cursor-pointer items-start justify-between gap-3"')
         ->toContain('class="min-w-0 flex-1"')
         ->toContain('class="shrink-0" @click.stop')

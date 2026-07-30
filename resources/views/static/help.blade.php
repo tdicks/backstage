@@ -48,6 +48,19 @@
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Find a Slot</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Find a Slot</span> to browse open parts across upcoming visible sessions. The list is grouped by session and set, with coverage matches shown first inside each group.
+                    </p>
+                    <p>
+                        Sessions and sets can be collapsed if you want to keep the list compact. Open a session or set from the card header, then take or request a slot from the song row when you are ready.
+                    </p>
+                    <p>
+                        If you are already playing a song, that song will not appear in the finder for you.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Creating Sets</h3>
                     <p>
                         If a session is open, use <span class="inline-flex rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-sm">Create Set</span> to bring your own mini set to the jam. Give it a clear name so other players can recognise it quickly, and add a short note if there is a style, theme, or special plan people should know about.

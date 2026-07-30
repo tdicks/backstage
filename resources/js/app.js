@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import { registerSessionCards } from './components/sessionCards';
+import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder';
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
 import { registerApprovalsStore } from './stores/approvals';
@@ -65,6 +66,8 @@ registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
+Alpine.data('slotFinderSongCard', slotFinderSongCard);
+Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 
 window.addEventListener('notifications-updated', () => {
 	syncPendingTitleFromStores();

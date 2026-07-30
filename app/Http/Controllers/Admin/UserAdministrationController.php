@@ -62,7 +62,7 @@ class UserAdministrationController extends Controller
             'hide_from_directory' => ['nullable', 'boolean'],
             'hide_from_slot_proposals' => ['nullable', 'boolean'],
             'slot_coverage' => ['nullable', 'array'],
-            'slot_coverage.*' => ['string'],
+            'slot_coverage.*' => ['string', Rule::in(array_keys(User::slotCoverageStates()))],
             'is_admin' => ['nullable', 'boolean'],
         ]);
 
@@ -78,7 +78,7 @@ class UserAdministrationController extends Controller
             'bio' => $validated['bio'] ?? null,
             'hide_from_directory' => (bool) ($validated['hide_from_directory'] ?? false),
             'hide_from_slot_proposals' => (bool) ($validated['hide_from_slot_proposals'] ?? false),
-            'slot_coverage' => $validated['slot_coverage'] ?? [],
+            'slot_coverage' => User::normalizeSlotCoverage($validated['slot_coverage'] ?? []),
         ];
 
         if ($request->user()->id !== $user->id) {

@@ -21,6 +21,7 @@ use App\Http\Controllers\SetController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\SlotAssignmentController;
 use App\Http\Controllers\SlotController;
+use App\Http\Controllers\SlotFinderController;
 use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\UserDirectoryController;
@@ -58,6 +59,8 @@ Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/dashboard/get-started/dismiss', [DashboardController::class, 'dismissGetStartedQuest'])->name('dashboard.get-started.dismiss');
+    Route::get('/find-a-slot', SlotFinderController::class)->name('slot-finder.index');
+    Route::redirect('/sit-in', '/find-a-slot')->name('sit-in.index');
 
     Route::view('/help', 'static.help')->name('help');
 

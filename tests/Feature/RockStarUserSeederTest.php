@@ -16,5 +16,5 @@ test('rock star user seeder creates reusable development accounts', function () 
     expect(User::query()->count())->toBe(30)
         ->and($james->name)->toBe('James Hetfield')
         ->and(Hash::check('password', $james->password))->toBeTrue()
-        ->and($james->slot_coverage)->toBe(['vocals', 'rhythm_guitar']);
+        ->and($james->slotCoverageMap())->toBe(['vocals' => 'can', 'rhythm_guitar' => 'can']);
 });

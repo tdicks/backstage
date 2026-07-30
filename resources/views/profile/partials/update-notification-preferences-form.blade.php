@@ -77,63 +77,67 @@
                             {{ $group['label'] }}
                         </h3>
                     </div>
-                    <div class="border-b border-slate-200 bg-white">
-                        <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            <div>Notification</div>
-                            <div class="text-center">Enabled</div>
-                            <div class="text-center">Popup</div>
-                            <div class="text-center">Email</div>
-                            <div class="text-center">Push</div>
-                        </div>
-                        <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 border-t border-slate-200 bg-slate-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                            <div>Apply to all</div>
-                            @foreach (['enabled', 'popup', 'email', 'push'] as $channel)
-                                <div class="flex items-center justify-center">
-                                    <input
-                                        type="checkbox"
-                                        @change="applyToColumn(@js($channel), $event.target.checked)"
-                                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                        aria-label="Apply {{ $channel }} to all {{ strtolower($group['label']) }} notifications"
-                                    >
+                    <div class="overflow-x-auto">
+                        <div class="min-w-[44rem]">
+                                <div class="border-b border-slate-200 bg-white">
+                                    <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                        <div>Notification</div>
+                                        <div class="text-center">Enabled</div>
+                                        <div class="text-center">Popup</div>
+                                        <div class="text-center">Email</div>
+                                        <div class="text-center">Push</div>
+                                    </div>
+                                    <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 border-t border-slate-200 bg-slate-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                        <div>Apply to all</div>
+                                        @foreach (['enabled', 'popup', 'email', 'push'] as $channel)
+                                            <div class="flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    @change="applyToColumn(@js($channel), $event.target.checked)"
+                                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                                    aria-label="Apply {{ $channel }} to all {{ strtolower($group['label']) }} notifications"
+                                                >
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div x-ref="optionRows" class="divide-y divide-slate-200 bg-white">
-                        @forelse ($group['options'] as $option)
-                            <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 px-4 py-4 text-sm text-slate-700">
-                                <div>
-                                    <p class="font-semibold text-slate-900">{{ $option['label'] }}</p>
-                                    <p class="mt-1 text-xs text-slate-500">{{ $option['description'] }}</p>
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    <input type="hidden" name="notification_preferences[{{ $option['type'] }}][enabled]" value="0">
-                                    <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][enabled]" value="1" data-notification-target="true" data-notification-channel="enabled" @checked(old('notification_preferences.'.$option['type'].'.enabled', $option['enabled'])) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    @if ($option['popup_available'])
-                                        <input type="hidden" name="notification_preferences[{{ $option['type'] }}][popup]" value="0">
-                                    @endif
-                                    <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][popup]" value="1" data-notification-target="true" data-notification-channel="popup" @checked(old('notification_preferences.'.$option['type'].'.popup', $option['popup'])) @disabled(! $option['popup_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    @if ($option['email_available'])
-                                        <input type="hidden" name="notification_preferences[{{ $option['type'] }}][email]" value="0">
-                                    @endif
-                                    <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][email]" value="1" data-notification-target="true" data-notification-channel="email" @checked(old('notification_preferences.'.$option['type'].'.email', $option['email'])) @disabled(! $option['email_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
-                                </div>
-                                <div class="flex items-center justify-center">
-                                    @if ($option['push_available'])
-                                        <input type="hidden" name="notification_preferences[{{ $option['type'] }}][push]" value="0">
-                                    @endif
-                                    <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][push]" value="1" data-notification-target="true" data-notification-channel="push" @checked(old('notification_preferences.'.$option['type'].'.push', $option['push'])) @disabled(! $option['push_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                <div x-ref="optionRows" class="divide-y divide-slate-200 bg-white">
+                                    @forelse ($group['options'] as $option)
+                                        <div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem_5rem_5rem] gap-3 px-4 py-4 text-sm text-slate-700">
+                                            <div>
+                                                <p class="font-semibold text-slate-900">{{ $option['label'] }}</p>
+                                                <p class="mt-1 text-xs text-slate-500">{{ $option['description'] }}</p>
+                                            </div>
+                                            <div class="flex items-center justify-center">
+                                                <input type="hidden" name="notification_preferences[{{ $option['type'] }}][enabled]" value="0">
+                                                <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][enabled]" value="1" data-notification-target="true" data-notification-channel="enabled" @checked(old('notification_preferences.'.$option['type'].'.enabled', $option['enabled'])) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                            </div>
+                                            <div class="flex items-center justify-center">
+                                                @if ($option['popup_available'])
+                                                    <input type="hidden" name="notification_preferences[{{ $option['type'] }}][popup]" value="0">
+                                                @endif
+                                                <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][popup]" value="1" data-notification-target="true" data-notification-channel="popup" @checked(old('notification_preferences.'.$option['type'].'.popup', $option['popup'])) @disabled(! $option['popup_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                            </div>
+                                            <div class="flex items-center justify-center">
+                                                @if ($option['email_available'])
+                                                    <input type="hidden" name="notification_preferences[{{ $option['type'] }}][email]" value="0">
+                                                @endif
+                                                <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][email]" value="1" data-notification-target="true" data-notification-channel="email" @checked(old('notification_preferences.'.$option['type'].'.email', $option['email'])) @disabled(! $option['email_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                            </div>
+                                            <div class="flex items-center justify-center">
+                                                @if ($option['push_available'])
+                                                    <input type="hidden" name="notification_preferences[{{ $option['type'] }}][push]" value="0">
+                                                @endif
+                                                <input type="checkbox" name="notification_preferences[{{ $option['type'] }}][push]" value="1" data-notification-target="true" data-notification-channel="push" @checked(old('notification_preferences.'.$option['type'].'.push', $option['push'])) @disabled(! $option['push_available']) class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="px-4 py-5 text-sm text-slate-500">
+                                            No notifications in this category.
+                                        </div>
+                                    @endforelse
                                 </div>
                             </div>
-                        @empty
-                            <div class="px-4 py-5 text-sm text-slate-500">
-                                No notifications in this category.
-                            </div>
-                        @endforelse
                     </div>
                 </div>
             @empty

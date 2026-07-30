@@ -34,11 +34,11 @@
                     @if ($user->bio)
                         <p class="mt-2 text-sm text-slate-700">{{ $user->bio }}</p>
                     @endif
-                    @php $coverage = $user->slot_coverage ?? []; @endphp
+                    @php $coverage = $user->slotCoverageMap(); @endphp
                     @if ($coverage)
                         <div class="mt-3 flex flex-wrap gap-1.5">
                             @foreach ($slotOptions as $key => $name)
-                                @if (in_array($key, $coverage, true))
+                                @if (($coverage[$key] ?? null) === \App\Models\User::SLOT_COVERAGE_CAN)
                                     <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{{ $name }}</span>
                                 @endif
                             @endforeach

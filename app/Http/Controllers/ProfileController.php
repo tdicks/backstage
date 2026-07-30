@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Slot;
+use App\Models\User;
 use App\Support\NotificationSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,8 +38,8 @@ class ProfileController extends Controller
         $validated = $request->validated();
         $attributes = $validated;
 
-        if ($request->boolean('slot_coverage_present')) {
-            $attributes['slot_coverage'] = $request->input('slot_coverage', []);
+        if ($request->has('slot_coverage') || $request->boolean('slot_coverage_present')) {
+            $attributes['slot_coverage'] = User::normalizeSlotCoverage($request->input('slot_coverage', []));
         }
 
         if (array_key_exists('notification_preferences', $attributes)) {

@@ -358,7 +358,10 @@
     <p x-show="contentLoadError" x-text="contentLoadError" class="mt-4 text-sm text-rose-700" x-cloak></p>
     <div x-show="!setCollapsed && !contentLoaded && !contentLoadError" x-cloak x-transition.opacity.duration.150ms class="mt-5">
         <div class="rounded-xl border border-dashed border-slate-300 bg-white/80 p-4 text-slate-500" aria-hidden="true">
-            <p class="text-sm">Loading songs...</p>
+            <div class="flex items-center gap-3">
+                <div class="h-4 w-4 shrink-0 rounded-full bg-slate-200/80"></div>
+                <div class="h-4 w-44 max-w-full rounded-full bg-slate-200/80"></div>
+            </div>
 
             <div class="mt-3 rounded-lg border border-slate-200 bg-white/90 p-3 animate-pulse">
                 <div class="h-4 w-56 rounded bg-slate-200/70"></div>

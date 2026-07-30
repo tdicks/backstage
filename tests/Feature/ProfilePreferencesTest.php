@@ -30,11 +30,18 @@ test('profile update stores slot coverage', function () {
         ->patch(route('profile.update'), [
             'name' => $user->name,
             'email' => $user->email,
-            'slot_coverage' => ['vocals', 'bass'],
+            'slot_coverage' => [
+                'vocals' => 'can',
+                'bass' => 'wont_cover',
+                'drums' => 'unspecified',
+            ],
         ])
         ->assertRedirect(route('profile.edit'));
 
-    expect($user->refresh()->slot_coverage)->toBe(['vocals', 'bass']);
+    expect($user->refresh()->slot_coverage)->toBe([
+        'vocals' => 'can',
+        'bass' => 'wont_cover',
+    ]);
 });
 
 test('profile update clears slot coverage when none selected', function () {
@@ -114,9 +121,10 @@ test('profile edit highlights selected slot coverage chips', function () {
         ->assertSee('Notification Preferences')
         ->assertSee('Mobile Number')
         ->assertSee('Slot request accepted')
-        ->assertSee('x-data="{ selected: ', false)
-        ->assertSee('x-bind:class="selected ? \'border-indigo-300 bg-indigo-50 text-indigo-700\'', false)
-        ->assertSee('@change="selected = $event.target.checked"', false);
+        ->assertSee('slot_coverage[vocals]')
+        ->assertSee('slot_coverage[bass]')
+        ->assertSee('cycle()')
+        ->assertSee('x-bind:value="state"', false);
 });
 
 test('profile update ignores non-user-configurable notification preference changes', function () {

@@ -121,6 +121,53 @@ test('closed signups block new slot requests', function () {
     expect(SlotAssignment::query()->count())->toBe(0);
 });
 
+test('requester can cancel their slot request', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Cancel Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Cancel Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Nirvana',
+        'title' => 'Come As You Are',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('slot-assignments.request', $slot), [])
+        ->assertCreated();
+
+    $assignment = SlotAssignment::query()->firstOrFail();
+
+    $this->actingAs($requester)
+        ->patchJson(route('slot-assignments.respond', $assignment), [
+            'status' => SlotAssignment::STATUS_REJECTED,
+        ])
+        ->assertOk();
+
+    expect($assignment->refresh()->status)->toBe(SlotAssignment::STATUS_REJECTED);
+});
+
 test('cannot propose slots to users who hide from proposals', function () {
     $owner = User::factory()->create();
     $actor = User::factory()->create();

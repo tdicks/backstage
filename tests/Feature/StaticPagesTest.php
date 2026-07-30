@@ -46,6 +46,8 @@ test('help page is only available to authenticated users', function () {
         ->assertOk()
         ->assertSee('Adding Songs')
         ->assertSee('band template')
+        ->assertSee('Find a Slot')
+        ->assertSee('coverage matches shown first')
         ->assertSee('Set Requests and Approvals')
         ->assertSee('Recommendations');
 });

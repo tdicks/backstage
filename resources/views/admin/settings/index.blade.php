@@ -117,7 +117,7 @@
                                 <h4 class="font-semibold text-slate-900">{{ $group['label'] }}</h4>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-slate-200">
+                                <table class="min-w-[56rem] divide-y divide-slate-200">
                                     <thead class="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
                                         <tr>
                                             <th class="px-6 py-3 text-left font-semibold">Notification type</th>

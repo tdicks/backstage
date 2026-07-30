@@ -23,7 +23,7 @@ test('user directory shows slot coverage for users', function () {
     $viewer = User::factory()->create();
     User::factory()->create([
         'name' => 'Jazz Player',
-        'slot_coverage' => ['vocals', 'bass'],
+        'slot_coverage' => ['vocals' => 'can', 'bass' => 'can'],
         'hide_from_directory' => false,
     ]);
 

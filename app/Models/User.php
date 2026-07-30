@@ -20,6 +20,12 @@ class User extends Authenticatable
 {
     public const ACTIVE_ACCOUNTS_SCOPE = 'activeAccounts';
 
+    public const SLOT_COVERAGE_CAN = 'can';
+
+    public const SLOT_COVERAGE_UNSPECIFIED = 'unspecified';
+
+    public const SLOT_COVERAGE_WONT = 'wont_cover';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
@@ -57,6 +63,88 @@ class User extends Authenticatable
     public function scopeWithDeletedAccounts(Builder $query): Builder
     {
         return $query->withoutGlobalScope(self::ACTIVE_ACCOUNTS_SCOPE);
+    }
+
+    public static function slotCoverageStates(): array
+    {
+        return [
+            self::SLOT_COVERAGE_UNSPECIFIED => 'Unspecified',
+            self::SLOT_COVERAGE_CAN => 'Can cover',
+            self::SLOT_COVERAGE_WONT => "Won't cover",
+        ];
+    }
+
+    public function slotCoverageMap(): array
+    {
+        $storedCoverage = is_array($this->slot_coverage) ? $this->slot_coverage : [];
+        $normalized = [];
+
+        foreach ($storedCoverage as $slotName => $state) {
+            if (is_int($slotName)) {
+                $normalized[(string) $state] = self::SLOT_COVERAGE_CAN;
+
+                continue;
+            }
+
+            $normalizedState = self::normalizeSlotCoverageState((string) $state);
+
+            if ($normalizedState === self::SLOT_COVERAGE_UNSPECIFIED) {
+                continue;
+            }
+
+            $normalized[(string) $slotName] = $normalizedState;
+        }
+
+        return $normalized;
+    }
+
+    public function slotCoverageState(string $slotName): string
+    {
+        return $this->slotCoverageMap()[$slotName] ?? self::SLOT_COVERAGE_UNSPECIFIED;
+    }
+
+    public function coversSlot(string $slotName): bool
+    {
+        return $this->slotCoverageState($slotName) === self::SLOT_COVERAGE_CAN;
+    }
+
+    public function willNotCoverSlot(string $slotName): bool
+    {
+        return $this->slotCoverageState($slotName) === self::SLOT_COVERAGE_WONT;
+    }
+
+    /**
+     * @param  array<string, mixed>  $coverage
+     * @return array<string, string>
+     */
+    public static function normalizeSlotCoverage(array $coverage): array
+    {
+        $normalized = [];
+
+        foreach ($coverage as $slotName => $state) {
+            if (is_int($slotName)) {
+                $normalized[(string) $state] = self::SLOT_COVERAGE_CAN;
+
+                continue;
+            }
+
+            $normalizedState = self::normalizeSlotCoverageState((string) $state);
+
+            if ($normalizedState === self::SLOT_COVERAGE_UNSPECIFIED) {
+                continue;
+            }
+
+            $normalized[(string) $slotName] = $normalizedState;
+        }
+
+        return $normalized;
+    }
+
+    private static function normalizeSlotCoverageState(string $state): string
+    {
+        return in_array($state, [self::SLOT_COVERAGE_CAN, self::SLOT_COVERAGE_WONT], true)
+            ? $state
+            : self::SLOT_COVERAGE_UNSPECIFIED;
     }
 
     public function slots(): HasMany

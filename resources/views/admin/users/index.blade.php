@@ -229,13 +229,61 @@
                                                                     @if ($slotOptions)
                                                                         <div>
                                                                             <x-input-label :value="'Slot Coverage'" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
+                                                                            <p class="mt-1 text-xs text-slate-500">Choose whether this user can cover each slot, is unsure, or should be hidden from Find a Slot results.</p>
+                                                                            @php $coverageStates = \App\Models\User::slotCoverageStates(); @endphp
                                                                             <div class="mt-2 flex flex-wrap gap-2">
                                                                                 @foreach ($slotOptions as $key => $name)
-                                                                                    @php $checked = in_array($key, $user->slot_coverage ?? [], true); @endphp
-                                                                                    <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition {{ $checked ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300' }}">
-                                                                                        <input type="checkbox" name="slot_coverage[]" value="{{ $key }}" @checked($checked) class="sr-only">
-                                                                                        {{ $name }}
-                                                                                    </label>
+                                                                                    @php $coverageState = old('slot_coverage.'.$key, $user->slotCoverageState($key)); @endphp
+                                                                                    <div
+                                                                                        x-data="{
+                                                                                            state: @js($coverageState),
+                                                                                            states: @js(array_keys($coverageStates)),
+                                                                                            labels: @js($coverageStates),
+                                                                                                symbols: {
+                                                                                                    can: '✓',
+                                                                                                    unspecified: '•',
+                                                                                                    wont_cover: '✕',
+                                                                                                },
+                                                                                            cycle() {
+                                                                                                const currentIndex = this.states.indexOf(this.state);
+                                                                                                const nextIndex = (currentIndex + 1) % this.states.length;
+
+                                                                                                this.state = this.states[nextIndex];
+                                                                                            },
+                                                                                            stateClasses() {
+                                                                                                if (this.state === '{{ \App\Models\User::SLOT_COVERAGE_CAN }}') {
+                                                                                                    return 'border-emerald-300 bg-emerald-50 text-emerald-700';
+                                                                                                }
+
+                                                                                                if (this.state === '{{ \App\Models\User::SLOT_COVERAGE_WONT }}') {
+                                                                                                    return 'border-rose-300 bg-rose-50 text-rose-700';
+                                                                                                }
+
+                                                                                                return 'border-slate-200 bg-white text-slate-600 hover:border-slate-300';
+                                                                                            },
+                                                                                        }"
+                                                                                        class="shrink-0"
+                                                                                    >
+                                                                                        <input type="hidden" name="slot_coverage[{{ $key }}]" x-bind:value="state">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            @click="cycle()"
+                                                                                            class="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition"
+                                                                                            x-bind:class="stateClasses()"
+                                                                                            x-bind:aria-label="`${labels[state]} for {{ $name }}`"
+                                                                                        >
+                                                                                            <span x-show="state === '{{ \App\Models\User::SLOT_COVERAGE_CAN }}'" x-cloak aria-hidden="true" class="shrink-0">
+                                                                                                <x-heroicon-m-check-circle class="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                                                                                            </span>
+                                                                                            <span x-show="state === '{{ \App\Models\User::SLOT_COVERAGE_UNSPECIFIED }}'" x-cloak aria-hidden="true" class="shrink-0">
+                                                                                                <x-heroicon-m-question-mark-circle class="h-4 w-4 text-slate-400" aria-hidden="true" />
+                                                                                            </span>
+                                                                                            <span x-show="state === '{{ \App\Models\User::SLOT_COVERAGE_WONT }}'" x-cloak aria-hidden="true" class="shrink-0">
+                                                                                                <x-heroicon-m-x-circle class="h-4 w-4 text-rose-600" aria-hidden="true" />
+                                                                                            </span>
+                                                                                            <span class="truncate">{{ $name }}</span>
+                                                                                        </button>
+                                                                                    </div>
                                                                                 @endforeach
                                                                             </div>
                                                                         </div>
