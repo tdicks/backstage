@@ -37,6 +37,7 @@
                             x-bind:aria-expanded="(!collapsed).toString()"
                             aria-label="Toggle session details"
                             role="button"
+                            @click="toggle()"
                             @keydown.enter.prevent="toggle()"
                             @keydown.space.prevent="toggle()"
                         >

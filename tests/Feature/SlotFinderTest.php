@@ -128,6 +128,7 @@ test('find a slot page lists visible upcoming open slots with coverage matches f
         ->assertSee('Future Artist - Future Song')
         ->assertDontSee('Hidden Song')
         ->assertDontSee('Past Song')
+        ->assertSee('@click="toggle()"', false)
         ->assertDontSee('Take Slot')
         ->assertDontSee('Request Slot');
 
