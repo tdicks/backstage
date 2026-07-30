@@ -245,8 +245,11 @@
                 <section class="grid w-full grid-cols-[1fr_auto_1fr] items-center rounded-md border border-emerald-700 bg-emerald-900/40 px-4 py-3 text-emerald-300 shadow-sm">
                     <x-live-status-icon size="h-5 w-5" title="This jam session is live" class="justify-self-start" />
                     <div class="text-center">
-                        <p class="text-xs font-semibold uppercase tracking-widest">This jam session is now live</p>
-                        <p class="mt-1 text-xs text-emerald-200">Any changes to sets will update here in real time.</p>
+                        <p class="text-xs font-semibold uppercase tracking-widest">This jam session is now in live mode</p>
+                        <p class="mt-1 text-xs text-emerald-200">Let the jam manager know about any changes to your sets.</p>
+                        @if ($session->allow_checkins)
+                            <p class="mt-1 text-xs text-emerald-200">Sign ins are live! Look for a QR code or ask the jam organisers for assistance.</p>
+                        @endif
                     </div>
                     <span class="h-5 w-5 justify-self-end" aria-hidden="true"></span>
                 </section>

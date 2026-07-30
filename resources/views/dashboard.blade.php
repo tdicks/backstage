@@ -38,7 +38,7 @@
                                     <a href="{{ route('sessions.show', $nextSession).'#set-'.$set->id }}" class="group flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-sky-400 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-400">
                                         <div class="min-w-0">
                                             <h4 class="truncate font-semibold text-slate-900">{{ $set->name }}</h4>
-                                            <p class="mt-1 text-sm text-slate-600">
+                                            <ul class="mt-1 list-none space-y-1 text-sm text-slate-600">
                                                 @foreach ($set->songs as $song)
                                                     @php
                                                         $slotNames = $song->slots->pluck('name')
@@ -46,9 +46,9 @@
                                                             ->map(fn ($slotName) => $slotLabels[$slotName] ?? str((string) $slotName)->replace(['_', '-'], ' ')->title()->toString())
                                                             ->join(', ');
                                                     @endphp
-                                                    {{ $slotNames !== '' ? $slotNames.' on ' : '' }}{{ $song->artist }} - {{ $song->title }}@if (! $loop->last); @endif
+                                                    <li>{{ $slotNames !== '' ? $slotNames.' on ' : '' }}{{ $song->artist }} - {{ $song->title }}</li>
                                                 @endforeach
-                                            </p>
+                                            </ul>
                                         </div>
                                         <x-heroicon-m-chevron-right class="h-5 w-5 shrink-0 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
                                     </a>

@@ -87,6 +87,8 @@ test('authenticated users see their next jam session slots on the dashboard', fu
         ->assertSee(route('sessions.show', $earlierSession).'#set-'.$featuredSet->id);
 
     expect($response->getContent())
+        ->toContain('<ul class="mt-1 list-none space-y-1 text-sm text-slate-600">')
+        ->toContain('<li>Guitar on The Band - Opening Song</li>')
         ->toContain('<h3 data-next-session-name class="mt-2 text-3xl font-semibold text-slate-900">Friday Jam</h3>')
         ->not->toContain('<h3 data-next-session-name class="mt-2 text-3xl font-semibold text-slate-900">Saturday Jam</h3>');
 });
