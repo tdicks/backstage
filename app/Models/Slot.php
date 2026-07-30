@@ -23,6 +23,7 @@ class Slot extends Model
     protected $fillable = [
         'song_id',
         'name',
+        'notes',
         'user_id',
         'manual_performer_name',
         'position',

@@ -15,6 +15,12 @@
 
             <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-8">
                 <div class="max-w-xl">
+                    @include('profile.partials.update-privacy-form')
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-8">
+                <div class="max-w-xl">
                     @include('profile.partials.update-password-form')
                 </div>
             </div>

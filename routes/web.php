@@ -57,6 +57,7 @@ Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::post('/dashboard/get-started/dismiss', [DashboardController::class, 'dismissGetStartedQuest'])->name('dashboard.get-started.dismiss');
 
     Route::view('/help', 'static.help')->name('help');
 
@@ -84,6 +85,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/privacy', [ProfileController::class, 'updatePrivacy'])->name('profile.privacy.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

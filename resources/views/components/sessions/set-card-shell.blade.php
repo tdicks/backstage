@@ -222,6 +222,7 @@
                 </button>
                 <template x-teleport="body">
                     <div
+                        x-ref="actionMenu"
                         x-show="openActionMenu"
                         x-cloak
                         x-transition.origin.top.right

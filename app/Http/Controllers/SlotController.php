@@ -27,6 +27,7 @@ class SlotController extends Controller
         $validated = $request->validate([
             'addition_mode' => ['nullable', 'string', 'in:individual,template'],
             'name' => ['nullable', 'string', 'in:'.implode(',', Slot::keys()), 'required_unless:addition_mode,template', 'prohibited_if:addition_mode,template'],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id', 'required_if:addition_mode,template', 'prohibited_unless:addition_mode,template'],
             'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
         ]);
@@ -68,7 +69,9 @@ class SlotController extends Controller
         $nextPosition = ((int) $song->slots()->max('position')) + 1;
 
         $slot = $song->slots()->create([
-            ...$validated,
+            'name' => $validated['name'],
+            'notes' => $validated['notes'] ?? null,
+            'user_id' => $validated['user_id'] ?? null,
             'position' => $nextPosition,
         ]);
 
@@ -88,6 +91,7 @@ class SlotController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
             'manual_performer_name' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
@@ -136,6 +140,7 @@ class SlotController extends Controller
 
             $slot->update([
                 'name' => $validated['name'],
+                'notes' => $validated['notes'] ?? null,
                 'user_id' => $validated['user_id'] ?? null,
                 'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
                 'position' => $validated['position'] ?? $slot->position,
@@ -370,6 +375,7 @@ class SlotController extends Controller
             'id' => $slot->id,
             'name' => $slot->name,
             'label' => Slot::options()[$slot->name] ?? $slot->name,
+            'notes' => $slot->notes,
             'user_id' => $slot->user_id,
             'user_name' => $slot->assignedPerformerName(),
             'manual_performer_name' => $slot->manual_performer_name,

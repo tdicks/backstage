@@ -41,6 +41,7 @@ test('set owner can add a keys slot to a song', function () {
     $this->actingAs($owner)
         ->post(route('slots.store', $song), [
             'name' => 'keys',
+            'notes' => 'Bring a sustain pedal.',
             'user_id' => null,
         ])
         ->assertRedirect();
@@ -48,6 +49,7 @@ test('set owner can add a keys slot to a song', function () {
     expect(Slot::query()
         ->where('song_id', $song->id)
         ->where('name', 'keys')
+        ->where('notes', 'Bring a sustain pedal.')
         ->exists())
         ->toBeTrue();
 });
@@ -150,4 +152,49 @@ test('user receives notification when manually assigned to a slot', function () 
 
     expect($performer->notifications()->first()?->data['title'])
         ->toContain('You\'ve been assigned to a slot');
+});
+
+test('set owner can update a slot note', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Notes Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Notes Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Radiohead',
+        'title' => 'Karma Police',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('slots.update', $slot), [
+            'name' => 'vocals',
+            'notes' => 'Cue the harmony on the chorus.',
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot.notes', 'Cue the harmony on the chorus.');
+
+    expect($slot->refresh()->notes)->toBe('Cue the harmony on the chorus.');
 });

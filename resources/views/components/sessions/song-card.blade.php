@@ -157,6 +157,7 @@
                 </button>
                 <template x-teleport="body">
                     <div
+                        x-ref="actionMenu"
                         x-show="openActionMenu"
                         x-cloak
                         x-transition.origin.top.right
@@ -302,6 +303,10 @@
                                 <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                             @endforeach
                         </select>
+                        <div class="mt-4">
+                            <x-input-label :value="'Notes (optional)'" />
+                            <x-textarea-input name="notes" rows="3" x-bind:disabled="slotAdditionMode !== 'individual'" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" placeholder="Add a note for this slot">{{ old('notes') }}</x-textarea-input>
+                        </div>
                     </div>
                     <div x-show="slotAdditionMode === 'template'" x-cloak>
                         <x-input-label :value="'Band Template'" />

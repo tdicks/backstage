@@ -103,6 +103,75 @@ test('authenticated users without upcoming slots see the empty dashboard state',
         ->assertSee(route('sessions.index'));
 });
 
+test('dashboard shows a dismissible get started quest for new users', function () {
+    $user = User::factory()->create([
+        'bio' => null,
+        'onboarding_dismissed_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Get started')
+        ->assertSee('Add something to your bio')
+        ->assertSee('Sign up for a song')
+        ->assertSee('Create your own set');
+
+    $this->actingAs($user)
+        ->post(route('dashboard.get-started.dismiss'))
+        ->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('Get started');
+});
+
+test('dashboard keeps the get started quest visible until dismissed when all items are complete', function () {
+    $user = User::factory()->create([
+        'bio' => 'I play drums and love late-night jams.',
+        'onboarding_dismissed_at' => null,
+    ]);
+
+    $jamSession = JamSession::create([
+        'name' => 'Friday Jam',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'My first set',
+        'owner_id' => $user->id,
+        'jam_session_id' => $jamSession->id,
+        'position' => 1,
+    ]);
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'The Band',
+        'title' => 'First Song',
+        'position' => 1,
+    ]);
+    Slot::create(['song_id' => $song->id, 'name' => 'drums', 'position' => 1, 'user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Get started')
+        ->assertSee('all set')
+        ->assertSee('Happy jamming!');
+});
+
+test('dashboard dismissing the get started quest over ajax returns no content', function () {
+    $user = User::factory()->create([
+        'onboarding_dismissed_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->withHeader('X-Requested-With', 'XMLHttpRequest')
+        ->post(route('dashboard.get-started.dismiss'))
+        ->assertNoContent();
+});
+
 test('dashboard shows quick links', function () {
     $user = User::factory()->create();
 

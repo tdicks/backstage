@@ -42,6 +42,10 @@
                                 />
                                 <div
                                     x-show="showEditUserSuggestions && filteredEditUsers().length > 0"
+                            <div>
+                                <x-input-label :value="'Notes (optional)'" />
+                                <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+                            </div>
                                     x-cloak
                                     class="absolute z-[120] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                                     @click.outside="showEditUserSuggestions = false"
@@ -132,6 +136,10 @@
                             <option value="{{ $user->name }}"></option>
                         @endforeach
                     </datalist>
+                </div>
+                <div>
+                    <x-input-label :value="'Notes (optional)'" />
+                    <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $slotModel->notes }}</x-textarea-input>
                 </div>
             </form>
             <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">

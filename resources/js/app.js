@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import { registerSessionCards } from './components/sessionCards';
 import { lazySessionSets } from './components/lazySessionSets';
+import { getStartedQuest } from './components/getStartedQuest';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
 import { copyShareLink } from './utils/clipboard';
@@ -63,6 +64,7 @@ registerNotificationsStore(Alpine);
 registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
+Alpine.data('getStartedQuest', getStartedQuest);
 
 window.addEventListener('notifications-updated', () => {
 	syncPendingTitleFromStores();

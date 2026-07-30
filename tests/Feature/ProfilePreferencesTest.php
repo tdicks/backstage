@@ -13,16 +13,14 @@ test('profile update stores visibility preferences', function () {
     ]);
 
     $this->actingAs($user)
-        ->patch(route('profile.update'), [
-            'name' => $user->name,
-            'email' => $user->email,
-            'bio' => 'Updated bio',
+        ->patch(route('profile.privacy.update'), [
             'hide_from_directory' => '1',
+            'hide_from_slot_proposals' => '1',
         ])
         ->assertRedirect(route('profile.edit'));
 
     expect($user->refresh()->hide_from_directory)->toBeTrue();
-    expect($user->hide_from_slot_proposals)->toBeFalse();
+    expect($user->hide_from_slot_proposals)->toBeTrue();
 });
 
 test('profile update stores slot coverage', function () {
@@ -88,6 +86,9 @@ test('profile page shows notification preferences section', function () {
     $this->actingAs($user)
         ->get(route('profile.edit'))
         ->assertOk()
+        ->assertSee('Privacy')
+        ->assertSee('Hide me from the who’s who page')
+        ->assertSee('Hide me from the slot proposal user list')
         ->assertSee('Notification Preferences')
         ->assertSee('Apply to all')
         ->assertSee('Enable Push Notifications');

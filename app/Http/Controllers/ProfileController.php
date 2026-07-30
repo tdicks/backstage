@@ -37,12 +37,6 @@ class ProfileController extends Controller
         $validated = $request->validated();
         $attributes = $validated;
 
-        foreach (['hide_from_directory', 'hide_from_slot_proposals'] as $field) {
-            if (array_key_exists($field, $attributes)) {
-                $attributes[$field] = $request->boolean($field);
-            }
-        }
-
         if ($request->boolean('slot_coverage_present')) {
             $attributes['slot_coverage'] = $request->input('slot_coverage', []);
         }
@@ -63,6 +57,24 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit')->with('status', 'Profile updated.');
+    }
+
+    /**
+     * Update the user's privacy preferences.
+     */
+    public function updatePrivacy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'hide_from_directory' => ['nullable', 'boolean'],
+            'hide_from_slot_proposals' => ['nullable', 'boolean'],
+        ]);
+
+        $request->user()->forceFill([
+            'hide_from_directory' => $request->boolean('hide_from_directory'),
+            'hide_from_slot_proposals' => $request->boolean('hide_from_slot_proposals'),
+        ])->save();
+
+        return Redirect::route('profile.edit')->with('status', 'Privacy updated.');
     }
 
     /**

@@ -42,6 +42,7 @@
         'slotId' => $slotModel->id,
         'assignedUserName' => $slotModel->user_id === $currentUserId ? 'You' : $slotModel->assignedPerformerName(),
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,
+        'slotNotes' => $slotModel->notes ?? '',
         'slotIsOpen' => $slotModel->isOpen(),
         'assignmentIsManual' => ! $slotModel->user_id && filled($slotModel->manual_performer_name),
         'initialEditAssignedUserId' => (string) ($slotModel->user_id ?? ''),
@@ -82,7 +83,7 @@
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
 >
     <td class="px-3 py-3 font-medium text-slate-700">
-        <span class="inline-flex items-center gap-2">
+        <div class="inline-flex items-center gap-2">
             <span x-text="slotLabel">{{ $slotOptions[$slotModel->name] ?? $slotModel->name }}</span>
             @if (($slotModel->attachments_count ?? 0) > 0)
                 <button
@@ -96,12 +97,13 @@
                     <span class="sr-only">Slot has attachments</span>
                 </button>
             @endif
-        </span>
+        </div>
+        <p x-show="slotNotes" x-cloak x-text="slotNotes" class="mt-1 text-xs font-normal leading-5 text-slate-500 whitespace-pre-wrap">{{ $slotModel->notes }}</p>
     </td>
     <td class="px-3 py-3">
         <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canEditSlot" />
     </td>
-    <td x-ref="toastAnchor" class="px-3 py-3 text-right">
+    <td x-ref="toastAnchor" class="relative px-3 py-3 text-right">
         <div class="flex items-center justify-end gap-2 md:items-start">
             @if ($canReorderSlots)
                 <div class="inline-flex w-7 flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-slate-500 md:hidden">
@@ -161,6 +163,22 @@
             </template>
         </div>
 
+        <div
+            x-show="actionFeedback"
+            x-cloak
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-100"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="pointer-events-none absolute left-1/2 top-1/2 z-[70] w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 -translate-y-1/2"
+        >
+            <div class="rounded-md border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-medium tracking-wide text-slate-700 shadow-sm shadow-slate-200/70 backdrop-blur-sm">
+                <span x-text="actionFeedback"></span>
+            </div>
+        </div>
+
         <x-sessions.slot-propose-modal
             :set-locked="$setLocked"
             :slot-model="$slotModel"
@@ -184,7 +202,6 @@
 
         <div class="mt-2 hidden flex-wrap justify-start gap-1.5 text-left md:flex">
             <p x-show="actionError" x-text="actionError" class="text-xs text-red-700"></p>
-            <p x-show="actionFeedback" x-text="actionFeedback" class="text-xs text-emerald-700"></p>
             <x-sessions.slot-assignment-pills :slot-model="$slotModel" :set="$set" :set-locked="$setLocked" />
         </div>
     </td>

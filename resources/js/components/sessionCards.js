@@ -16,20 +16,26 @@ function baseDragState() {
     };
 }
 
-function viewportActionMenuStyle(button) {
+function viewportActionMenuStyle(button, menu = null) {
     const buttonRect = button.getBoundingClientRect();
     const viewportPadding = 8;
     const menuWidth = Math.min(288, window.innerWidth - (viewportPadding * 2));
+    const menuHeight = menu ? menu.offsetHeight : 0;
     const spaceRight = window.innerWidth - buttonRect.left;
     const spaceLeft = buttonRect.right;
     const openToLeft = spaceRight < menuWidth && spaceLeft > spaceRight;
     const left = openToLeft
         ? Math.max(viewportPadding, buttonRect.right - menuWidth)
         : Math.min(buttonRect.left, window.innerWidth - menuWidth - viewportPadding);
-    const top = Math.min(
-        window.innerHeight - viewportPadding - 12,
-        Math.max(viewportPadding, buttonRect.bottom + viewportPadding)
-    );
+    const topBelow = buttonRect.bottom + viewportPadding;
+    const topAbove = buttonRect.top - viewportPadding - menuHeight;
+    const canOpenBelow = menuHeight === 0 || (topBelow + menuHeight <= window.innerHeight - viewportPadding);
+    const canOpenAbove = menuHeight > 0 && topAbove >= viewportPadding;
+    const top = canOpenBelow
+        ? Math.max(viewportPadding, topBelow)
+        : canOpenAbove
+            ? topAbove
+            : Math.max(viewportPadding, window.innerHeight - viewportPadding - menuHeight);
 
     return `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; max-height: calc(100vh - ${viewportPadding * 2}px); overflow-y: auto;`;
 }
@@ -599,13 +605,17 @@ export function sessionSetCard(config) {
             }
         },
         positionActionMenu() {
-            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
+            this.$nextTick(() => {
+                this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton, this.$refs.actionMenu);
+            });
         },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
             if (shouldOpen) {
+                this.openActionMenu = true;
                 this.positionActionMenu();
+                return;
             }
 
             this.openActionMenu = shouldOpen;
@@ -1761,13 +1771,17 @@ export function sessionSongCard(config) {
             }
         },
         positionActionMenu() {
-            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
+            this.$nextTick(() => {
+                this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton, this.$refs.actionMenu);
+            });
         },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
             if (shouldOpen) {
+                this.openActionMenu = true;
                 this.positionActionMenu();
+                return;
             }
 
             this.openActionMenu = shouldOpen;
@@ -2086,6 +2100,7 @@ export function sessionSongCard(config) {
         async persistSlotOrder() {
             this.busyAction = true;
             this.actionError = '';
+            this.clearActionFeedback();
 
             const slotIds = Array.from(this.$refs.slotsContainer.querySelectorAll('[data-slot-id]'))
                 .map((el) => Number(el.dataset.slotId));
@@ -2106,7 +2121,7 @@ export function sessionSongCard(config) {
                     throw new Error('Reorder failed');
                 }
 
-                this.actionFeedback = 'Slot order saved.';
+                this.showActionFeedback('Slot order saved.');
             } catch (e) {
                 this.actionError = 'Could not save slot order. Refresh and try again.';
             } finally {
@@ -2116,6 +2131,7 @@ export function sessionSongCard(config) {
         async submitAddSlot(event) {
             this.busyAction = true;
             this.actionError = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.slotsStoreUrl, {
@@ -2215,6 +2231,7 @@ export function sessionSlotRow(config) {
         actionMenuStyle: '',
         assignedUserName: config.assignedUserName,
         slotLabel: config.slotLabel,
+        slotNotes: config.slotNotes || '',
         slotIsOpen: config.slotIsOpen,
         assignmentIsManual: config.assignmentIsManual,
         initialEditAssignedUserId: config.initialEditAssignedUserId,
@@ -2230,6 +2247,7 @@ export function sessionSlotRow(config) {
         busyAction: false,
         actionError: '',
         actionFeedback: '',
+        actionFeedbackTimer: null,
         assignmentConflictMessage: '',
         assignmentConflictPending: false,
         assignmentConflictCooldown: false,
@@ -2258,6 +2276,27 @@ export function sessionSlotRow(config) {
         showEditUserSuggestions: false,
         showProposalUserSuggestions: false,
         proposeMessage: '',
+        clearActionFeedback() {
+            clearTimeout(this.actionFeedbackTimer);
+            this.actionFeedbackTimer = null;
+            this.actionFeedback = '';
+        },
+        showActionFeedback(message, duration = 2500) {
+            if (!message) {
+                this.clearActionFeedback();
+                return;
+            }
+
+            this.actionFeedback = message;
+            clearTimeout(this.actionFeedbackTimer);
+            this.actionFeedbackTimer = setTimeout(() => {
+                if (this.actionFeedback === message) {
+                    this.actionFeedback = '';
+                }
+
+                this.actionFeedbackTimer = null;
+            }, duration);
+        },
         syncMobileSlotOrder() {
             const slotRows = Array.from(this.$el.parentElement?.querySelectorAll('[data-slot-id]') ?? []);
             const slotIndex = slotRows.indexOf(this.$el);
@@ -2355,6 +2394,7 @@ export function sessionSlotRow(config) {
             }
 
             this.slotLabel = slot.label;
+            this.slotNotes = slot.notes || '';
             this.slotIsOpen = slot.is_open;
             this.assignmentIsManual = !slot.user_id && Boolean(slot.manual_performer_name);
             this.assignedToCurrentUser = Number(slot.user_id) === Number(this.currentUserId);
@@ -2418,13 +2458,17 @@ export function sessionSlotRow(config) {
             }
         },
         positionActionMenu() {
-            this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);
+            this.$nextTick(() => {
+                this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton, this.$refs.actionMenu);
+            });
         },
         toggleActionMenu() {
             const shouldOpen = !this.openActionMenu;
             window.dispatchEvent(new CustomEvent('close-session-action-menus'));
             if (shouldOpen) {
+                this.openActionMenu = true;
                 this.positionActionMenu();
+                return;
             }
 
             this.openActionMenu = shouldOpen;
@@ -2451,7 +2495,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.requestSlotUrl, {
@@ -2469,7 +2513,7 @@ export function sessionSlotRow(config) {
                     throw new Error('Request failed');
                 }
 
-                this.actionFeedback = 'Request sent.';
+                this.showActionFeedback('Request sent.');
                 this.hasPendingOwnRequest = true;
             } catch (e) {
                 this.actionError = 'Could not send request. Try again.';
@@ -2484,7 +2528,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.takeSlotUrl, {
@@ -2509,7 +2553,7 @@ export function sessionSlotRow(config) {
 
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
-                this.actionFeedback = payload.message || 'Slot assigned to you.';
+                this.showActionFeedback(payload.message || 'Slot assigned to you.');
             } catch (e) {
                 this.actionError = e.message || 'Could not take slot. Try again.';
             } finally {
@@ -2528,7 +2572,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.proposeSlotUrl, {
@@ -2549,7 +2593,7 @@ export function sessionSlotRow(config) {
                     throw new Error('Request failed');
                 }
 
-                this.actionFeedback = 'Recommendation sent.';
+                this.showActionFeedback('Recommendation sent.');
                 this.openPropose = false;
                 this.proposeMessage = '';
             } catch (e) {
@@ -2565,7 +2609,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.releaseSlotUrl, {
@@ -2585,7 +2629,7 @@ export function sessionSlotRow(config) {
 
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
-                this.actionFeedback = payload.message || 'Slot released.';
+                this.showActionFeedback(payload.message || 'Slot released.');
             } catch (e) {
                 this.actionError = 'Could not release slot. Try again.';
             } finally {
@@ -2603,7 +2647,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.updateSlotUrl, {
@@ -2630,7 +2674,7 @@ export function sessionSlotRow(config) {
                 this.openEditSlot = false;
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
-                this.actionFeedback = payload.message || 'Slot cleared.';
+                this.showActionFeedback(payload.message || 'Slot cleared.');
             } catch (e) {
                 this.actionError = 'Could not clear slot. Try again.';
             } finally {
@@ -2639,12 +2683,7 @@ export function sessionSlotRow(config) {
         },
         async copySlotDirectLink() {
             await window.copyShareLink(config.slotDirectUrl);
-            this.actionFeedback = 'Direct link copied.';
-            setTimeout(() => {
-                if (this.actionFeedback === 'Direct link copied.') {
-                    this.actionFeedback = '';
-                }
-            }, 1800);
+            this.showActionFeedback('Direct link copied.', 1800);
         },
         async openAttachmentsModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
@@ -2800,7 +2839,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const assignment = this.resolveEditedSlotAssignment();
@@ -2838,7 +2877,7 @@ export function sessionSlotRow(config) {
                 this.openEditSlot = false;
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
-                this.actionFeedback = payload.message || 'Slot updated.';
+                this.showActionFeedback(payload.message || 'Slot updated.');
             } catch (e) {
                 this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {
@@ -2857,7 +2896,7 @@ export function sessionSlotRow(config) {
 
             this.busyAction = true;
             this.actionError = '';
-            this.actionFeedback = '';
+            this.clearActionFeedback();
 
             try {
                 const response = await fetch(config.destroySlotUrl, {
