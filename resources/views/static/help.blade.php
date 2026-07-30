@@ -34,7 +34,7 @@
                         </div>
                         <div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <x-live-status-icon size="h-5 w-5" class="mt-0.5 shrink-0" title="Jam session is live" />
-                            <p><span class="font-semibold text-slate-900">Live session.</span> The jam is in motion and organisers are using the live dashboard.</p>
+                            <p><span class="font-semibold text-slate-900">Live session.</span> The jam is in motion and organisers are tracking the jam using the live dashboard.</p>
                         </div>
                         <div class="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <x-heroicon-m-lock-closed class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />
@@ -50,13 +50,10 @@
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Find a Slot</h3>
                     <p>
-                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Find a Slot</span> to browse open parts across upcoming visible sessions. The list is grouped by session and set, with coverage matches shown first inside each group.
+                        Use the <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Find a Slot</span> page to browse open parts across upcoming sessions. The list is grouped by session and set. Use the Slot Coverage controls in your User Profile to influence what slots you see in the Slot Finder.
                     </p>
                     <p>
-                        Sessions and sets can be collapsed if you want to keep the list compact. Open a session or set from the card header, then take or request a slot from the song row when you are ready.
-                    </p>
-                    <p>
-                        If you are already playing a song, that song will not appear in the finder for you.
+                        Click or tap a slot to take it or request it, depending on how the set owner is managing that set. If you're already playing a part on a song, it will not be shown.
                     </p>
                 </div>
 
@@ -66,7 +63,7 @@
                         If a session is open, use <span class="inline-flex rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-sm">Create Set</span> to bring your own mini set to the jam. Give it a clear name so other players can recognise it quickly, and add a short note if there is a style, theme, or special plan people should know about.
                     </p>
                     <p>
-                        When you create a set, you become the person looking after it. Open the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu to add songs, tidy the running order, choose who plays each part, and respond when other players ask to join in.
+                        When you create a set, you become the person looking after it. Open the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu to add songs or edit the set details. You can also invite other players to help manage the set with you.
                     </p>
                 </div>
 
@@ -76,7 +73,7 @@
                         From the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu, choose <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>. Enter the song title and artist, then choose a band template before saving. The band template gives the song a sensible starting lineup, such as vocals, lead guitar, rhythm guitar, bass, drums, keys, or whatever setup your group uses.
                     </p>
                     <p>
-                        Choose the template that feels closest to the version you want to play. You can still use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-pencil-square class="h-3.5 w-3.5" aria-hidden="true" /> Edit slot</span> afterwards if your arrangement needs extra vocals, fewer guitars, a keys part, or something more unusual.
+                        Choose the template that feels closest to the version you want to play. You can add more slots later, including another band template via <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-pencil-square class="h-3.5 w-3.5" aria-hidden="true" /> Edit slot</span>. Any duplicate slots won't get overwritten.
                     </p>
                 </div>
 
@@ -138,9 +135,33 @@
                     <p>
                         Use the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-share class="h-3.5 w-3.5" aria-hidden="true" /> Copy share link</span> control for sessions and sets when you want someone to see the plan without signing in. Shared pages are read-only, so they are handy for previews, reminders, and posting the running order elsewhere.
                     </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Push Notifications</h3>
                     <p>
-                        If organisers are running the live dashboard, admins can open <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Who's Here</span> from the management dashboard to mark people in and out on the night. As a player, the main thing to know is that the session page will show the <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-live-status-icon size="h-3.5 w-3.5" title="Jam session is live" /> Live session</span> icon when the jam is live.
+                        Backstage can send browser push notifications when your browser and device allow them. Support is somewhat patchy however, your mileage may vary!
                     </p>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p class="font-semibold text-slate-900">Desktop</p>
+                            <p class="mt-1 text-sm text-slate-700">
+                                Most desktop browsers support Push Notifications. Go to your User Profile and click the <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Enable Push Notifications</span> to receive a prompt from your browser. Allow the prompt to receive notifications. If you previously denied them, update the site notification permission in your browser settings.
+                            </p>
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p class="font-semibold text-slate-900">iOS</p>
+                            <p class="mt-1 text-sm text-slate-700">
+                                Open Backstage in Safari on iPhone or iPad, choose Share and find the option for Add to Home Screen. Open Backstage from the home screen, then allow notifications using the <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Enable Push Notifications</span> button in your User Profile.
+                            </p>
+                        </div>
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                            <p class="font-semibold text-slate-900">Android</p>
+                            <p class="mt-1 text-sm text-slate-700">
+                                Open Backstage in Chrome on Android, navigate to your User Profile, and use the <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Enable Push Notifications</span> button.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

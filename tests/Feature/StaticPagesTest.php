@@ -44,6 +44,10 @@ test('help page is only available to authenticated users', function () {
 
     $this->actingAs(User::factory()->create())->get(route('help'))
         ->assertOk()
+        ->assertSee('Push Notifications')
+        ->assertSee('Desktop')
+        ->assertSee('iOS')
+        ->assertSee('Android')
         ->assertSee('Adding Songs')
         ->assertSee('band template')
         ->assertSee('Find a Slot')
