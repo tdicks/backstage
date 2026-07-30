@@ -83,12 +83,12 @@ test('authenticated users see their next jam session slots on the dashboard', fu
         ->assertSee(route('dashboard'))
         ->assertSee('Friday Jam')
         ->assertSee('Opening Set')
-        ->assertSee('The Band - Opening Song')
+        ->assertSee('Guitar on The Band - Opening Song')
         ->assertSee(route('sessions.show', $earlierSession).'#set-'.$featuredSet->id);
 
     expect($response->getContent())
-        ->toContain('<h3 class="mt-2 text-3xl font-semibold text-white">Friday Jam</h3>')
-        ->not->toContain('<h3 class="mt-2 text-3xl font-semibold text-white">Saturday Jam</h3>');
+        ->toContain('<h3 data-next-session-name class="mt-2 text-3xl font-semibold text-slate-900">Friday Jam</h3>')
+        ->not->toContain('<h3 data-next-session-name class="mt-2 text-3xl font-semibold text-slate-900">Saturday Jam</h3>');
 });
 
 test('authenticated users without upcoming slots see the empty dashboard state', function () {
@@ -99,4 +99,17 @@ test('authenticated users without upcoming slots see the empty dashboard state',
         ->assertOk()
         ->assertSee('No upcoming slots yet')
         ->assertSee(route('sessions.index'));
+});
+
+test('dashboard shows quick links', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Quick links')
+        ->assertSee(route('sessions.index'))
+        ->assertSee(route('my-sets.index'))
+        ->assertSee(route('directory.index'))
+        ->assertSee(route('profile.edit'));
 });

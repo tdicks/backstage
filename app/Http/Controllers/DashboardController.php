@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JamSession;
 use App\Models\Set;
+use App\Models\Slot;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -29,7 +30,16 @@ class DashboardController extends Controller
                 ->where('jam_session_id', $nextSession->id)
                 ->where('performed', false)
                 ->whereHas('songs.slots', fn ($slotQuery) => $slotQuery->where('user_id', $user->id))
-                ->with(['songs' => fn ($query) => $query->whereHas('slots', fn ($slotQuery) => $slotQuery->where('user_id', $user->id))])
+                ->with([
+                    'songs' => fn ($query) => $query
+                        ->whereHas('slots', fn ($slotQuery) => $slotQuery->where('user_id', $user->id))
+                        ->with([
+                            'slots' => fn ($slotQuery) => $slotQuery
+                                ->where('user_id', $user->id)
+                                ->orderBy('position'),
+                        ])
+                        ->orderBy('position'),
+                ])
                 ->orderBy('position')
                 ->get()
             : collect();
@@ -37,6 +47,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'nextSession' => $nextSession,
             'nextSessionSets' => $nextSessionSets,
+            'slotLabels' => Slot::options(),
         ]);
     }
 }
