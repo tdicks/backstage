@@ -15,6 +15,10 @@
                     @php
                         $session = $sessionGroup['session'];
                         $sessionKey = 'backstage:u'.auth()->id().':slot-finder:session:'.$session->id;
+                        $hiddenCardClass = 'border-sky-400 bg-white/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]';
+                        $sessionCardClass = $session->is_hidden
+                            ? $hiddenCardClass
+                            : 'border-slate-200 bg-slate-50/95 shadow-sm';
                     @endphp
                     <article
                         x-data="{
@@ -26,7 +30,7 @@
                         }"
                         x-init="collapsed = localStorage.getItem(sessionKey) === '1'"
                         x-effect="localStorage.setItem(sessionKey, collapsed ? '1' : '0')"
-                        class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6"
+                        class="rounded-xl border {{ $sessionCardClass }} p-5 sm:p-6"
                     >
                         <div
                             class="flex cursor-pointer items-start justify-between gap-4"
@@ -43,6 +47,12 @@
                                         <x-heroicon-m-chevron-up x-show="!collapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
                                         <x-heroicon-m-chevron-down x-show="collapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
                                     </span>
+                                    @if ($session->is_hidden)
+                                        <span class="inline-flex shrink-0 items-center" title="Jam session is hidden from non-admin users">
+                                            <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                                            <span class="sr-only">Hidden jam session</span>
+                                        </span>
+                                    @endif
                                 </h3>
                                 <p class="mt-1 text-sm text-slate-600">{{ $session->date->format('l, F j, Y') }}</p>
                             </div>
@@ -62,6 +72,9 @@
                                 @php
                                     $set = $setGroup['set'];
                                     $setKey = 'backstage:u'.auth()->id().':slot-finder:set:'.$set->id;
+                                    $setCardClass = $set->is_hidden
+                                        ? $hiddenCardClass
+                                        : 'border-slate-200 bg-white/95 shadow-sm';
                                 @endphp
                                 <article
                                     x-data="{
@@ -90,7 +103,7 @@
                                     x-show="!removed"
                                     x-bind:class="removing ? 'opacity-0 translate-y-2 scale-[0.98] pointer-events-none' : ''"
                                     x-transition.opacity.duration.200ms
-                                    class="rounded-xl border border-slate-200 bg-white/95 p-4 shadow-sm transition-all duration-300 ease-out"
+                                    class="rounded-xl border {{ $setCardClass }} p-4 transition-all duration-300 ease-out"
                                 >
                                     <div
                                         class="flex cursor-pointer items-start justify-between gap-3"
@@ -110,9 +123,15 @@
                                                     <x-heroicon-m-chevron-down x-show="collapsed" x-cloak class="h-4 w-4" aria-hidden="true" />
                                                 </span>
                                                 @if ($set->free_for_all)
-                                                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-orange-800" title="Free for all mode">
-                                                        <x-heroicon-m-fire class="h-3.5 w-3.5" aria-hidden="true" />
-                                                        Free For All
+                                                    <span class="inline-flex items-center" title="Free for all mode">
+                                                        <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                                                        <span class="sr-only">Free for all mode</span>
+                                                    </span>
+                                                @endif
+                                                @if ($set->is_hidden)
+                                                    <span class="inline-flex shrink-0 items-center" title="Hidden set">
+                                                        <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                                                        <span class="sr-only">Hidden set</span>
                                                     </span>
                                                 @endif
                                             </h4>

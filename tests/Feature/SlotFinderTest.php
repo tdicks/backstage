@@ -177,6 +177,98 @@ test('find a slot page hides slots marked as wont cover', function () {
         ->assertDontSee('Artist - Song');
 });
 
+test('find a slot page shows the free for all icon on free for all sets', function () {
+    $user = User::factory()->create();
+    $session = JamSession::query()->create([
+        'name' => 'Free for All Jam',
+        'date' => now()->addDays(2),
+        'description' => null,
+        'is_closed' => false,
+        'is_hidden' => false,
+        'is_archived' => false,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Free for All Set',
+        'description' => null,
+        'owner_id' => $user->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'free_for_all' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('slot-finder.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('title="Free for all mode"', false)
+        ->assertSee('Free for all mode');
+});
+
+test('find a slot page shows hidden icons for hidden sessions and sets', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $session = JamSession::query()->create([
+        'name' => 'Hidden Jam Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+        'is_closed' => false,
+        'is_hidden' => true,
+        'is_archived' => false,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Hidden Set',
+        'description' => null,
+        'owner_id' => $admin->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'is_hidden' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Hidden Artist',
+        'title' => 'Hidden Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 1,
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('slot-finder.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('Jam session is hidden from non-admin users')
+        ->assertSee('Hidden set')
+        ->assertSee('Hidden jam session')
+        ->assertSee('inset_0_0_8px_rgb(125_211_252_/_0.65)', false)
+        ->assertSee('inset_0_0_20px_rgb(186_230_253_/_0.55)', false);
+});
+
 test('find a slot page appears in navigation for authenticated users', function () {
     $user = User::factory()->create();
 
