@@ -4,6 +4,7 @@
     'users',
     'templates',
     'slotOptions',
+    'jamStandardSongs' => collect(),
     'jamSessionClosed' => false,
 ])
 
@@ -76,6 +77,11 @@
         'songsReorderUrl' => route('songs.reorder', $set),
         'songStoreUrl' => route('songs.store', $set),
         'songRequestStoreUrl' => route('song-requests.store', $set),
+        'jamStandardSongs' => $jamStandardSongs->map(fn ($song) => [
+            'id' => $song->id,
+            'artist' => $song->artist,
+            'title' => $song->title,
+        ])->values()->all(),
         'setSummaryUrl' => route('sets.summary', $set),
         'attachmentsListUrl' => route('sets.attachments.index', $set),
         'attachmentsStoreUrl' => route('sets.attachments.store', $set),
@@ -352,7 +358,7 @@
     </div>
 
     @if ($canRequestSong)
-        <x-sessions.song-request-modal :set="$set" />
+        <x-sessions.song-request-modal :set="$set" :slot-options="$slotOptions" :jam-standard-songs="$jamStandardSongs" />
     @endif
 
     <p x-show="contentLoadError" x-text="contentLoadError" class="mt-4 text-sm text-rose-700" x-cloak></p>

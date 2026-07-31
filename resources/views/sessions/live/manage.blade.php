@@ -1,6 +1,117 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{ liveDisplayModalOpen: false }" @keydown.escape.window="liveDisplayModalOpen = false">
+        <div class="flex flex-wrap items-center justify-between gap-4" x-data="{
+            liveDisplayModalOpen: false,
+            liveQuickSetOpen: false,
+            liveQuickSetStep: 1,
+            selectedLiveSongIds: [],
+            liveQuickSetAssignments: {},
+            slotLabels: @js($slotOptions),
+            slotConflicts: @js($slotConflicts),
+            liveManagerId: @js($session->jam_manager_id),
+            liveQuickSetSongs: [],
+            liveQuickSetAttendees: [],
+            liveQuickSetLoading: false,
+            liveQuickSetSubmitting: false,
+            liveQuickSetError: '',
+            liveQuickSetPollTimer: null,
+            async refreshLiveQuickSetData() {
+                this.liveQuickSetLoading = true;
+                try {
+                    const response = await fetch(@js(route('sessions.live.quick-set-data', $session)), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (!response.ok) { return; }
+                    const payload = await response.json();
+                    this.liveQuickSetSongs = payload.songs || [];
+                    this.liveQuickSetAttendees = payload.attendees || [];
+                } finally {
+                    this.liveQuickSetLoading = false;
+                }
+            },
+            openLiveQuickSet() {
+                this.selectedLiveSongIds = [];
+                this.liveQuickSetAssignments = {};
+                this.liveQuickSetStep = 1;
+                this.liveQuickSetError = '';
+                this.refreshLiveQuickSetData();
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'live-quick-set' }));
+            },
+            async submitLiveQuickSet(form) {
+                this.liveQuickSetSubmitting = true;
+                this.liveQuickSetError = '';
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new FormData(form),
+                    });
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        this.liveQuickSetError = Object.values(payload.errors || {}).flat()[0]
+                            || payload.message
+                            || 'Could not create the live quick set.';
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('close-modal', { detail: 'live-quick-set' }));
+                } catch (error) {
+                    this.liveQuickSetError = 'Could not create the live quick set.';
+                } finally {
+                    this.liveQuickSetSubmitting = false;
+                }
+            },
+            isExcludedFromSlot(user, slotName) { return user.slot_coverage?.[slotName] === 'wont_cover'; },
+            suggestedUsers(song, slotName) {
+                const capableIds = song.capable_user_ids?.[slotName] || [];
+                return this.liveQuickSetAttendees.filter(user => capableIds.includes(user.id) && !this.isExcludedFromSlot(user, slotName));
+            },
+            otherCheckedInUsers(song, slotName) {
+                const capableIds = song.capable_user_ids?.[slotName] || [];
+                return this.liveQuickSetAttendees.filter(user => !capableIds.includes(user.id) && !this.isExcludedFromSlot(user, slotName));
+            },
+            toggleLiveSong(songId, selected) {
+                this.selectedLiveSongIds = selected
+                    ? [...new Set([...this.selectedLiveSongIds, songId])]
+                    : this.selectedLiveSongIds.filter(id => id !== songId);
+            },
+            isLiveQuickSetAssignmentDisabled(songId, slotName, userId) {
+                if (!userId) { return false; }
+                const assignments = this.liveQuickSetAssignments[songId] || {};
+
+                return Object.entries(assignments).some(([assignedSlotName, assignedUserId]) => {
+                    return assignedSlotName !== slotName
+                        && String(assignedUserId) === String(userId)
+                        && (this.slotConflicts[slotName] || []).includes(assignedSlotName);
+                });
+            },
+            topSuggestedUsers(song, slotName) {
+                return this.suggestedUsers(song, slotName)
+                    .filter(user => !this.isLiveQuickSetAssignmentDisabled(song.id, slotName, user.id))
+                    .slice(0, 3);
+            },
+            setLiveQuickSetAssignment(songId, slotName, userId) {
+                this.liveQuickSetAssignments = {
+                    ...this.liveQuickSetAssignments,
+                    [songId]: {
+                        ...(this.liveQuickSetAssignments[songId] || {}),
+                        [slotName]: userId,
+                    },
+                };
+            },
+            isLiveQuickSetAssignmentSelected(songId, slotName, userId) {
+                return String(this.liveQuickSetAssignments[songId]?.[slotName] || '') === String(userId);
+            },
+            isLiveQuickSetSongFullyAssigned(song) {
+                return song.slots.every(slot => Boolean(this.liveQuickSetAssignments[song.id]?.[slot.name]));
+            },
+            slotLabel(slotName) { return this.slotLabels[slotName] || slotName.replaceAll('_', ' '); },
+            init() { this.refreshLiveQuickSetData(); this.liveQuickSetPollTimer = setInterval(() => this.refreshLiveQuickSetData(), 5000); },
+            destroy() { clearInterval(this.liveQuickSetPollTimer); },
+        }" @jam-manager-updated.window="liveManagerId = $event.detail" @open-live-quick-set.window="openLiveQuickSet()" @keydown.escape.window="liveDisplayModalOpen = false">
             <div>
                 <h2 class="text-xl font-semibold text-slate-100">Live Control</h2>
                 <p class="text-sm text-slate-400">{{ $session->name }} &middot; {{ $session->date->format('l, F j, Y') }}</p>
@@ -33,8 +144,8 @@
                 </button>
             </div>
             <template x-teleport="body">
-                <div x-show="liveDisplayModalOpen" x-cloak @keydown.escape.window="liveDisplayModalOpen = false">
-                    <div data-modal-overlay class="fixed inset-0 z-40 bg-black/50" @click="liveDisplayModalOpen = false"></div>
+                <div x-show="liveDisplayModalOpen" x-cloak data-modal-overlay @keydown.escape.window="liveDisplayModalOpen = false">
+                    <div class="fixed inset-0 z-40 bg-black/50" @click="liveDisplayModalOpen = false"></div>
                     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div @click.stop class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-900 shadow-2xl">
                             <h3 class="text-lg font-semibold">Live Display</h3>
@@ -55,6 +166,69 @@
                         </div>
                     </div>
                 </div>
+            </template>
+            <template x-teleport="body">
+                <x-modal name="live-quick-set" maxWidth="2xl" focusable>
+                    <div class="flex max-h-[calc(100vh-3rem)] flex-col text-slate-900">
+                        <div class="min-h-0 flex-1 overflow-y-auto p-6">
+                            <div class="flex items-start justify-between gap-4">
+                                <div><h3 class="text-lg font-semibold">Live Quick Set</h3><p class="mt-1 text-sm text-slate-600" x-text="liveQuickSetStep === 1 ? 'Songs with checked-in performers appear first.' : 'Leave a part open, choose a suggested performer, or select another attendee.'"></p></div>
+                                <button type="button" @click="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'live-quick-set' }))" class="text-slate-500 hover:text-slate-800" aria-label="Close live quick set"><x-heroicon-m-x-mark class="h-5 w-5" /></button>
+                            </div>
+                            <form method="POST" action="{{ route('jam-standards.live-quick-set.store') }}" class="mt-5" @submit.prevent="submitLiveQuickSet($event.target)">
+                                @csrf
+                                <input type="hidden" name="jam_session_id" value="{{ $session->id }}">
+                                <input type="hidden" name="set_name" value="Live Quick Set">
+                                <div x-show="liveQuickSetStep === 1" class="max-h-[60vh] space-y-2 overflow-y-auto">
+                                    <template x-for="song in liveQuickSetSongs" :key="song.id">
+                                        <label :class="selectedLiveSongIds.includes(song.id) ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 text-slate-800 hover:border-emerald-300 hover:bg-emerald-50'" class="flex cursor-pointer items-start gap-3 border p-3 text-sm transition">
+                                            <input type="checkbox" name="catalog_song_ids[]" :value="song.id" @change="toggleLiveSong(song.id, $event.target.checked)" class="mt-0.5 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                            <span><span class="font-semibold" x-text="`${song.artist} - ${song.title}`"></span><span class="mt-1 block text-xs text-slate-500" x-text="`${song.capability_match_count} checked-in capability match${song.capability_match_count === 1 ? '' : 'es'}`"></span></span>
+                                        </label>
+                                    </template>
+                                </div>
+                                <div x-show="liveQuickSetStep === 2" x-cloak class="max-h-[60vh] space-y-4 overflow-y-auto">
+                                    <template x-for="song in liveQuickSetSongs" :key="song.id">
+                                        <div x-show="selectedLiveSongIds.includes(song.id)" :class="isLiveQuickSetSongFullyAssigned(song) ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-slate-50'" class="border p-3">
+                                            <p class="font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></p>
+                                            <div class="mt-2 divide-y divide-slate-200">
+                                            <template x-for="slot in song.slots" :key="slot.name">
+                                                <div class="py-2 first:pt-0 last:pb-0">
+                                                    <input type="hidden" :name="`live_song_assignments[${song.id}][${slot.name}]`" :value="liveQuickSetAssignments[song.id]?.[slot.name] || ''">
+                                                    <p class="text-sm font-semibold text-slate-900" x-text="slotLabel(slot.name)"></p>
+                                                    <div class="mt-1.5 flex items-center gap-2">
+                                                        <span class="w-20 shrink-0 text-xs font-medium text-slate-500">Open</span>
+                                                        <button type="button" @click="setLiveQuickSetAssignment(song.id, slot.name, '')" :class="isLiveQuickSetAssignmentSelected(song.id, slot.name, '') ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800'" class="inline-flex h-7 w-32 items-center justify-center rounded-full border px-2 text-xs font-medium transition">Leave unassigned</button>
+                                                    </div>
+                                                    <div class="mt-1.5 flex items-start gap-2">
+                                                        <span class="w-20 shrink-0 pt-1 text-xs font-medium text-slate-500">Suggested</span>
+                                                        <div class="flex min-w-0 flex-wrap gap-1.5">
+                                                        <template x-for="user in topSuggestedUsers(song, slot.name)" :key="user.id">
+                                                            <button type="button" @click="setLiveQuickSetAssignment(song.id, slot.name, user.id)" :class="isLiveQuickSetAssignmentSelected(song.id, slot.name, user.id) ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800'" class="inline-flex h-7 w-32 items-center justify-center truncate rounded-full border px-2 text-xs font-medium transition" x-bind:title="user.name" x-text="user.name"></button>
+                                                        </template>
+                                                        <p x-show="topSuggestedUsers(song, slot.name).length === 0" class="py-1 text-sm text-slate-500">No suggested performer</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-1.5 flex items-center gap-2">
+                                                        <span class="w-20 shrink-0 text-xs font-medium text-slate-500">Attendee</span>
+                                                        <div x-show="otherCheckedInUsers(song, slot.name).length" class="min-w-0 flex-1 sm:max-w-64">
+                                                        <label class="sr-only" x-bind:for="`live-slot-${song.id}-${slot.name}`" x-text="`Assign another attendee to ${slotLabel(slot.name)}`"></label>
+                                                        <select :id="`live-slot-${song.id}-${slot.name}`" :value="liveQuickSetAssignments[song.id]?.[slot.name] || ''" @change="setLiveQuickSetAssignment(song.id, slot.name, $event.target.value)" :class="otherCheckedInUsers(song, slot.name).some(user => isLiveQuickSetAssignmentSelected(song.id, slot.name, user.id)) ? 'border-emerald-200 bg-emerald-50 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-200' : 'border-slate-200 bg-white text-slate-700 focus:border-emerald-500 focus:ring-emerald-200'" class="block h-7 w-full rounded-full px-3 py-0 text-xs font-medium"><option value="">Other attendee</option><template x-for="user in otherCheckedInUsers(song, slot.name)" :key="user.id"><option :value="user.id" :disabled="isLiveQuickSetAssignmentDisabled(song.id, slot.name, user.id)" x-text="user.name"></option></template></select>
+                                                        </div>
+                                                        <p x-show="otherCheckedInUsers(song, slot.name).length === 0" class="text-sm text-slate-500">No other attendees</p>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <p x-show="liveQuickSetError" x-text="liveQuickSetError" x-cloak class="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+                                <div class="mt-5 flex justify-between gap-3"><x-modal-secondary-button type="button" x-show="liveQuickSetStep === 2" @click="liveQuickSetStep = 1">Back</x-modal-secondary-button><span></span><x-modal-primary-button type="button" x-show="liveQuickSetStep === 1" @click="if (selectedLiveSongIds.length) liveQuickSetStep = 2">Next</x-modal-primary-button><x-modal-primary-button x-show="liveQuickSetStep === 2" x-bind:disabled="liveQuickSetSubmitting" class="disabled:cursor-not-allowed disabled:opacity-40" x-text="liveQuickSetSubmitting ? 'Creating...' : 'Create Set'"></x-modal-primary-button></div>
+                            </form>
+                        </div>
+                    </div>
+                </x-modal>
             </template>
         </div>
     </x-slot>
@@ -117,6 +291,16 @@
                         >
                             <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
                             <span class="hidden sm:inline">Reset</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="window.dispatchEvent(new CustomEvent('open-live-quick-set'))"
+                            class="inline-flex items-center gap-1.5 rounded-md border border-amber-700 bg-amber-950/60 px-2 py-2 text-sm font-medium text-amber-300 transition hover:border-amber-600 hover:bg-amber-900/70 sm:px-3"
+                            title="Quick Set"
+                            aria-label="Quick Set"
+                        >
+                            <x-heroicon-m-bolt class="h-4 w-4" aria-hidden="true" />
+                            <span class="hidden sm:inline">Quick Set</span>
                         </button>
                         <button
                             type="button"
@@ -675,6 +859,7 @@
             applyJamManager(payload) {
                 this.jamManagerId = payload?.id ?? null;
                 this.jamManagerName = payload?.name ?? '';
+                window.dispatchEvent(new CustomEvent('jam-manager-updated', { detail: this.jamManagerId }));
             },
 
             normalizeServerSet(serverSet) {

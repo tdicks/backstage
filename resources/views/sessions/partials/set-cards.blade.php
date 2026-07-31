@@ -6,6 +6,7 @@
             :users="$users"
             :templates="$templates"
             :slot-options="$slotOptions"
+            :jam-standard-songs="$jamStandardSongs"
             :jam-session-closed="$session->is_closed"
         />
     @empty

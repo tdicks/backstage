@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamSession;
+use App\Models\JamStandardSong;
 use App\Models\Slot;
+use App\Models\SlotType;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +38,14 @@ class LiveJamController extends Controller
             ->get();
 
         $liveState = $this->getLiveState($jamSession->id);
+        $checkedInUserIds = $jamSession->signIns()->whereNotNull('signed_in_at')->pluck('user_id');
+        $checkedInUsers = User::query()->whereIn('id', $checkedInUserIds)->orderBy('name')->get(['id', 'name']);
+        $liveCatalogSongs = JamStandardSong::query()
+            ->active()
+            ->with(['slots', 'userSlots' => fn ($query) => $query->whereIn('user_id', $checkedInUserIds)])
+            ->get()
+            ->sortByDesc(fn (JamStandardSong $song) => $song->userSlots->count())
+            ->values();
 
         return view('sessions.live.manage', [
             'session' => $jamSession,
@@ -45,7 +55,31 @@ class LiveJamController extends Controller
             'assignmentUsers' => User::query()->orderBy('name')->get(['id', 'name']),
             'currentUserId' => $request->user()->id,
             'jamManager' => $jamSession->jamManager,
+            'checkedInUsers' => $checkedInUsers,
+            'liveCatalogSongs' => $liveCatalogSongs,
+            'slotConflicts' => $this->slotConflicts(),
         ]);
+    }
+
+    /** @return array<string, list<string>> */
+    private function slotConflicts(): array
+    {
+        return collect(SlotType::query()
+            ->with('conflicts:key')
+            ->where('active', true)
+            ->get(['id', 'key'])
+            ->reduce(function (array $conflicts, SlotType $slotType): array {
+                $conflicts[$slotType->key] ??= [];
+
+                foreach ($slotType->conflicts->pluck('key') as $conflictingKey) {
+                    $conflicts[$slotType->key][] = $conflictingKey;
+                    $conflicts[$conflictingKey][] = $slotType->key;
+                }
+
+                return $conflicts;
+            }, []))
+            ->map(fn (array $conflictingKeys) => collect($conflictingKeys)->unique()->values()->all())
+            ->all();
     }
 
     /**
@@ -240,6 +274,44 @@ class LiveJamController extends Controller
             'jam_finished' => $jamFinished,
             'updated_at' => $liveState['updated_at'] ?? null,
             'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
+        ]);
+    }
+
+    public function quickSetData(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        $checkedInUsers = $jamSession->signIns()
+            ->whereNotNull('signed_in_at')
+            ->with('user:id,name,slot_coverage')
+            ->orderBy('signed_in_at')
+            ->get()
+            ->map(fn ($signIn) => $signIn->user)
+            ->filter()
+            ->values();
+        $checkedInUserIds = $checkedInUsers->pluck('id');
+        $songs = JamStandardSong::query()
+            ->active()
+            ->with(['slots', 'userSlots' => fn ($query) => $query->whereIn('user_id', $checkedInUserIds)])
+            ->get()
+            ->sortByDesc(fn (JamStandardSong $song) => $song->userSlots->count())
+            ->values()
+            ->map(fn (JamStandardSong $song) => [
+                'id' => $song->id,
+                'artist' => $song->artist,
+                'title' => $song->title,
+                'slots' => $song->slots->map(fn ($slot) => ['name' => $slot->name])->values(),
+                'capable_user_ids' => $song->userSlots->groupBy('slot_name')->map(fn ($slots) => $slots->pluck('user_id')->values())->all(),
+                'capability_match_count' => $song->userSlots->count(),
+            ]);
+
+        return response()->json([
+            'songs' => $songs,
+            'attendees' => $checkedInUsers->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'slot_coverage' => $user->slotCoverageMap(),
+            ])->values(),
         ]);
     }
 

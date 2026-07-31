@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { jamStandardsCatalog } from './components/jamStandardsCatalog';
 import { registerSessionCards } from './components/sessionCards';
 import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder';
 import { lazySessionSets } from './components/lazySessionSets';
@@ -66,6 +67,7 @@ registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
+Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 

@@ -16,6 +16,7 @@ class Song extends Model
         'duration',
         'source',
         'set_id',
+        'jam_standard_song_id',
         'position',
     ];
 
@@ -30,6 +31,11 @@ class Song extends Model
     public function set(): BelongsTo
     {
         return $this->belongsTo(Set::class);
+    }
+
+    public function jamStandardSong(): BelongsTo
+    {
+        return $this->belongsTo(JamStandardSong::class);
     }
 
     public function slots(): HasMany

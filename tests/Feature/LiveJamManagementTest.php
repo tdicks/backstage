@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\JamSession;
+use App\Models\JamSessionSignIn;
+use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +15,76 @@ test('admin can access live jam management dashboard', function () {
     $session = JamSession::create(['name' => 'Live Jam', 'date' => now()->addDay(), 'description' => null, 'is_live' => true]);
 
     $this->actingAs($admin)->get(route('sessions.live.manage', $session))->assertOk()->assertViewIs('sessions.live.manage');
+});
+
+test('live management shows quick set catalog controls with checked-in capability matches', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $performer = User::factory()->create(['name' => 'Checked In Bass']);
+    $session = JamSession::create(['name' => 'Live Catalog Jam', 'date' => now()->addDay(), 'description' => null, 'is_live' => true, 'jam_manager_id' => $admin->id]);
+    JamSessionSignIn::query()->create(['jam_session_id' => $session->id, 'user_id' => $performer->id, 'signed_in_at' => now()]);
+
+    $catalogSong = JamStandardSong::query()->create(['artist' => 'Pixies', 'title' => 'Where Is My Mind?', 'is_active' => true]);
+    $catalogSong->slots()->create(['name' => 'bass', 'position' => 1]);
+    $catalogSong->userSlots()->create(['user_id' => $performer->id, 'slot_name' => 'bass']);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.live.manage', $session))
+        ->assertOk()
+        ->assertSee('Quick Set')
+        ->assertSee('@open-live-quick-set.window="openLiveQuickSet()"', false)
+        ->assertSee("new CustomEvent('open-live-quick-set')", false)
+        ->assertSee('href="'.route('sessions.show', $session).'"', false)
+        ->assertSee('Songs with checked-in performers appear first.')
+        ->assertDontSee('Refreshing checked-in performers...')
+        ->assertSee('refreshLiveQuickSetData()', false)
+        ->assertSee('live-quick-set', false)
+        ->assertSee('x-show="liveDisplayModalOpen" x-cloak data-modal-overlay', false)
+        ->assertSee('isLiveQuickSetAssignmentDisabled', false)
+        ->assertSee('isLiveQuickSetAssignmentSelected', false)
+        ->assertSee('isLiveQuickSetSongFullyAssigned(song)', false)
+        ->assertSee('topSuggestedUsers(song, slot.name)', false)
+        ->assertSee('slotLabel(slot.name)', false)
+        ->assertSee('border-emerald-200 bg-emerald-50', false)
+        ->assertSee('border-emerald-100 bg-emerald-50/50', false)
+        ->assertSee('selectedLiveSongIds.includes(song.id)', false)
+        ->assertSee('cursor-pointer', false)
+        ->assertSee('submitLiveQuickSet($event.target)', false)
+        ->assertDontSee('live_song_slots', false)
+        ->assertSee('Leave unassigned')
+        ->assertSee('Other attendee');
+
+    $this->actingAs($admin)
+        ->getJson(route('sessions.live.quick-set-data', $session))
+        ->assertOk()
+        ->assertJsonPath('songs.0.artist', 'Pixies')
+        ->assertJsonPath('songs.0.capable_user_ids.bass.0', $performer->id)
+        ->assertJsonPath('attendees.0.name', 'Checked In Bass');
+});
+
+test('live quick set data excludes checked-in users who will not cover the slot', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $capable = User::factory()->create(['name' => 'Capable Bass']);
+    $unavailable = User::factory()->create(['name' => 'Unavailable Bass', 'slot_coverage' => ['bass' => User::SLOT_COVERAGE_WONT]]);
+    $session = JamSession::create(['name' => 'Availability Jam', 'date' => now()->addDay(), 'description' => null, 'is_live' => true, 'jam_manager_id' => $admin->id]);
+    JamSessionSignIn::query()->create(['jam_session_id' => $session->id, 'user_id' => $capable->id, 'signed_in_at' => now()->subMinutes(2)]);
+    JamSessionSignIn::query()->create(['jam_session_id' => $session->id, 'user_id' => $unavailable->id, 'signed_in_at' => now()->subMinute()]);
+    $catalogSong = JamStandardSong::query()->create(['artist' => 'Muse', 'title' => 'Hysteria', 'is_active' => true]);
+    $catalogSong->slots()->create(['name' => 'bass', 'position' => 1]);
+    $catalogSong->userSlots()->create(['user_id' => $capable->id, 'slot_name' => 'bass']);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('sessions.live.quick-set-data', $session))
+        ->assertOk()
+        ->assertJsonPath('songs.0.capable_user_ids.bass.0', $capable->id);
+
+    expect(collect($response->json('attendees'))->keyBy('id')->all())
+        ->toHaveKey($capable->id)
+        ->toHaveKey($unavailable->id)
+        ->and($response->json('attendees'))->toContain([
+            'id' => $unavailable->id,
+            'name' => 'Unavailable Bass',
+            'slot_coverage' => ['bass' => User::SLOT_COVERAGE_WONT],
+        ]);
 });
 
 test('non-admin cannot access live jam management dashboard', function () {

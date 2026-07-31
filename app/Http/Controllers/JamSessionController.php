@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BandTemplate;
 use App\Models\JamSession;
+use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
@@ -247,6 +248,11 @@ class JamSessionController extends Controller
                 ->orderByDesc('date')
                 ->get(['id', 'name', 'date']),
             'slotOptions' => Slot::options(),
+            'jamStandardSongs' => JamStandardSong::query()
+                ->active()
+                ->orderBy('artist')
+                ->orderBy('title')
+                ->get(['id', 'artist', 'title']),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()->orderBy('name')->get(),
         ];

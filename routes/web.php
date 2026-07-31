@@ -11,6 +11,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionController;
+use App\Http\Controllers\JamStandardCapabilityController;
+use App\Http\Controllers\JamStandardController;
+use App\Http\Controllers\JamStandardQuickSetController;
+use App\Http\Controllers\JamStandardSongRequestController;
 use App\Http\Controllers\LiveJamController;
 use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\NotificationController;
@@ -66,6 +70,16 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/my-sets/count', [MySetsController::class, 'count'])->name('my-sets.count');
+    Route::get('/jam-standards', [JamStandardController::class, 'index'])->name('jam-standards.index');
+    Route::post('/jam-standards', [JamStandardController::class, 'store'])->name('jam-standards.store');
+    Route::put('/jam-standards/{jamStandardSong}', [JamStandardController::class, 'update'])->name('jam-standards.update');
+    Route::delete('/jam-standards/{jamStandardSong}', [JamStandardController::class, 'destroy'])->name('jam-standards.destroy');
+    Route::get('/jam-standards/{jamStandardSong}/coverage', [JamStandardController::class, 'coverage'])->name('jam-standards.coverage');
+    Route::post('/jam-standards/requests', [JamStandardSongRequestController::class, 'store'])->name('jam-standards.requests.store');
+    Route::patch('/jam-standards/requests/{jamStandardSongRequest}', [JamStandardSongRequestController::class, 'respond'])->name('jam-standards.requests.respond');
+    Route::put('/jam-standards/{jamStandardSong}/capabilities', [JamStandardCapabilityController::class, 'update'])->name('jam-standards.capabilities.update');
+    Route::post('/jam-standards/quick-set', [JamStandardQuickSetController::class, 'storeUser'])->name('jam-standards.quick-set.store');
+    Route::post('/jam-standards/live-quick-set', [JamStandardQuickSetController::class, 'storeLive'])->name('jam-standards.live-quick-set.store');
     Route::get('/directory', UserDirectoryController::class)->name('directory.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {
@@ -111,6 +125,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
 
     Route::get('/sessions/{jamSession}/live', [LiveJamController::class, 'manage'])->name('sessions.live.manage');
+    Route::get('/sessions/{jamSession}/live/quick-set-data', [LiveJamController::class, 'quickSetData'])->name('sessions.live.quick-set-data');
     Route::post('/sessions/{jamSession}/live/manager', [LiveJamController::class, 'claimManager'])->name('sessions.live.manager.claim');
     Route::delete('/sessions/{jamSession}/live/manager', [LiveJamController::class, 'releaseManager'])->name('sessions.live.manager.release');
     Route::post('/sessions/{jamSession}/live/update', [LiveJamController::class, 'update'])->name('sessions.live.update');

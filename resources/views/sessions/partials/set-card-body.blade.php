@@ -67,6 +67,7 @@
     <x-sessions.song-requests-panel
         :set="$set"
         :templates="$templates"
+        :slot-options="$slotOptions"
         :can-manage-set="$canManageSet"
         :is-set-owner="$isSetOwner"
         :set-locked="$setLocked"
