@@ -163,7 +163,8 @@
                         {{ __('Find a Slot') }}
                     </x-nav-link>
                     <x-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
-                        {{ __('Jam Standards') }}
+                        <span>{{ __('Jam Standards') }}</span>
+                        <span class="ms-2 inline-flex items-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none text-slate-950">New</span>
                     </x-nav-link>
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                         {{ __("Who's Who") }}
@@ -353,7 +354,8 @@
                 {{ __('Find a Slot') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
-                {{ __('Jam Standards') }}
+                <span>{{ __('Jam Standards') }}</span>
+                <span class="ms-2 inline-flex items-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none text-slate-950">New</span>
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                 {{ __("Who's Who") }}
