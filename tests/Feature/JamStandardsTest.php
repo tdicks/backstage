@@ -400,7 +400,8 @@ test('users can save song-specific catalog slot capabilities', function () {
     expect(JamStandardUserSlot::query()->where('user_id', $user->id)->pluck('slot_name')->all())->toBe(['bass']);
 
     $this->actingAs($user)
-        ->putJson(route('jam-standards.capabilities.update', $catalogSong), [
+        ->post(route('jam-standards.capabilities.update', $catalogSong), [
+            '_method' => 'PUT',
             'slot_names' => [],
         ])
         ->assertOk()

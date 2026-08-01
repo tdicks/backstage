@@ -358,10 +358,12 @@ export function jamStandardsCatalog(config) {
                 : this.entrySlotNames;
         },
         async updateCapabilities(songId, form) {
+            const formData = new FormData(form);
+            formData.set('_method', 'PUT');
             const response = await fetch(`${config.catalogUrl}/${songId}/capabilities`, {
-                method: 'PUT',
+                method: 'POST',
                 headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': config.csrfToken },
-                body: new FormData(form),
+                body: formData,
             });
             if (!response.ok) {
                 window.alert('Could not save your song capability choices.');
