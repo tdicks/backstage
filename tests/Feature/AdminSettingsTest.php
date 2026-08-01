@@ -1,5 +1,6 @@
 <?php
 
+use App\Mail\AdminTestEmail;
 use App\Models\NotificationPushSubscription;
 use App\Models\Setting;
 use App\Models\SlotType;
@@ -7,6 +8,7 @@ use App\Models\User;
 use App\Services\WebPushService;
 use Database\Seeders\SettingsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
@@ -42,6 +44,7 @@ test('admin can view settings page', function () {
         ->assertSee('New user registered')
         ->assertSee('Admin')
         ->assertSee('Send Test Push Notification')
+        ->assertSee('Send Test Email Notification')
         ->assertSee('Apply to all')
         ->assertSee('Enable Social Logins')
         ->assertSee('enable_social_logins');
@@ -152,4 +155,35 @@ test('non admin cannot trigger a test push notification from settings', function
     $this->actingAs($user)
         ->postJson(route('admin.settings.push-test'))
         ->assertForbidden();
+});
+
+test('admin can trigger a test email from settings', function () {
+    $admin = User::factory()->create([
+        'is_admin' => true,
+        'email' => 'admin@example.test',
+    ]);
+
+    Mail::fake();
+
+    $this->actingAs($admin)
+        ->postJson(route('admin.settings.email-test'))
+        ->assertOk()
+        ->assertJsonPath('message', 'Test email sent to admin@example.test.');
+
+    Mail::assertSent(AdminTestEmail::class, function (AdminTestEmail $mail) use ($admin): bool {
+        return $mail->hasTo($admin->email)
+            && $mail->recipient->is($admin);
+    });
+});
+
+test('non admin cannot trigger a test email from settings', function () {
+    $user = User::factory()->create(['is_admin' => false]);
+
+    Mail::fake();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.settings.email-test'))
+        ->assertForbidden();
+
+    Mail::assertNothingSent();
 });

@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('/settings/{setting}', [SettingController::class, 'update'])->name('settings.update');
         Route::post('/settings/test-push', [SettingController::class, 'sendTestPush'])->name('settings.push-test');
+        Route::post('/settings/test-email', [SettingController::class, 'sendTestEmail'])->name('settings.email-test');
         Route::post('/slot-types', [SlotTypeController::class, 'store'])->name('slot-types.store');
         Route::patch('/slot-types/{slotType}', [SlotTypeController::class, 'update'])->name('slot-types.update');
 

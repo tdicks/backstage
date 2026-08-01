@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AdminTestEmail;
 use App\Models\Setting;
 use App\Models\SlotType;
 use App\Services\WebPushService;
 use App\Support\NotificationSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class SettingController extends Controller
@@ -82,6 +84,25 @@ class SettingController extends Controller
 
         return response()->json([
             'message' => 'Test push sent. If you do not receive it, check browser site permissions for notifications.',
+        ]);
+    }
+
+    public function sendTestEmail(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $user = $request->user();
+
+        if (! $user || ! $user->email) {
+            return response()->json([
+                'message' => 'Your account does not have an email address configured.',
+            ], 422);
+        }
+
+        Mail::to($user)->send(new AdminTestEmail($user));
+
+        return response()->json([
+            'message' => 'Test email sent to '.$user->email.'.',
         ]);
     }
 

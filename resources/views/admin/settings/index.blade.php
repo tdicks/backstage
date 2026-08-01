@@ -73,20 +73,31 @@
 
                             <section class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 shadow-sm">
                 <div class="border-b border-slate-200 px-6 py-4">
-                                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between" x-data="{ busy: false, message: '', error: '', timer: null, async sendTestPush() { this.busy = true; this.message = ''; this.error = ''; clearTimeout(this.timer); try { const response = await fetch(@js(route('admin.settings.push-test')), { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': @js(csrf_token()) } }); const payload = await response.json(); if (!response.ok) { this.error = payload.message || 'Could not send test push.'; return; } this.message = payload.message || 'Test push sent.'; this.timer = setTimeout(() => this.message = '', 4000); } catch (e) { this.error = 'Could not send test push.'; } finally { this.busy = false; } } }">
+                                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between" x-data="{ busyAction: null, message: '', error: '', timer: null, async sendTestPush() { this.busyAction = 'push'; this.message = ''; this.error = ''; clearTimeout(this.timer); try { const response = await fetch(@js(route('admin.settings.push-test')), { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': @js(csrf_token()) } }); const payload = await response.json(); if (!response.ok) { this.error = payload.message || 'Could not send test push.'; return; } this.message = payload.message || 'Test push sent.'; this.timer = setTimeout(() => this.message = '', 4000); } catch (e) { this.error = 'Could not send test push.'; } finally { this.busyAction = null; } }, async sendTestEmail() { this.busyAction = 'email'; this.message = ''; this.error = ''; clearTimeout(this.timer); try { const response = await fetch(@js(route('admin.settings.email-test')), { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': @js(csrf_token()) } }); const payload = await response.json(); if (!response.ok) { this.error = payload.message || 'Could not send test email.'; return; } this.message = payload.message || 'Test email sent.'; this.timer = setTimeout(() => this.message = '', 4000); } catch (e) { this.error = 'Could not send test email.'; } finally { this.busyAction = null; } } }">
                                         <div>
                                             <h3 class="text-lg font-semibold text-slate-900">Notifications</h3>
                                             <p class="mt-1 text-sm text-slate-600">Admin notification controls always override individual user preferences.</p>
                                         </div>
-                                        <button
-                                            type="button"
-                                            @click="sendTestPush()"
-                                            :disabled="busy"
-                                            class="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            <span x-show="!busy">Send Test Push Notification</span>
-                                            <span x-show="busy" x-cloak>Sending...</span>
-                                        </button>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <button
+                                                type="button"
+                                                @click="sendTestPush()"
+                                                :disabled="busyAction !== null"
+                                                class="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <span x-show="busyAction !== 'push'">Send Test Push Notification</span>
+                                                <span x-show="busyAction === 'push'" x-cloak>Sending push...</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="sendTestEmail()"
+                                                :disabled="busyAction !== null"
+                                                class="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <span x-show="busyAction !== 'email'">Send Test Email Notification</span>
+                                                <span x-show="busyAction === 'email'" x-cloak>Sending email...</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <p x-show="message" x-text="message" x-cloak class="mt-2 text-sm text-emerald-700"></p>
                                     <p x-show="error" x-text="error" x-cloak class="mt-2 text-sm text-rose-700"></p>
