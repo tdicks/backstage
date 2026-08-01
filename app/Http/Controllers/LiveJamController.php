@@ -7,6 +7,7 @@ use App\Models\JamStandardSong;
 use App\Models\Slot;
 use App\Models\SlotType;
 use App\Models\User;
+use App\Services\LiveQuickSetCandidateBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -22,6 +23,10 @@ class LiveJamController extends Controller
      * Cache TTL: 12 hours – enough to cover a full jam session evening.
      */
     private const CACHE_TTL_SECONDS = 43200;
+
+    private const QUICK_SET_TIMING_CACHE_KEY = 'live-quick-set:timing-summary';
+
+    public function __construct(private LiveQuickSetCandidateBuilder $liveQuickSetCandidateBuilder) {}
 
     /**
      * Show the organiser management dashboard.
@@ -290,23 +295,10 @@ class LiveJamController extends Controller
             ->map(fn ($signIn) => $signIn->user)
             ->filter()
             ->values();
-        $checkedInUserIds = $checkedInUsers->pluck('id');
-        $songs = JamStandardSong::query()
-            ->active()
-            ->with(['slots', 'userSlots' => fn ($query) => $query->whereIn('user_id', $checkedInUserIds)])
-            ->get()
-            ->sortByDesc(fn (JamStandardSong $song) => $song->userSlots->count())
-            ->values()
-            ->map(fn (JamStandardSong $song) => [
-                'id' => $song->id,
-                'artist' => $song->artist,
-                'title' => $song->title,
-                'duration' => $song->duration,
-                'source' => $song->source,
-                'slots' => $song->slots->map(fn ($slot) => ['name' => $slot->name])->values(),
-                'capable_user_ids' => $song->userSlots->groupBy('slot_name')->map(fn ($slots) => $slots->pluck('user_id')->values())->all(),
-                'capability_match_count' => $song->userSlots->count(),
-            ]);
+        $startedAt = hrtime(true);
+        $songs = $this->liveQuickSetCandidateBuilder->build($checkedInUsers, $this->slotConflicts());
+        $calculationMilliseconds = round((hrtime(true) - $startedAt) / 1_000_000, 2);
+        $timing = $this->recordQuickSetTiming($jamSession, $calculationMilliseconds, $checkedInUsers->count(), $songs->count());
 
         return response()->json([
             'songs' => $songs,
@@ -315,7 +307,45 @@ class LiveJamController extends Controller
                 'name' => $user->name,
                 'slot_coverage' => $user->slotCoverageMap(),
             ])->values(),
+            'timing' => $timing,
         ]);
+    }
+
+    /**
+     * @return array{calculation_milliseconds: float, checked_in_user_count: int, candidate_song_count: int, sample_count: int, average_milliseconds: float, maximum_milliseconds: float}
+     */
+    private function recordQuickSetTiming(JamSession $jamSession, float $calculationMilliseconds, int $checkedInUserCount, int $candidateSongCount): array
+    {
+        $summary = Cache::get(self::QUICK_SET_TIMING_CACHE_KEY, [
+            'sample_count' => 0,
+            'total_milliseconds' => 0.0,
+            'maximum_milliseconds' => 0.0,
+        ]);
+        $sampleCount = (int) ($summary['sample_count'] ?? 0) + 1;
+        $totalMilliseconds = (float) ($summary['total_milliseconds'] ?? 0.0) + $calculationMilliseconds;
+        $maximumMilliseconds = max((float) ($summary['maximum_milliseconds'] ?? 0.0), $calculationMilliseconds);
+
+        Cache::forever(self::QUICK_SET_TIMING_CACHE_KEY, [
+            'sample_count' => $sampleCount,
+            'total_milliseconds' => $totalMilliseconds,
+            'maximum_milliseconds' => $maximumMilliseconds,
+            'last_sample' => [
+                'jam_session_id' => $jamSession->id,
+                'calculation_milliseconds' => $calculationMilliseconds,
+                'checked_in_user_count' => $checkedInUserCount,
+                'candidate_song_count' => $candidateSongCount,
+                'recorded_at' => now()->toIso8601String(),
+            ],
+        ]);
+
+        return [
+            'calculation_milliseconds' => $calculationMilliseconds,
+            'checked_in_user_count' => $checkedInUserCount,
+            'candidate_song_count' => $candidateSongCount,
+            'sample_count' => $sampleCount,
+            'average_milliseconds' => round($totalMilliseconds / $sampleCount, 2),
+            'maximum_milliseconds' => $maximumMilliseconds,
+        ];
     }
 
     public function claimManager(Request $request, JamSession $jamSession): JsonResponse

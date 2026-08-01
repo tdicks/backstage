@@ -34,25 +34,20 @@ test('live management shows quick set catalog controls with checked-in capabilit
         ->assertSee('@open-live-quick-set.window="openLiveQuickSet()"', false)
         ->assertSee("new CustomEvent('open-live-quick-set')", false)
         ->assertSee('href="'.route('sessions.show', $session).'"', false)
-        ->assertSee('Songs with checked-in performers appear first.')
-        ->assertDontSee('Refreshing checked-in performers...')
-        ->assertSee('refreshLiveQuickSetData()', false)
+        ->assertSee('Assemble a quick set from the standards list.')
         ->assertSee('live-quick-set', false)
         ->assertSee('x-show="liveDisplayModalOpen" x-cloak data-modal-overlay', false)
-        ->assertSee('isLiveQuickSetAssignmentDisabled', false)
-        ->assertSee('isLiveQuickSetAssignmentSelected', false)
-        ->assertSee('isLiveQuickSetSongFullyAssigned(song)', false)
-        ->assertSee('topSuggestedUsers(song, slot.name)', false)
-        ->assertSee('slotLabel(slot.name)', false)
-        ->assertSee('border-emerald-200 bg-emerald-50', false)
-        ->assertSee('border-emerald-100 bg-emerald-50/50', false)
         ->assertSee('selectedLiveSongIds.includes(song.id)', false)
-        ->assertSee('cursor-pointer', false)
+        ->assertSee(':checked="selectedLiveSongIds.includes(song.id)"', false)
         ->assertSee('submitLiveQuickSet($event.target)', false)
+        ->assertSee("@modal-closed.window=\"if (\$event.detail.name === 'live-quick-set')", false)
+        ->assertSee('closeLiveQuickSet();', false)
         ->assertSee('Estimated set duration')
-        ->assertSee('liveQuickSetTransitionSeconds', false)
-        ->assertSee('liveQuickSetTotalDuration()', false)
-        ->assertSee('formatLiveQuickSetDuration(song.duration)', false)
+        ->assertSee('x-ref="liveQuickSetAssignmentList"', false)
+        ->assertSee('aria-label="Collapse song assignments"', false)
+        ->assertDontSee('hover:bg-black/5', false)
+        ->assertSee('Collapse song assignments')
+        ->assertSee('One or more songs do not have a duration, cannot estimate set time')
         ->assertDontSee('live_song_slots', false)
         ->assertSee('Leave unassigned')
         ->assertSee('Other attendee');
@@ -91,6 +86,77 @@ test('live quick set data excludes checked-in users who will not cover the slot'
             'name' => 'Unavailable Bass',
             'slot_coverage' => ['bass' => User::SLOT_COVERAGE_WONT],
         ]);
+});
+
+test('live quick set ranks conflict-aware coverage with confirmed and global fallback capabilities', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $multiPartPerformer = User::factory()->create(['name' => 'Multi Part Performer']);
+    $globalFallbackPerformer = User::factory()->create([
+        'name' => 'Global Drummer',
+        'slot_coverage' => ['drums' => User::SLOT_COVERAGE_CAN],
+    ]);
+    $unavailablePerformer = User::factory()->create([
+        'name' => 'Unavailable Bassist',
+        'slot_coverage' => ['bass' => User::SLOT_COVERAGE_WONT],
+    ]);
+    $session = JamSession::create([
+        'name' => 'Coverage Ranking Jam',
+        'date' => now()->addDay(),
+        'description' => null,
+        'is_live' => true,
+        'jam_manager_id' => $admin->id,
+    ]);
+
+    foreach ([$multiPartPerformer, $globalFallbackPerformer, $unavailablePerformer] as $performer) {
+        JamSessionSignIn::query()->create([
+            'jam_session_id' => $session->id,
+            'user_id' => $performer->id,
+            'signed_in_at' => now(),
+        ]);
+    }
+
+    $compatibleSong = JamStandardSong::query()->create(['artist' => 'Compatible', 'title' => 'Two Parts', 'is_active' => true]);
+    $compatibleSong->slots()->create(['name' => 'vocals', 'position' => 1]);
+    $compatibleSong->slots()->create(['name' => 'rhythm_guitar', 'position' => 2]);
+    $compatibleSong->userSlots()->create(['user_id' => $multiPartPerformer->id, 'slot_name' => 'vocals']);
+    $compatibleSong->userSlots()->create(['user_id' => $multiPartPerformer->id, 'slot_name' => 'rhythm_guitar']);
+
+    $conflictSong = JamStandardSong::query()->create(['artist' => 'Conflicted', 'title' => 'Three Parts', 'is_active' => true]);
+    $conflictSong->slots()->create(['name' => 'bass', 'position' => 1]);
+    $conflictSong->slots()->create(['name' => 'rhythm_guitar', 'position' => 2]);
+    $conflictSong->slots()->create(['name' => 'drums', 'position' => 3]);
+    $conflictSong->userSlots()->create(['user_id' => $multiPartPerformer->id, 'slot_name' => 'bass']);
+    $conflictSong->userSlots()->create(['user_id' => $multiPartPerformer->id, 'slot_name' => 'rhythm_guitar']);
+
+    $fallbackSong = JamStandardSong::query()->create(['artist' => 'Fallback', 'title' => 'Potential Only', 'is_active' => true]);
+    $fallbackSong->slots()->create(['name' => 'drums', 'position' => 1]);
+
+    $excludedSong = JamStandardSong::query()->create(['artist' => 'Excluded', 'title' => 'No Bassist', 'is_active' => true]);
+    $excludedSong->slots()->create(['name' => 'bass', 'position' => 1]);
+    $excludedSong->userSlots()->create(['user_id' => $unavailablePerformer->id, 'slot_name' => 'bass']);
+
+    $response = $this->actingAs($admin)
+        ->getJson(route('sessions.live.quick-set-data', $session))
+        ->assertOk()
+        ->assertJsonPath('songs.0.artist', 'Compatible')
+        ->assertJsonPath('songs.0.covered_slot_count', 2)
+        ->assertJsonPath('songs.0.confirmed_assignment_count', 2)
+        ->assertJsonPath('songs.1.artist', 'Conflicted')
+        ->assertJsonPath('songs.1.covered_slot_count', 2)
+        ->assertJsonPath('songs.1.confirmed_assignment_count', 1)
+        ->assertJsonPath('songs.1.capable_user_ids.drums.0', $globalFallbackPerformer->id)
+        ->assertJsonPath('songs.2.artist', 'Fallback')
+        ->assertJsonPath('songs.2.covered_slot_count', 1)
+        ->assertJsonPath('songs.2.confirmed_assignment_count', 0)
+        ->assertJsonPath('timing.checked_in_user_count', 3)
+        ->assertJsonPath('timing.candidate_song_count', 3);
+
+    expect($response->json('songs'))->not->toContain(['id' => $excludedSong->id]);
+    expect(Cache::get('live-quick-set:timing-summary')['last_sample'])->toMatchArray([
+        'jam_session_id' => $session->id,
+        'checked_in_user_count' => 3,
+        'candidate_song_count' => 3,
+    ]);
 });
 
 test('non-admin cannot access live jam management dashboard', function () {

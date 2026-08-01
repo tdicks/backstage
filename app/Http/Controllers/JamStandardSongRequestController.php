@@ -7,6 +7,7 @@ use App\Models\JamStandardSong;
 use App\Models\JamStandardSongRequest;
 use App\Models\Slot;
 use App\Models\User;
+use App\Services\DeezerDurationLookup;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 
 class JamStandardSongRequestController extends Controller
 {
+    public function __construct(private DeezerDurationLookup $deezerDurationLookup) {}
+
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
@@ -45,6 +48,19 @@ class JamStandardSongRequestController extends Controller
         }
 
         $nearMatches = JamStandardSong::nearMatchesFor($validated['artist'], $validated['title']);
+
+        if (($validated['duration'] ?? null) === null) {
+            try {
+                $duration = $this->deezerDurationLookup->findDuration($validated['artist'], $validated['title']);
+            } catch (\Throwable) {
+                $duration = null;
+            }
+
+            if ($duration !== null) {
+                $validated['duration'] = $duration;
+                $validated['source'] = 'deezer';
+            }
+        }
 
         $catalogRequest = JamStandardSongRequest::query()->create([
             ...$validated,
@@ -129,10 +145,34 @@ class JamStandardSongRequestController extends Controller
                 'request_id' => $jamStandardSongRequest->id,
                 'status' => $validated['status'],
                 'song' => $catalogSong?->load('slots'),
+                'remaining_request_count' => JamStandardSongRequest::query()
+                    ->where('status', JamStandardSongRequest::STATUS_PENDING)
+                    ->count(),
             ]);
         }
 
         return to_route('jam-standards.index')->with('status', 'Catalog request '.$validated['status'].'.');
+    }
+
+    public function destroy(Request $request, JamStandardSongRequest $jamStandardSongRequest): RedirectResponse|JsonResponse
+    {
+        abort_unless($jamStandardSongRequest->requester_user_id === $request->user()->id, 403);
+        abort_if($jamStandardSongRequest->status !== JamStandardSongRequest::STATUS_PENDING, 422);
+
+        $requestId = $jamStandardSongRequest->id;
+        $jamStandardSongRequest->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'request_id' => $requestId,
+                'status' => 'cancelled',
+                'remaining_request_count' => JamStandardSongRequest::query()
+                    ->where('status', JamStandardSongRequest::STATUS_PENDING)
+                    ->count(),
+            ]);
+        }
+
+        return to_route('jam-standards.index')->with('status', 'Catalog request cancelled.');
     }
 
     /** @param array<string, mixed> $validated */

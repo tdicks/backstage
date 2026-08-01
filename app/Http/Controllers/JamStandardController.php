@@ -22,6 +22,16 @@ class JamStandardController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
+        $selectedPerformerIds = collect($request->input('user_ids', []))
+            ->filter(fn ($userId) => filter_var($userId, FILTER_VALIDATE_INT) !== false)
+            ->map(fn ($userId) => (int) $userId)
+            ->unique()
+            ->values();
+        $selectedPerformers = User::query()
+            ->whereIn('id', $selectedPerformerIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         $catalogSongs = JamStandardSong::query()
             ->active()
             ->when($request->filled('q'), function ($query) use ($request): void {
@@ -30,22 +40,33 @@ class JamStandardController extends Controller
                         ->orWhere('title', 'like', '%'.$request->string('q')->trim().'%');
                 });
             })
-            ->when($request->filled('user_id'), fn ($query) => $query->whereHas('userSlots', fn ($slotQuery) => $slotQuery->where('user_id', $request->integer('user_id'))))
+            ->when($selectedPerformers->isNotEmpty(), function ($query) use ($selectedPerformers): void {
+                foreach ($selectedPerformers->modelKeys() as $performerId) {
+                    $query->whereHas('userSlots', fn ($slotQuery) => $slotQuery->where('user_id', $performerId));
+                }
+            })
             ->orderBy('artist')
             ->orderBy('title')
             ->with(['slots', 'userSlots' => fn ($query) => $query->where('user_id', $request->user()->id)])
             ->paginate(self::CATALOG_SONGS_PER_PAGE)
             ->withQueryString();
-        $selectedPerformer = $request->filled('user_id')
-            ? User::query()->find($request->integer('user_id'))
-            : null;
-        $searchedUserSlots = $selectedPerformer === null
+        $searchedUserSlots = $selectedPerformers->isEmpty()
             ? collect()
             : JamStandardUserSlot::query()
-                ->where('user_id', $selectedPerformer->id)
+                ->whereIn('user_id', $selectedPerformers->modelKeys())
                 ->get()
                 ->groupBy('jam_standard_song_id')
-                ->map(fn ($slots) => $slots->pluck('slot_name')->values()->all());
+                ->map(fn ($slots) => $slots->groupBy('slot_name')
+                    ->map(fn ($slotUsers) => $slotUsers->pluck('user_id')->unique()->values()->all())
+                    ->all());
+
+        $recentCapabilityCounts = JamStandardUserSlot::recentCapabilityCountsForSongs(
+            $catalogSongs->getCollection()->pluck('id'),
+        );
+
+        $catalogSongs->getCollection()->each(function (JamStandardSong $song) use ($recentCapabilityCounts): void {
+            $song->setAttribute('recent_capability_counts', $recentCapabilityCounts[$song->id] ?? []);
+        });
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -57,11 +78,14 @@ class JamStandardController extends Controller
                     'duration' => $song->duration,
                     'source' => $song->source,
                     'band_template_id' => $song->band_template_id,
-                    'slots' => $song->slots->map(fn ($slot) => ['name' => $slot->name])->values(),
+                    'slots' => $song->slots->map(fn ($slot) => [
+                        'name' => $slot->name,
+                        'recent_capability_count' => max(0, (int) ($song->recent_capability_counts[$slot->name] ?? 0)),
+                    ])->values(),
                     'user_slot_names' => $song->userSlots->pluck('slot_name')->values(),
-                    'performer_slot_names' => $searchedUserSlots[$song->id] ?? [],
+                    'performer_slots' => $searchedUserSlots[$song->id] ?? [],
                 ])->values(),
-                'performer' => $selectedPerformer?->only(['id', 'name']),
+                'performers' => $selectedPerformers->values(),
                 'pagination' => [
                     'current_page' => $catalogSongs->currentPage(),
                     'last_page' => $catalogSongs->lastPage(),
@@ -101,10 +125,12 @@ class JamStandardController extends Controller
                 ->whereKeyNot($request->user()->id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'pendingRequests' => $request->user()->is_admin
-                ? JamStandardSongRequest::query()->where('status', JamStandardSongRequest::STATUS_PENDING)->with(['requester', 'bandTemplate'])->latest()->get()
-                : collect(),
-            'selectedPerformer' => $selectedPerformer,
+            'pendingRequests' => JamStandardSongRequest::query()
+                ->where('status', JamStandardSongRequest::STATUS_PENDING)
+                ->with(['requester', 'bandTemplate'])
+                ->latest()
+                ->get(),
+            'selectedPerformers' => $selectedPerformers,
             'searchedUserSlots' => $searchedUserSlots,
         ]);
     }
@@ -172,6 +198,8 @@ class JamStandardController extends Controller
             'artist' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'duration' => ['nullable', 'integer', 'min:1', 'required_with:source'],
+            'source' => ['nullable', 'string', 'in:deezer', 'required_with:duration'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id', 'required_without:slot_names'],
             'slot_names' => ['nullable', 'array', 'min:1', 'required_without:band_template_id'],
             'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
@@ -182,6 +210,8 @@ class JamStandardController extends Controller
                 'artist' => $validated['artist'],
                 'title' => $validated['title'],
                 'notes' => $validated['notes'] ?? null,
+                'duration' => $validated['duration'] ?? null,
+                'source' => $validated['source'] ?? null,
                 'band_template_id' => $validated['band_template_id'] ?? null,
             ]);
 

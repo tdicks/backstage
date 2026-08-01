@@ -228,15 +228,24 @@ class JamRegisterController extends Controller
 
     private function signInUser(JamSession $jamSession, int $userId): JamSessionSignIn
     {
+        $signedInAt = now();
+
         $signIn = JamSessionSignIn::query()->updateOrCreate(
             [
                 'jam_session_id' => $jamSession->id,
                 'user_id' => $userId,
             ],
             [
-                'signed_in_at' => now(),
+                'signed_in_at' => $signedInAt,
             ]
         );
+
+        User::query()
+            ->whereKey($userId)
+            ->update([
+                'last_seen_at' => $signedInAt,
+                'last_signed_in_at' => $signedInAt,
+            ]);
 
         return $signIn->load('user:id,name');
     }

@@ -4,16 +4,19 @@ import { registerSessionCards } from './components/sessionCards';
 import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder';
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
+import { liveQuickSet } from './components/liveQuickSet';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
 import { copyShareLink } from './utils/clipboard';
 import { isInteractiveDragSource } from './utils/drag';
 import { focusSessionFragmentTarget } from './utils/sessionFragments';
+import { setDuration } from './utils/setDuration';
 
 window.Alpine = Alpine;
 window.copyShareLink = copyShareLink;
 window.isInteractiveDragSource = isInteractiveDragSource;
 window.focusSessionFragmentTarget = focusSessionFragmentTarget;
+window.setDuration = setDuration;
 
 function readMetaCount(metaName) {
 	return Math.max(0, Number(document.querySelector(`meta[name="${metaName}"]`)?.content || 0));
@@ -68,6 +71,7 @@ registerSessionCards(Alpine);
 Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
 Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
+Alpine.data('liveQuickSet', liveQuickSet);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 

@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/jam-standards/{jamStandardSong}/coverage', [JamStandardController::class, 'coverage'])->name('jam-standards.coverage');
     Route::post('/jam-standards/requests', [JamStandardSongRequestController::class, 'store'])->name('jam-standards.requests.store');
     Route::patch('/jam-standards/requests/{jamStandardSongRequest}', [JamStandardSongRequestController::class, 'respond'])->name('jam-standards.requests.respond');
+    Route::delete('/jam-standards/requests/{jamStandardSongRequest}', [JamStandardSongRequestController::class, 'destroy'])->name('jam-standards.requests.destroy');
     Route::put('/jam-standards/{jamStandardSong}/capabilities', [JamStandardCapabilityController::class, 'update'])->name('jam-standards.capabilities.update');
     Route::post('/jam-standards/quick-set', [JamStandardQuickSetController::class, 'storeUser'])->name('jam-standards.quick-set.store');
     Route::post('/jam-standards/live-quick-set', [JamStandardQuickSetController::class, 'storeLive'])->name('jam-standards.live-quick-set.store');

@@ -171,7 +171,7 @@
                         </div>
 
                         <div class="flex justify-end" x-show="selectedSongCount > 0" x-cloak>
-                            <x-modal-primary-button>Create Quick Set</x-modal-primary-button>
+                            <x-modal-primary-button>Create Set</x-modal-primary-button>
                         </div>
                     </form>
                 </div>
@@ -191,10 +191,6 @@
                                         <option value="{{ $session->id }}">{{ $session->name }} ({{ $session->date->format('M j, Y') }})</option>
                                     @endforeach
                                 </select>
-                            </div>
-                            <div>
-                                <x-input-label value="Set Name" />
-                                <x-text-input name="set_name" class="mt-1 block w-full" value="Live Quick Set" required />
                             </div>
                             <label class="flex items-center gap-2 rounded-lg border border-sky-300 bg-slate-50 px-3 py-2 text-sm text-slate-700 shadow-[inset_0_0_6px_rgb(125_211_252_/_0.45),inset_0_0_14px_rgb(186_230_253_/_0.35)]">
                                 <input type="hidden" name="is_hidden" value="0">

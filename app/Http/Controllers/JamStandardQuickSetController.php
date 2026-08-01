@@ -141,7 +141,6 @@ class JamStandardQuickSetController extends Controller
 
         $validated = $request->validate([
             'jam_session_id' => ['required', 'integer', 'exists:jam_sessions,id'],
-            'set_name' => ['required', 'string', 'max:255'],
             'is_hidden' => ['nullable', 'boolean'],
             'free_for_all' => ['nullable', 'boolean'],
             'catalog_song_ids' => ['required', 'array', 'min:1'],
@@ -168,7 +167,7 @@ class JamStandardQuickSetController extends Controller
 
         $set = DB::transaction(function () use ($validated, $request, $jamSession, $songSelections) {
             $set = $jamSession->sets()->create([
-                'name' => $validated['set_name'],
+                'name' => $this->liveQuickSetName($songSelections),
                 'owner_id' => $request->user()->id,
                 'position' => ((int) $jamSession->sets()->max('position')) + 1,
                 'performed' => false,
@@ -245,6 +244,15 @@ class JamStandardQuickSetController extends Controller
         return $orderedIds
             ->map(fn (int $songId) => $songs->get($songId))
             ->filter();
+    }
+
+    private function liveQuickSetName($catalogSongs): string
+    {
+        return $catalogSongs
+            ->countBy(fn (JamStandardSong $song): string => $song->artist)
+            ->sortDesc()
+            ->keys()
+            ->implode('/');
     }
 
     /** @param array<int|string, array<int, string>> $selectedSlots */

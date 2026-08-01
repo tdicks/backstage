@@ -32,21 +32,60 @@ export function jamStandardsCatalog(config) {
         entryMode: 'template',
         entrySlotNames: [],
         requestTemplateId: '',
-        statusMessage: '',
+        statusMessage: config.initialStatusMessage || '',
+        statusTimeout: null,
         searchLoading: false,
+        performerFilterOpen: false,
         catalogPage: config.catalogPage,
         slotLabels: config.slotLabels,
         canEditCatalog: config.canEditCatalog,
         templateSlots: config.templateSlots,
+        quickSetSongs: config.quickSetSongs,
         selectedSongIds: [],
         quickSetAssignments: {},
         quickSetJamSessionId: '',
         quickSetName: '',
+        selectedPerformerIds: config.selectedPerformerIds,
+        performerNames: config.performerNames,
         slotConflicts: config.slotConflicts,
+        init() {
+            if (this.statusMessage) {
+                this.setStatusMessage(this.statusMessage);
+            }
+        },
+        setStatusMessage(message) {
+            this.statusMessage = message;
+            if (this.statusTimeout) {
+                clearTimeout(this.statusTimeout);
+            }
+            this.statusTimeout = setTimeout(() => {
+                this.statusMessage = '';
+                this.statusTimeout = null;
+            }, 5000);
+        },
+        selectedPerformerFilterLabel() {
+            if (this.selectedPerformerIds.length === 0) {
+                return 'All performers';
+            }
+
+            if (this.selectedPerformerIds.length > 3) {
+                return `${this.selectedPerformerIds.length} performers`;
+            }
+
+            return this.selectedPerformerIds
+                .map((performerId) => this.performerNames[performerId])
+                .filter(Boolean)
+                .join(', ');
+        },
         toggleSong(songId, selected) {
             this.selectedSongIds = selected
                 ? [...new Set([...this.selectedSongIds, songId])]
                 : this.selectedSongIds.filter((id) => id !== songId);
+        },
+        selectedQuickSetSongs() {
+            return this.selectedSongIds
+                .map((songId) => this.quickSetSongs[songId])
+                .filter(Boolean);
         },
         catalogRowClass(selected) {
             return selected
@@ -298,6 +337,21 @@ export function jamStandardsCatalog(config) {
                     : selectedSlots.filter((selectedSlot) => selectedSlot !== slotName),
             };
         },
+        confirmQuickSetSubmission() {
+            const uncoveredSongTitles = this.selectedSongIds
+                .filter((songId) => (this.quickSetAssignments[songId] || []).length === 0)
+                .map((songId) => {
+                    const song = this.quickSetSongs[songId];
+
+                    return song ? `${song.artist} - ${song.title}` : 'Unknown song';
+                });
+
+            if (uncoveredSongTitles.length === 0) {
+                return true;
+            }
+
+            return window.confirm(`You have not picked a slot on:\n\n${uncoveredSongTitles.join('\n')}\n\nAre you sure you want to continue?`);
+        },
         availableRequesterSlots() {
             return this.entryMode === 'template'
                 ? (this.templateSlots[this.requestTemplateId] || [])
@@ -311,7 +365,11 @@ export function jamStandardsCatalog(config) {
             });
             if (!response.ok) {
                 window.alert('Could not save your song capability choices.');
+
+                return null;
             }
+
+            return response.json();
         },
         async jsonSubmit(form, method = 'POST') {
             const response = await fetch(form.action, {
@@ -327,9 +385,9 @@ export function jamStandardsCatalog(config) {
             }
             return payload;
         },
-        async fetchCatalog(page = 1) {
+        async fetchCatalog(page = 1, searchParameters = null) {
             const form = this.$refs.catalogSearch;
-            const parameters = new URLSearchParams(new FormData(form));
+            const parameters = searchParameters || new URLSearchParams(new FormData(form));
             parameters.set('page', page);
             this.searchLoading = true;
             try {
@@ -342,7 +400,7 @@ export function jamStandardsCatalog(config) {
                 const payload = await response.json();
                 this.selectedSongIds = [];
                 this.catalogPage = payload.pagination.current_page;
-                this.renderCatalogSongs(payload.songs || [], payload.performer, payload.pagination);
+                this.renderCatalogSongs(payload.songs || [], payload.performers || [], payload.pagination);
                 window.history.replaceState({}, '', `${form.action}?${parameters.toString()}`);
             } catch (error) {
                 window.alert('Could not search the catalog.');
@@ -355,8 +413,9 @@ export function jamStandardsCatalog(config) {
         },
         resetCatalogSearch() {
             this.$refs.catalogSearch.querySelector('[name=q]').value = '';
-            this.$refs.catalogSearch.querySelector('[name=user_id]').value = '';
-            this.fetchCatalog();
+            this.selectedPerformerIds = [];
+            this.performerFilterOpen = false;
+            this.fetchCatalog(1, new URLSearchParams());
         },
         goToCatalogPage(page) {
             if (!this.searchLoading && page !== this.catalogPage) {
@@ -368,20 +427,25 @@ export function jamStandardsCatalog(config) {
         },
         catalogSlotChipClass(selected) {
             return selected
-                ? 'inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 transition'
+                ? 'inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 transition'
                 : 'inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300';
         },
-        createPerformerSlotBadge(performer, slotName) {
+        catalogCapabilityCountClass(selected) {
+            return selected
+                ? 'inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-sky-300 bg-white px-1 text-[11px] font-semibold text-sky-700'
+                : 'inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-1 text-[11px] font-semibold text-slate-600';
+        },
+        createPerformerSlotBadge(performers, slotName) {
             const badge = document.createElement('span');
             badge.className = 'inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-[11px] font-bold text-emerald-700';
             badge.textContent = '\u2713';
-            badge.title = `${performer.name} can play ${this.slotLabel(slotName)}`;
+            badge.title = `${performers.map((performer) => performer.name).join(', ')} can play ${this.slotLabel(slotName)}`;
             badge.setAttribute('aria-label', badge.title);
             return badge;
         },
-        renderPerformerCapabilityLegend(performer) {
+        renderPerformerCapabilityLegend(performers) {
             this.$refs.performerCapabilityLegend.replaceChildren();
-            if (!performer) {
+            if (!performers.length) {
                 return;
             }
             const badge = document.createElement('span');
@@ -389,10 +453,10 @@ export function jamStandardsCatalog(config) {
             badge.textContent = '\u2713';
             const label = document.createElement('p');
             label.className = 'text-xs font-medium text-slate-600';
-            label.textContent = `${performer.name} can play these slots`;
+            label.textContent = `${performers.map((performer) => performer.name).join(', ')} can play these slots`;
             this.$refs.performerCapabilityLegend.append(badge, label);
         },
-        appendCatalogSong(song, performer = null) {
+        appendCatalogSong(song, performers = []) {
             const row = document.createElement('tr');
             row.dataset.catalogSongId = song.id;
             row.className = this.catalogRowClass(this.selectedSongIds.includes(song.id));
@@ -446,17 +510,21 @@ export function jamStandardsCatalog(config) {
                 input.checked = (song.user_slot_names || []).includes(slot.name);
                 input.className = 'sr-only';
                 label.className = this.catalogSlotChipClass(input.checked);
-                const ownCapabilityBadge = document.createElement('span');
-                ownCapabilityBadge.className = input.checked ? 'inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white' : 'hidden';
-                ownCapabilityBadge.textContent = '\u2713';
-                label.append(input, ownCapabilityBadge, document.createTextNode(this.slotLabel(slot.name)));
-                if (performer && (song.performer_slot_names || []).includes(slot.name)) {
-                    label.append(this.createPerformerSlotBadge(performer, slot.name));
+                const capabilityCount = document.createElement('span');
+                capabilityCount.className = this.catalogCapabilityCountClass(input.checked);
+                capabilityCount.textContent = String(Math.max(0, Number(slot.recent_capability_count || 0)));
+                label.append(input, document.createTextNode(this.slotLabel(slot.name)), capabilityCount);
+                const matchingPerformers = performers.filter((performer) => (song.performer_slots?.[slot.name] || []).includes(performer.id));
+                if (matchingPerformers.length) {
+                    label.append(this.createPerformerSlotBadge(matchingPerformers, slot.name));
                 }
-                input.addEventListener('change', () => {
+                input.addEventListener('change', async () => {
                     label.className = this.catalogSlotChipClass(input.checked);
-                    ownCapabilityBadge.className = input.checked ? 'inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white' : 'hidden';
-                    this.updateCapabilities(song.id, capabilityForm);
+                    capabilityCount.className = this.catalogCapabilityCountClass(input.checked);
+                    const payload = await this.updateCapabilities(song.id, capabilityForm);
+                    if (payload) {
+                        capabilityCount.textContent = String(Math.max(0, Number(payload.slot_capability_counts?.[slot.name] || 0)));
+                    }
                 });
                 capabilityForm.append(label);
             });
@@ -487,9 +555,13 @@ export function jamStandardsCatalog(config) {
             }
             this.$refs.catalogRows.prepend(row);
         },
-        renderCatalogSongs(songs, performer, pagination) {
+        renderCatalogSongs(songs, performers, pagination) {
+            this.quickSetSongs = {
+                ...this.quickSetSongs,
+                ...Object.fromEntries(songs.map((song) => [song.id, song])),
+            };
             this.$refs.catalogRows.replaceChildren();
-            this.renderPerformerCapabilityLegend(performer);
+            this.renderPerformerCapabilityLegend(performers || []);
             if (!songs.length) {
                 const row = document.createElement('tr');
                 const cell = document.createElement('td');
@@ -501,19 +573,23 @@ export function jamStandardsCatalog(config) {
                 this.renderCatalogPagination(pagination);
                 return;
             }
-            [...songs].reverse().forEach((song) => this.appendCatalogSong(song, performer));
+            [...songs].reverse().forEach((song) => this.appendCatalogSong(song, performers || []));
             this.renderCatalogPagination(pagination);
         },
         renderCatalogPagination(pagination) {
             this.$refs.catalogPagination.replaceChildren();
-            if (pagination.last_page <= 1) {
+            if (pagination.total === 0) {
                 return;
             }
             const controls = document.createElement('div');
             controls.className = 'flex flex-wrap items-center justify-between gap-3';
             const summary = document.createElement('p');
             summary.className = 'text-sm text-slate-600';
-            summary.textContent = `Page ${pagination.current_page} of ${pagination.last_page}`;
+            summary.textContent = `Page ${pagination.current_page} of ${pagination.last_page} · ${pagination.total} song${pagination.total === 1 ? '' : 's'}`;
+            if (pagination.last_page <= 1) {
+                this.$refs.catalogPagination.append(controls);
+                return;
+            }
             const buttons = document.createElement('div');
             buttons.className = 'flex gap-2';
             [['Previous', pagination.current_page - 1, pagination.current_page === 1], ['Next', pagination.current_page + 1, pagination.current_page === pagination.last_page]].forEach(([label, page, disabled]) => {
@@ -547,16 +623,74 @@ export function jamStandardsCatalog(config) {
             if (!payload) {
                 return;
             }
+            this.appendOwnCatalogRequest(payload.request);
             event.target.reset();
             this.resetCatalogSongForm();
             this.closeCatalogSongForm();
-            this.statusMessage = 'Catalog song request sent for review.';
+            this.setStatusMessage('Catalog song request sent for review.');
             if (payload.near_matches?.length) {
                 window.alert(`A similar song already exists: ${payload.near_matches[0].artist} - ${payload.near_matches[0].title}`);
             }
         },
+        appendOwnCatalogRequest(request) {
+            if (!request) {
+                return;
+            }
+
+            let panel = document.querySelector('[data-catalog-requests-panel]');
+            if (!panel) {
+                panel = document.createElement('section');
+                panel.dataset.catalogRequestsPanel = '';
+                panel.className = 'mb-6 rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6';
+                const heading = document.createElement('h3');
+                heading.className = 'text-lg font-semibold text-slate-900';
+                heading.textContent = 'Catalog Requests';
+                const requests = document.createElement('div');
+                requests.dataset.catalogRequests = '';
+                requests.className = 'mt-3 space-y-3';
+                panel.append(heading, requests);
+                document.querySelector('[data-catalog-section]')?.before(panel);
+            }
+
+            const requests = panel.querySelector('[data-catalog-requests]');
+            if (!requests || requests.querySelector(`[data-catalog-request-id='${request.id}']`)) {
+                return;
+            }
+
+            const row = document.createElement('div');
+            row.dataset.catalogRequestId = request.id;
+            row.className = 'flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white/90 p-4 shadow-sm';
+            const song = document.createElement('p');
+            song.className = 'text-sm text-slate-700';
+            const songName = document.createElement('span');
+            songName.className = 'font-semibold';
+            songName.textContent = `${request.artist} - ${request.title}`;
+            song.append(songName, document.createTextNode(' requested by you'));
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `${config.catalogRequestsUrl}/${request.id}`;
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = config.csrfToken;
+            const method = document.createElement('input');
+            method.type = 'hidden';
+            method.name = '_method';
+            method.value = 'DELETE';
+            const button = document.createElement('button');
+            button.type = 'submit';
+            button.className = 'inline-flex items-center rounded-md border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400';
+            button.textContent = 'Cancel';
+            form.append(csrfToken, method, button);
+            form.addEventListener('submit', (submitEvent) => {
+                submitEvent.preventDefault();
+                this.cancelCatalogRequest({ target: form });
+            });
+            row.append(song, form);
+            requests.prepend(row);
+        },
         async submitCatalogEdit(event) {
-            const payload = await this.jsonSubmit(event.target, 'POST');
+            const payload = await this.jsonSubmit(event.target, 'PUT');
             if (!payload) {
                 return;
             }
@@ -564,7 +698,7 @@ export function jamStandardsCatalog(config) {
             this.resetCatalogSongForm();
             window.dispatchEvent(new CustomEvent('close-modal', { detail: 'catalog-song-edit' }));
             await this.fetchCatalog(this.catalogPage);
-            this.statusMessage = 'Catalog song updated.';
+            this.setStatusMessage('Catalog song updated.');
         },
         async deleteCatalogSong() {
             if (!this.editingSong || !window.confirm('Delete this catalog song? Existing set songs will remain, but they will no longer be linked to this catalog song.')) {
@@ -583,18 +717,36 @@ export function jamStandardsCatalog(config) {
             this.selectedSongIds = this.selectedSongIds.filter((songId) => songId !== payload.deleted_id);
             this.openEditSong = false;
             window.dispatchEvent(new CustomEvent('close-modal', { detail: 'catalog-song-edit' }));
-            this.statusMessage = 'Catalog song deleted.';
+            this.setStatusMessage('Catalog song deleted.');
         },
         async respondToCatalogRequest(event) {
             const payload = await this.jsonSubmit(event.target, 'POST');
             if (!payload) {
                 return;
             }
-            this.$refs.catalogRequests?.querySelector(`[data-catalog-request-id='${payload.request_id}']`)?.remove();
+            this.removeCatalogRequest(payload.request_id, payload.remaining_request_count);
             if (payload.song) {
                 this.appendCatalogSong(payload.song);
             }
-            this.statusMessage = `Catalog request ${payload.status}.`;
+            this.setStatusMessage(`Catalog request ${payload.status}.`);
+        },
+        removeCatalogRequest(requestId, remainingRequestCount) {
+            const catalogRequests = document.querySelector('[data-catalog-requests]');
+            catalogRequests?.querySelector(`[data-catalog-request-id='${requestId}']`)?.remove();
+            if (remainingRequestCount === 0 || !catalogRequests?.querySelector('[data-catalog-request-id]')) {
+                document.querySelector('[data-catalog-requests-panel]')?.remove();
+            }
+        },
+        async cancelCatalogRequest(event) {
+            if (!window.confirm('Cancel this catalog request?')) {
+                return;
+            }
+            const payload = await this.jsonSubmit(event.target, 'DELETE');
+            if (!payload) {
+                return;
+            }
+            this.removeCatalogRequest(payload.request_id, payload.remaining_request_count);
+            this.setStatusMessage('Catalog request cancelled.');
         },
     };
 }

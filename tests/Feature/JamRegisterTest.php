@@ -83,6 +83,9 @@ test('it signs a user in and reports status', function () {
         'jam_session_id' => $session->id,
         'user_id' => $user->id,
     ]);
+    expect($user->refresh()->last_seen_at)
+        ->not->toBeNull()
+        ->and($user->last_signed_in_at)->not->toBeNull();
 
     $statusResponse = $this->getJson(route('jam-register.status', [$session, $user]));
 

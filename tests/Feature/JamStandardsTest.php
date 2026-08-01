@@ -10,6 +10,7 @@ use App\Models\Set;
 use App\Models\Song;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -140,6 +141,7 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('Delete Song')
         ->assertSee('Song Coverage')
         ->assertSee('catalog-song-coverage', false)
+        ->assertSee('Search by artist or song title, then filter by performers who know parts on those songs.')
         ->assertSee('text-slate-900 placeholder:text-slate-500', false)
         ->assertSee('catalog-song-form', false)
         ->assertSee('name="duration"', false)
@@ -152,17 +154,32 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('catalogArtistLookupBusy', false)
         ->assertSee('catalogTitleLookupBusy', false)
         ->assertSee('catalog-song-edit', false)
+        ->assertSee('name="_method" value="PUT"', false)
+        ->assertSee('${editingSong?.id}`', false)
+        ->assertSee('Start typing an artist to fetch Deezer suggestions.')
+        ->assertSee('Song suggestions are scoped to the selected artist.')
         ->assertSee('catalog-quick-set', false)
         ->assertSee('quickSetJamSessionId', false)
         ->assertSee('quickSetName', false)
+        ->assertSee('initialStatusMessage', false)
+        ->assertSee('x-transition.opacity', false)
+        ->assertSee('rounded-lg border border-emerald-200 bg-emerald-50', false)
+        ->assertSee('performerNames', false)
+        ->assertSee('selectedPerformerFilterLabel()', false)
+        ->assertSee('@click="resetCatalogSearch()"', false)
+        ->assertSee('quickSetSongs', false)
+        ->assertSee('x-for="song in selectedQuickSetSongs()"', false)
+        ->assertSee('name="requester_slot_names[]"', false)
+        ->assertSee("checked ? 'cursor-pointer border-sky-300 bg-sky-50 text-sky-700'", false)
+        ->assertSee('confirmQuickSetSubmission()', false)
         ->assertSee('Set Name <span class="text-rose-600"', false)
         ->assertSee('Jam Session <span class="text-rose-600"', false)
         ->assertSee('Select the parts you want to take on for each song.')
         ->assertSee('text-sky-500', false)
         ->assertSee('text-orange-500', false)
         ->assertSee('rounded-lg border border-slate-200 bg-slate-50 p-3', false)
-        ->assertSee('border-emerald-300 bg-emerald-50 text-emerald-700', false)
-        ->assertSee('bg-emerald-600 text-white', false)
+        ->assertSee('border-sky-300 bg-sky-50 text-sky-700', false)
+        ->assertSee("selected ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600'", false)
         ->assertSee('h-4 w-4', false)
         ->assertSee('catalogRowClass(selectedSongIds.includes(', false)
         ->assertSee('$el.querySelector(\'input\').click()', false)
@@ -173,7 +190,7 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('border border-sky-200 bg-sky-50/80', false)
         ->assertSee('flex items-center gap-2 text-sm leading-6 text-sky-900', false)
         ->assertSee('h-5 w-5 text-sky-500', false)
-        ->assertSee('I can fill')
+        ->assertSee('I can perform')
         ->assertSee('jamStandardsCatalog', false)
         ->assertSee('Band template')
         ->assertSee('Add Song');
@@ -207,11 +224,73 @@ test('pending catalog requests are shown in their own panel above the catalog ta
     $response
         ->assertOk()
         ->assertSee('Catalog Requests')
-        ->assertSee('x-ref="catalogRequests"', false)
+        ->assertSee('aria-label="Approve catalog request"', false)
+        ->assertSee('aria-label="Reject catalog request"', false)
+        ->assertSee('h-8 w-8 items-center justify-center rounded-md text-emerald-700', false)
+        ->assertSee('h-8 w-8 items-center justify-center rounded-md text-rose-700', false)
+        ->assertSee('data-catalog-requests', false)
+        ->assertSee('mt-3 space-y-3', false)
+        ->assertSee('rounded-lg border border-slate-200 bg-white/90 p-4 shadow-sm', false)
         ->assertSee('Portishead - Sour Times');
 
     expect(strpos($response->getContent(), 'Catalog Requests'))
         ->toBeLessThan(strpos($response->getContent(), '<table'));
+});
+
+test('a user sees all pending catalog requests but can cancel only their own', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $ownRequest = JamStandardSongRequest::query()->create([
+        'requester_user_id' => $user->id,
+        'artist' => 'The Cure',
+        'title' => 'A Forest',
+        'slot_names' => ['bass'],
+    ]);
+    $otherRequest = JamStandardSongRequest::query()->create([
+        'requester_user_id' => $otherUser->id,
+        'artist' => 'Cocteau Twins',
+        'title' => 'Heaven or Las Vegas',
+        'slot_names' => ['bass'],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('jam-standards.index'))
+        ->assertOk()
+        ->assertSee('Catalog Requests')
+        ->assertSee('The Cure - A Forest')
+        ->assertSee('requested by you')
+        ->assertSee('Cocteau Twins - Heaven or Las Vegas')
+        ->assertSee('requested by '.$otherUser->name)
+        ->assertSee('Cancel')
+        ->assertDontSee('aria-label="Approve catalog request"', false)
+        ->assertDontSee('aria-label="Reject catalog request"', false);
+
+    $this->actingAs($user)
+        ->deleteJson(route('jam-standards.requests.destroy', $ownRequest))
+        ->assertOk()
+        ->assertJsonPath('request_id', $ownRequest->id)
+        ->assertJsonPath('status', 'cancelled')
+        ->assertJsonPath('remaining_request_count', 1);
+
+    expect(JamStandardSongRequest::query()->find($ownRequest->id))->toBeNull()
+        ->and(JamStandardSongRequest::query()->find($otherRequest->id))->not->toBeNull();
+});
+
+test('a user cannot cancel another users catalog request', function () {
+    $user = User::factory()->create();
+    $requester = User::factory()->create();
+    $catalogRequest = JamStandardSongRequest::query()->create([
+        'requester_user_id' => $requester->id,
+        'artist' => 'Siouxsie and the Banshees',
+        'title' => 'Spellbound',
+        'slot_names' => ['bass'],
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('jam-standards.requests.destroy', $catalogRequest))
+        ->assertForbidden();
+
+    expect($catalogRequest->exists)->toBeTrue();
 });
 
 test('an admin can update a catalog song and replace its slots', function () {
@@ -299,7 +378,7 @@ test('an admin can view catalog song coverage grouped by performer', function ()
 });
 
 test('users can save song-specific catalog slot capabilities', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['last_seen_at' => now()]);
     $catalogSong = JamStandardSong::query()->create([
         'artist' => 'The Clash',
         'title' => 'Should I Stay or Should I Go',
@@ -315,17 +394,52 @@ test('users can save song-specific catalog slot capabilities', function () {
             'slot_names' => ['bass'],
         ])
         ->assertOk()
-        ->assertJson(['slot_names' => ['bass']]);
+        ->assertJson(['slot_names' => ['bass']])
+        ->assertJsonPath('slot_capability_counts.bass', 1);
 
     expect(JamStandardUserSlot::query()->where('user_id', $user->id)->pluck('slot_name')->all())->toBe(['bass']);
+
+    $this->actingAs($user)
+        ->putJson(route('jam-standards.capabilities.update', $catalogSong), [
+            'slot_names' => [],
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot_capability_counts.bass', 0);
+
+    expect(JamStandardUserSlot::query()->where('user_id', $user->id)->exists())->toBeFalse();
 });
 
-test('catalog can be filtered by artist or by a performer capability', function () {
-    $user = User::factory()->create(['name' => 'Bass Player']);
+test('catalog slot counts include only recently seen users with song-specific capabilities', function () {
+    $viewer = User::factory()->create(['last_seen_at' => now()]);
+    $recentPerformer = User::factory()->create(['last_seen_at' => now()->subMonths(5)]);
+    $inactivePerformer = User::factory()->create(['last_seen_at' => now()->subMonths(6)->subSecond()]);
+    $catalogSong = JamStandardSong::query()->create(['artist' => 'Fleetwood Mac', 'title' => 'Dreams', 'is_active' => true]);
+    $catalogSong->slots()->create(['name' => 'bass', 'position' => 1]);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $catalogSong->id, 'user_id' => $recentPerformer->id, 'slot_name' => 'bass']);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $catalogSong->id, 'user_id' => $inactivePerformer->id, 'slot_name' => 'bass']);
+
+    $this->actingAs($viewer)
+        ->getJson(route('jam-standards.index'))
+        ->assertOk()
+        ->assertJsonPath('songs.0.slots.0.name', 'bass')
+        ->assertJsonPath('songs.0.slots.0.recent_capability_count', 1);
+});
+
+test('catalog can be filtered by artist or capabilities shared by all selected performers', function () {
+    $bassPlayer = User::factory()->create(['name' => 'Bass Player']);
+    $drummer = User::factory()->create(['name' => 'Drummer']);
     $viewer = User::factory()->create();
     $matchingSong = JamStandardSong::query()->create(['artist' => 'Rage Against the Machine', 'title' => 'Killing in the Name', 'is_active' => true]);
     $otherSong = JamStandardSong::query()->create(['artist' => 'Radiohead', 'title' => 'Creep', 'is_active' => true]);
-    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $matchingSong->id, 'user_id' => $user->id, 'slot_name' => 'bass']);
+    $matchingSong->slots()->createMany([
+        ['name' => 'bass', 'position' => 1],
+        ['name' => 'drums', 'position' => 2],
+    ]);
+    $otherSong->slots()->create(['name' => 'drums', 'position' => 1]);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $matchingSong->id, 'user_id' => $bassPlayer->id, 'slot_name' => 'bass']);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $matchingSong->id, 'user_id' => $drummer->id, 'slot_name' => 'drums']);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $otherSong->id, 'user_id' => $drummer->id, 'slot_name' => 'drums']);
+    JamStandardUserSlot::query()->create(['jam_standard_song_id' => $matchingSong->id, 'user_id' => $viewer->id, 'slot_name' => 'bass']);
 
     $this->actingAs($viewer)
         ->get(route('jam-standards.index', ['q' => 'Radiohead']))
@@ -334,10 +448,12 @@ test('catalog can be filtered by artist or by a performer capability', function 
         ->assertDontSee('Rage Against the Machine - Killing in the Name');
 
     $this->actingAs($viewer)
-        ->get(route('jam-standards.index', ['user_id' => $user->id]))
+        ->get(route('jam-standards.index', ['user_ids' => [$bassPlayer->id, $drummer->id]]))
         ->assertOk()
         ->assertSee('Rage Against the Machine - Killing in the Name')
-        ->assertSee('Bass Player can play these slots')
+        ->assertSee('Bass Player, Drummer can play these slots')
+        ->assertSee('border-sky-300 bg-sky-50 text-sky-700', false)
+        ->assertSee('border-emerald-300 bg-emerald-50 text-emerald-700', false)
         ->assertSee('Bass')
         ->assertDontSee('Radiohead - Creep');
 });
@@ -355,24 +471,42 @@ test('catalog search returns filtered JSON for dynamic rendering', function () {
         ->assertJsonPath('songs.0.title', 'Paranoid Android');
 });
 
-test('catalog search filters dynamic results by performer capability', function () {
+test('catalog search filters dynamic results by capabilities shared by all selected performers', function () {
     $viewer = User::factory()->create();
-    $performer = User::factory()->create(['name' => 'Bass Player']);
+    $bassPlayer = User::factory()->create(['name' => 'Bass Player']);
+    $drummer = User::factory()->create(['name' => 'Drummer']);
     $matchingSong = JamStandardSong::query()->create(['artist' => 'Rage Against the Machine', 'title' => 'Killing in the Name', 'is_active' => true]);
-    JamStandardSong::query()->create(['artist' => 'Radiohead', 'title' => 'Creep', 'is_active' => true]);
+    $otherSong = JamStandardSong::query()->create(['artist' => 'Radiohead', 'title' => 'Creep', 'is_active' => true]);
+    $matchingSong->slots()->createMany([
+        ['name' => 'bass', 'position' => 1],
+        ['name' => 'drums', 'position' => 2],
+    ]);
+    $otherSong->slots()->create(['name' => 'drums', 'position' => 1]);
     JamStandardUserSlot::query()->create([
         'jam_standard_song_id' => $matchingSong->id,
-        'user_id' => $performer->id,
+        'user_id' => $bassPlayer->id,
         'slot_name' => 'bass',
+    ]);
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $matchingSong->id,
+        'user_id' => $drummer->id,
+        'slot_name' => 'drums',
+    ]);
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $otherSong->id,
+        'user_id' => $drummer->id,
+        'slot_name' => 'drums',
     ]);
 
     $this->actingAs($viewer)
-        ->getJson(route('jam-standards.index', ['user_id' => $performer->id]))
+        ->getJson(route('jam-standards.index', ['user_ids' => [$bassPlayer->id, $drummer->id]]))
         ->assertOk()
         ->assertJsonCount(1, 'songs')
         ->assertJsonPath('songs.0.artist', 'Rage Against the Machine')
-        ->assertJsonPath('songs.0.performer_slot_names.0', 'bass')
-        ->assertJsonPath('performer.name', 'Bass Player');
+        ->assertJsonPath('songs.0.performer_slots.bass.0', $bassPlayer->id)
+        ->assertJsonPath('songs.0.performer_slots.drums.0', $drummer->id)
+        ->assertJsonPath('performers.0.name', 'Bass Player')
+        ->assertJsonPath('performers.1.name', 'Drummer');
 });
 
 test('catalog pagination is included in normal and dynamic search results', function () {
@@ -389,7 +523,8 @@ test('catalog pagination is included in normal and dynamic search results', func
     $this->actingAs($viewer)
         ->get(route('jam-standards.index'))
         ->assertOk()
-        ->assertSee('Page 1 of 2');
+        ->assertSee('Page 1 of 2')
+        ->assertSee('16 songs');
 
     $this->actingAs($viewer)
         ->getJson(route('jam-standards.index', ['page' => 2]))
@@ -428,6 +563,54 @@ test('a user can request a catalog song and an admin approval adds it with reque
         ->and($catalogSong->source)->toBe('deezer')
         ->and($catalogSong->slots()->pluck('name')->all())->toBe(['bass', 'vocals'])
         ->and($catalogSong->userSlots()->where('user_id', $user->id)->pluck('slot_name')->all())->toBe(['bass']);
+});
+
+test('a manual catalog request backfills a matching Deezer duration', function () {
+    $user = User::factory()->create();
+
+    Http::fake([
+        'https://api.deezer.com/search*' => Http::response([
+            'data' => [[
+                'title' => 'Disorder',
+                'duration' => 209,
+                'artist' => ['name' => 'Joy Division'],
+            ]],
+        ]),
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('jam-standards.requests.store'), [
+            'artist' => 'Joy Division',
+            'title' => 'Disorder',
+            'slot_names' => ['bass'],
+        ])
+        ->assertRedirect(route('jam-standards.index'));
+
+    Http::assertSentCount(1);
+
+    expect(JamStandardSongRequest::query()->sole())
+        ->duration->toBe(209)
+        ->source->toBe('deezer');
+});
+
+test('a catalog request preserves an explicitly selected Deezer duration', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('jam-standards.requests.store'), [
+            'artist' => 'Joy Division',
+            'title' => 'Disorder',
+            'duration' => 208,
+            'source' => 'deezer',
+            'slot_names' => ['bass'],
+        ])
+        ->assertRedirect(route('jam-standards.index'));
+
+    expect(JamStandardSongRequest::query()->sole())
+        ->duration->toBe(208)
+        ->source->toBe('deezer');
+
+    Http::assertNothingSent();
 });
 
 test('an approved catalog request retains its selected template', function () {
@@ -470,7 +653,9 @@ test('catalog requests and moderation return JSON for dynamic page updates', fun
             'requester_slot_names' => ['vocals'],
         ])
         ->assertCreated()
-        ->assertJsonPath('request.requester.name', 'Requesting Player');
+        ->assertJsonPath('request.requester.name', 'Requesting Player')
+        ->assertJsonPath('request.artist', 'Massive Attack')
+        ->assertJsonPath('request.title', 'Teardrop');
 
     $catalogRequest = JamStandardSongRequest::query()->firstOrFail();
 
@@ -479,7 +664,8 @@ test('catalog requests and moderation return JSON for dynamic page updates', fun
         ->assertOk()
         ->assertJsonPath('request_id', $catalogRequest->id)
         ->assertJsonPath('status', 'approved')
-        ->assertJsonPath('song.title', 'Teardrop');
+        ->assertJsonPath('song.title', 'Teardrop')
+        ->assertJsonPath('remaining_request_count', 0);
 });
 
 test('an admin can reject a catalog request asynchronously', function () {
@@ -653,7 +839,7 @@ test('a quick set cannot assign the creator to incompatible catalog slots', func
     expect(Set::query()->where('name', 'Conflict Quick Set')->exists())->toBeFalse();
 });
 
-test('an admin can create a live quick set with partial assignments', function () {
+test('an admin can create a live quick set with a frequency-sorted artist name and partial assignments', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $performer = User::factory()->create();
 
@@ -677,13 +863,16 @@ test('an admin can create a live quick set with partial assignments', function (
         ['name' => 'vocals', 'position' => 1],
         ['name' => 'bass', 'position' => 2],
     ]);
+    $secondBlackSabbathSong = JamStandardSong::query()->create(['artist' => 'Black Sabbath', 'title' => 'Paranoid', 'is_active' => true]);
+    $thirdBlackSabbathSong = JamStandardSong::query()->create(['artist' => 'Black Sabbath', 'title' => 'Iron Man', 'is_active' => true]);
+    $kamelotSong = JamStandardSong::query()->create(['artist' => 'Kamelot', 'title' => 'March of Mephisto', 'is_active' => true]);
+    $catalogSong->update(['artist' => 'Black Sabbath']);
     JamSessionSignIn::query()->create(['jam_session_id' => $jamSession->id, 'user_id' => $performer->id, 'signed_in_at' => now()]);
 
     $response = $this->actingAs($admin)
         ->post(route('jam-standards.live-quick-set.store'), [
             'jam_session_id' => $jamSession->id,
-            'set_name' => 'Live Quick Set',
-            'catalog_song_ids' => [$catalogSong->id],
+            'catalog_song_ids' => [$catalogSong->id, $secondBlackSabbathSong->id, $thirdBlackSabbathSong->id, $kamelotSong->id],
             'live_song_assignments' => [
                 $catalogSong->id => [
                     'vocals' => $performer->id,
@@ -694,7 +883,7 @@ test('an admin can create a live quick set with partial assignments', function (
     $response->assertRedirect();
     expect((string) $response->headers->get('Location'))->toStartWith(route('sessions.show', $jamSession));
 
-    $set = Set::query()->where('name', 'Live Quick Set')->firstOrFail();
+    $set = Set::query()->where('name', 'Black Sabbath/Kamelot')->firstOrFail();
     $song = Song::query()->where('set_id', $set->id)->firstOrFail();
 
     $vocals = $song->slots()->where('name', 'vocals')->first();
@@ -717,12 +906,11 @@ test('a live quick set returns its created set for an asynchronous request', fun
     $this->actingAs($admin)
         ->postJson(route('jam-standards.live-quick-set.store'), [
             'jam_session_id' => $jamSession->id,
-            'set_name' => 'Async Live Quick Set',
             'catalog_song_ids' => [$catalogSong->id],
         ])
         ->assertCreated()
         ->assertJsonPath('message', 'Live quick set created from Jam Standards.')
-        ->assertJsonPath('set.name', 'Async Live Quick Set');
+        ->assertJsonPath('set.name', 'Radiohead');
 });
 
 test('a live quick set cannot assign one performer to incompatible slots for one song', function () {
