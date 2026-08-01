@@ -61,7 +61,7 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Sign up for a song',
-                    'href' => route('sessions.index'),
+                    'href' => route('slot-finder.index'),
                     'completed' => $user->slots()->exists(),
                     'description' => 'Find a free slot to play on.',
                 ],
