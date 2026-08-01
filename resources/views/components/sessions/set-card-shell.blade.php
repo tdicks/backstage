@@ -13,6 +13,9 @@
     $isAdmin = $currentUser?->is_admin;
     $isSetOwner = $set->owner_id === auth()->id();
     $isCollaborator = ! $isSetOwner && $set->isCollaborator($currentUser);
+    $isPerformingOnSet = $currentUser
+        ? $set->songs->contains(fn ($song) => $song->slots->contains(fn ($slot) => (int) $slot->user_id === (int) $currentUser->id))
+        : false;
     $canManageSet = $isAdmin || $isSetOwner || $isCollaborator;
     $canEditSet = $isAdmin || $isSetOwner;
     $canManageCollaborators = $isAdmin || $isSetOwner;
@@ -35,6 +38,23 @@
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-sky-500';
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner && ! $isCollaborator;
+    $collaboratorNames = collect($set->collaboratorUserIds())
+        ->map(fn ($userId) => $users->firstWhere('id', $userId)?->name)
+        ->filter(fn ($name) => filled($name));
+    $setParticipantSearchText = collect([$set->owner?->name])
+        ->merge($collaboratorNames)
+        ->merge(
+            $set->songs
+                ->flatMap(fn ($song) => $song->slots)
+                ->flatMap(fn ($slot) => [
+                    $slot->user?->name,
+                    $slot->manual_performer_name,
+                ])
+        )
+        ->filter(fn ($name) => filled($name))
+        ->map(fn ($name) => trim((string) $name))
+        ->unique()
+        ->implode(' ');
     $setManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
@@ -50,6 +70,19 @@
     id="set-{{ $set->id }}"
     data-session-set-card
     data-set-id="{{ $set->id }}"
+    data-set-name="{{ str($set->name)->lower() }}"
+    data-set-owner-name="{{ str($set->owner->name)->lower() }}"
+    data-set-participants="{{ str($setParticipantSearchText)->lower() }}"
+    data-set-owner-id="{{ $set->owner_id }}"
+    data-set-collaborating="{{ $isCollaborator ? '1' : '0' }}"
+    data-set-performing="{{ $isPerformingOnSet ? '1' : '0' }}"
+    data-set-performed="{{ $set->performed ? '1' : '0' }}"
+    data-set-hidden="{{ $set->is_hidden ? '1' : '0' }}"
+    data-set-feature="{{ $set->feature_set ? '1' : '0' }}"
+    data-set-signups-open="{{ $set->signups_open ? '1' : '0' }}"
+    data-set-free-for-all="{{ $set->free_for_all ? '1' : '0' }}"
+    data-set-has-attachments="{{ ($set->attachments_count ?? 0) > 0 ? '1' : '0' }}"
+    data-set-summary-url="{{ route('sets.summary', $set) }}"
     data-set-body-url="{{ route('sessions.sets.body', [$set->session, $set]) }}"
     class="rounded-xl border {{ $setCardClass }} p-6"
     x-bind:data-set-open="(!setCollapsed).toString()"
@@ -92,8 +125,7 @@
         'initialCollaborators' => $users->whereIn('id', $set->collaboratorUserIds())->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values()->all(),
         'csrfToken' => csrf_token(),
     ]))"
-    x-init="setCollapsed = localStorage.getItem(setKey) === '1'; songRequestsCollapsed = localStorage.getItem(songRequestsKey) === '1'; initLazySetCard($el)"
-    x-effect="localStorage.setItem(setKey, setCollapsed ? '1' : '0'); localStorage.setItem(songRequestsKey, songRequestsCollapsed ? '1' : '0')"
+    x-init="setCollapsed = true; songRequestsCollapsed = false; initLazySetCard($el)"
     x-on:mobile-song-move.window="if ($event.detail.setId === {{ $set->id }}) moveSong($event.detail.songId, $event.detail.direction)"
     x-on:session-song-request-processed.window="onSongRequestProcessed($event.detail)"
     @close-session-modals.window="closeSessionModals()"

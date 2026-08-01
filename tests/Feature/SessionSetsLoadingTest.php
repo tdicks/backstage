@@ -265,6 +265,80 @@ test('session page shows set loading errors before loading placeholders', functi
     expect(strpos($view, 'x-show="error"'))->toBeLessThan(strpos($view, 'x-show="!loaded && !error"'));
 });
 
+test('session page includes local set search and filtering controls without replacing static card layout', function () {
+    $view = file_get_contents(resource_path('views/sessions/show.blade.php'));
+    $lazyScript = file_get_contents(resource_path('js/components/lazySessionSets.js'));
+    $setShell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
+
+    expect($view)
+        ->toContain('lazySessionSets(')
+        ->toContain('currentUserId: @js((string) auth()->id())')
+        ->toContain('Search by set, owner, or song')
+        ->toContain('x-model="filterQuery"')
+        ->toContain('selectedFilterLabel()')
+        ->toContain('x-model="selectedAttributeFilters"')
+        ->toContain('Ownership')
+        ->toContain('Status')
+        ->toContain('Sign ups')
+        ->toContain('Visibility and mode')
+        ->toContain('Attachments')
+        ->toContain('value="my_sets"')
+        ->toContain('value="collaborating"')
+        ->toContain('value="performing_on"')
+        ->toContain('value="planned"')
+        ->toContain('value="performed"')
+        ->toContain('value="signups_open"')
+        ->toContain('value="signups_closed"')
+        ->toContain('value="hidden"')
+        ->toContain('value="free_for_all"')
+        ->toContain('value="has_attachments"')
+        ->toContain('Searching set songs...')
+        ->toContain('x-text="`${visibleSetCount} of ${totalSetCount} sets`"')
+        ->toContain('@click="clearFilters()"')
+        ->toContain('x-show="hasActiveFilters()"')
+        ->toContain('No sets match your current filters.');
+
+    expect($lazyScript)
+        ->toContain('matchesFilters(setCard)')
+        ->toContain('matchesNonTextFilters(setCard)')
+        ->toContain('applyFilters()')
+        ->toContain('clearFilters()')
+        ->toContain('runSummarySearch(query)')
+        ->toContain('summaryTextFromPayload(payload)')
+        ->toContain('setCard.dataset.setParticipants')
+        ->toContain('if (!this.matchesNonTextFilters(setCard))')
+        ->toContain('selectedAttributeFilters: []')
+        ->toContain('filterOptions: [')
+        ->toContain("{ key: 'my_sets', label: 'My sets' }")
+        ->toContain("{ key: 'collaborating', label: \"Sets I'm collaborating on\" }")
+        ->toContain("{ key: 'performing_on', label: \"Set's I'm performing on\" }")
+        ->toContain("{ key: 'signups_open', label: 'Sign ups open' }")
+        ->toContain("{ key: 'signups_closed', label: 'Sign ups closed' }")
+        ->toContain("case 'my_sets':")
+        ->toContain("case 'collaborating':")
+        ->toContain("case 'performing_on':")
+        ->toContain("case 'signups_closed':")
+        ->toContain("case 'has_attachments':")
+        ->toContain('this.applyFilters();')
+        ->toContain('data-set-open="true"]:not(.hidden) [data-session-song-card][data-song-open="true"]');
+
+    expect($setShell)
+        ->toContain('data-set-name="{{ str($set->name)->lower() }}"')
+        ->toContain('data-set-owner-name="{{ str($set->owner->name)->lower() }}"')
+        ->toContain('data-set-participants="{{ str($setParticipantSearchText)->lower() }}"')
+        ->toContain('data-set-summary-url="{{ route(\'sets.summary\', $set) }}"')
+        ->toContain('data-set-owner-id="{{ $set->owner_id }}"')
+        ->toContain('data-set-collaborating="{{ $isCollaborator ? \'1\' : \'0\' }}"')
+        ->toContain('data-set-performing="{{ $isPerformingOnSet ? \'1\' : \'0\' }}"')
+        ->toContain('data-set-performed="{{ $set->performed ? \'1\' : \'0\' }}"')
+        ->toContain('data-set-hidden="{{ $set->is_hidden ? \'1\' : \'0\' }}"')
+        ->toContain('data-set-feature="{{ $set->feature_set ? \'1\' : \'0\' }}"')
+        ->toContain('data-set-has-attachments="{{ ($set->attachments_count ?? 0) > 0 ? \'1\' : \'0\' }}"')
+        ->toContain('x-init="setCollapsed = true; songRequestsCollapsed = false; initLazySetCard($el)"')
+        ->not->toContain('localStorage.getItem(setKey)')
+        ->not->toContain('localStorage.setItem(setKey');
+});
+
 test('session activity endpoint batches approval count and open song slot updates', function () {
     $owner = User::factory()->create();
     $target = User::factory()->create(['name' => 'Recommended Player']);

@@ -34,3 +34,14 @@ test('live jam session page shows a live notice', function () {
         ->toContain('mt-1 text-xs text-emerald-200')
         ->toContain('class="justify-self-start"');
 });
+
+test('session fragment focus helper can expand collapsed sets while resolving deep links', function () {
+    $fragmentHelper = file_get_contents(resource_path('js/utils/sessionFragments.js'));
+
+    expect($fragmentHelper)
+        ->toContain('async function openSetCardIfNeeded(setCard)')
+        ->toContain('await setCardData.loadSetBody(setCard);')
+        ->toContain("if (!targetId.startsWith('song-') && !targetId.startsWith('slot-'))")
+        ->toContain('for (const setCard of setCards)')
+        ->toContain('let focusingFragment = false;');
+});
