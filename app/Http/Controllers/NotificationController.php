@@ -13,7 +13,9 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
             'after' => ['nullable', 'date'],
+            'before' => ['nullable', 'date'],
             'known_ids' => ['nullable', 'array', 'max:50'],
             'known_ids.*' => ['string', 'max:255'],
         ]);
@@ -21,7 +23,9 @@ class NotificationController extends Controller
         return response()->json(
             $this->notificationService->feedForUser(
                 $request->user(),
+                limit: (int) ($validated['limit'] ?? 25),
                 after: $request->date('after'),
+                before: $request->date('before'),
                 knownIds: $validated['known_ids'] ?? [],
             )
         );

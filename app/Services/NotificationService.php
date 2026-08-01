@@ -138,9 +138,9 @@ class NotificationService
     }
 
     /**
-     * @return array{notifications: list<array{id: string, type_key: string, title: string, body: string, action_url: string|null, action_label: string, should_popup: bool, seen: bool, created_at: string|null, created_at_human: string|null}>, unread_count: int}
+     * @return array{notifications: list<array{id: string, type_key: string, title: string, body: string, action_url: string|null, action_label: string, should_popup: bool, seen: bool, created_at: string|null, created_at_human: string|null}>, unread_count: int, total_count: int}
      */
-    public function feedForUser(User $user, int $limit = 25, ?CarbonInterface $after = null, array $knownIds = []): array
+    public function feedForUser(User $user, int $limit = 25, ?CarbonInterface $after = null, ?CarbonInterface $before = null, array $knownIds = []): array
     {
         $notifications = $user->notifications()->whereNull('dismissed_at');
 
@@ -149,20 +149,35 @@ class NotificationService
                 ->where('created_at', '>=', $after)
                 ->when($knownIds !== [], fn ($query) => $query->whereNotIn('id', $knownIds))
                 ->oldest();
+        } elseif ($before !== null) {
+            $notifications
+                ->where(function ($query) use ($before, $knownIds): void {
+                    $query->where('created_at', '<', $before);
+
+                    if ($knownIds !== []) {
+                        $query->orWhere(function ($timestampQuery) use ($before, $knownIds): void {
+                            $timestampQuery
+                                ->where('created_at', '=', $before)
+                                ->whereNotIn('id', $knownIds);
+                        });
+                    }
+                })
+                ->latest();
         } else {
             $notifications->latest();
         }
 
         $notifications = $notifications->limit($limit)->get();
+        $activeNotifications = $user->notifications()->whereNull('dismissed_at');
 
         return [
             'notifications' => $notifications
                 ->map(fn (DatabaseNotification $notification) => $this->mapNotification($notification))
                 ->all(),
-            'unread_count' => $user->notifications()
-                ->whereNull('dismissed_at')
+            'unread_count' => (clone $activeNotifications)
                 ->whereNull('read_at')
                 ->count(),
+            'total_count' => (clone $activeNotifications)->count(),
         ];
     }
 

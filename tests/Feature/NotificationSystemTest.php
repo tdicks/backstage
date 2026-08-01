@@ -231,6 +231,51 @@ test('notification feed polls only notifications created after the browser curso
         ->assertJsonPath('notifications.0.id', $latestNotification->id);
 });
 
+test('notification feed can page older notifications and reports total active count', function () {
+    $user = User::factory()->create();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Oldest update', 'body' => '', 'action_url' => null]
+    ));
+    $oldestNotification = $user->notifications()->latest()->firstOrFail();
+    $oldestNotification->forceFill(['created_at' => now()->subMinutes(4)])->save();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Older update', 'body' => '', 'action_url' => null]
+    ));
+    $olderNotification = $user->notifications()->latest()->firstOrFail();
+    $olderNotification->forceFill(['created_at' => now()->subMinutes(3)])->save();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Newer update', 'body' => '', 'action_url' => null]
+    ));
+    $newerNotification = $user->notifications()->latest()->firstOrFail();
+    $newerNotification->forceFill(['created_at' => now()->subMinutes(2)])->save();
+
+    $user->notify(new AppActivityNotification(
+        NotificationTypeCatalog::SET_UPDATED,
+        ['title' => 'Newest update', 'body' => '', 'action_url' => null]
+    ));
+    $newestNotification = $user->notifications()->latest()->firstOrFail();
+    $newestNotification->forceFill(['created_at' => now()->subMinute()])->save();
+
+    $this->actingAs($user)
+        ->getJson(route('notifications.index', [
+            'limit' => 2,
+            'before' => $newerNotification->created_at->toIso8601String(),
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total_count', 4)
+        ->assertJsonPath('notifications.0.id', $olderNotification->id)
+        ->assertJsonPath('notifications.1.id', $oldestNotification->id)
+        ->assertJsonMissingPath('notifications.2.id');
+
+    expect([$newestNotification->id, $newerNotification->id])->not->toContain($olderNotification->id);
+});
+
 test('authenticated navigation renders the initial notification feed', function () {
     $user = User::factory()->create();
 

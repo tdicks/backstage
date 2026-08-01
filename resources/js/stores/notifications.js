@@ -18,13 +18,18 @@ export function registerNotificationsStore(Alpine) {
 	Alpine.store('notifications', {
 		items: [],
 		unreadCount: 0,
+		totalCount: 0,
 		indexUrl: null,
 		seenUrlTemplate: null,
 		dismissUrlTemplate: null,
 		initialized: false,
 		intervalId: null,
-		notificationCursor: null,
-		notificationCursorIds: [],
+		newestNotificationCursor: null,
+		newestNotificationCursorIds: [],
+		oldestNotificationCursor: null,
+		oldestNotificationCursorIds: [],
+		trayWindowSize: 15,
+		loadingOlder: false,
 		toasts: [],
 		toastTimers: {},
 		pushPublicKey: null,
@@ -53,6 +58,8 @@ export function registerNotificationsStore(Alpine) {
 			this.pushUnsubscribeUrl = pushUnsubscribeUrl || this.pushUnsubscribeUrl;
 			this.items = items;
 			this.unreadCount = Number(unreadCount || 0);
+			this.totalCount = this.items.length;
+			this.trayWindowSize = Math.max(this.trayWindowSize, this.items.length || 0);
 			this.updateCursor(items);
 
 			if (!this.initialized) {
@@ -193,9 +200,9 @@ export function registerNotificationsStore(Alpine) {
 			try {
 				const url = new URL(this.indexUrl, window.location.origin);
 
-				if (this.notificationCursor) {
-					url.searchParams.set('after', this.notificationCursor);
-					this.notificationCursorIds.forEach((id) => url.searchParams.append('known_ids[]', id));
+				if (this.newestNotificationCursor) {
+					url.searchParams.set('after', this.newestNotificationCursor);
+					this.newestNotificationCursorIds.forEach((id) => url.searchParams.append('known_ids[]', id));
 				}
 
 				const response = await fetch(url, {
@@ -214,6 +221,64 @@ export function registerNotificationsStore(Alpine) {
 			} catch (e) {}
 		},
 
+		async loadOlder({ showPopups = false } = {}) {
+			if (!this.indexUrl || this.loadingOlder || !this.oldestNotificationCursor) {
+				return;
+			}
+
+			this.loadingOlder = true;
+
+			try {
+				const url = new URL(this.indexUrl, window.location.origin);
+				url.searchParams.set('before', this.oldestNotificationCursor);
+				url.searchParams.set('limit', String(this.trayWindowSize));
+				this.oldestNotificationCursorIds.forEach((id) => url.searchParams.append('known_ids[]', id));
+
+				const response = await fetch(url, {
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
+				});
+
+				if (!response.ok) {
+					return;
+				}
+
+				const payload = await response.json();
+				this.applyPayload(payload, { showPopups });
+			} catch (e) {
+			} finally {
+				this.loadingOlder = false;
+			}
+		},
+
+		async refreshWindow({ showPopups = false } = {}) {
+			if (!this.indexUrl) {
+				return;
+			}
+
+			try {
+				const url = new URL(this.indexUrl, window.location.origin);
+				url.searchParams.set('limit', String(this.trayWindowSize));
+
+				const response = await fetch(url, {
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
+				});
+
+				if (!response.ok) {
+					return;
+				}
+
+				const payload = await response.json();
+				this.items = [];
+				this.applyPayload(payload, { showPopups });
+			} catch (e) {}
+		},
+
 		applyPayload(payload, { showPopups = true } = {}) {
 			const notifications = Array.isArray(payload.notifications) ? payload.notifications : [];
 			const previousIds = this.items.map((item) => item.id);
@@ -222,6 +287,7 @@ export function registerNotificationsStore(Alpine) {
 				.filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index)
 				.sort((first, second) => new Date(second.created_at) - new Date(first.created_at));
 			this.unreadCount = Number(payload.unread_count || 0);
+			this.totalCount = Number(payload.total_count ?? this.totalCount);
 			this.updateCursor(this.items);
 
 			if (showPopups) {
@@ -242,10 +308,39 @@ export function registerNotificationsStore(Alpine) {
 				return latest;
 			}, null);
 
-			this.notificationCursor = latestNotification?.created_at || null;
-			this.notificationCursorIds = this.notificationCursor
-				? items.filter((item) => item.created_at === this.notificationCursor).map((item) => item.id)
+			const oldestNotification = items.reduce((oldest, item) => {
+				if (!oldest || new Date(item.created_at) < new Date(oldest.created_at)) {
+					return item;
+				}
+
+				return oldest;
+			}, null);
+
+			this.newestNotificationCursor = latestNotification?.created_at || null;
+			this.newestNotificationCursorIds = this.newestNotificationCursor
+				? items.filter((item) => item.created_at === this.newestNotificationCursor).map((item) => item.id)
 				: [];
+			this.oldestNotificationCursor = oldestNotification?.created_at || null;
+			this.oldestNotificationCursorIds = this.oldestNotificationCursor
+				? items.filter((item) => item.created_at === this.oldestNotificationCursor).map((item) => item.id)
+				: [];
+		},
+
+		shouldTopUp() {
+			return this.totalCount > this.items.length && this.items.length < this.trayWindowSize;
+		},
+
+		async topUpAfterDismiss() {
+			if (!this.shouldTopUp()) {
+				return;
+			}
+
+			if (this.items.length === 0) {
+				await this.refreshWindow({ showPopups: false });
+				return;
+			}
+
+			await this.loadOlder({ showPopups: false });
 		},
 
 		async markSeen(id) {
@@ -271,7 +366,7 @@ export function registerNotificationsStore(Alpine) {
 			} catch (e) {}
 		},
 
-		async dismiss(id) {
+		async dismiss(id, { topUp = true } = {}) {
 			const index = this.items.findIndex((item) => item.id === id);
 
 			if (index === -1 || !this.dismissUrlTemplate) {
@@ -279,6 +374,8 @@ export function registerNotificationsStore(Alpine) {
 			}
 
 			const [notification] = this.items.splice(index, 1);
+			this.totalCount = Math.max(0, this.totalCount - 1);
+			this.updateCursor(this.items);
 
 			if (!notification.seen) {
 				this.unreadCount = Math.max(0, this.unreadCount - 1);
@@ -296,6 +393,10 @@ export function registerNotificationsStore(Alpine) {
 			} catch (e) {}
 
 			window.dispatchEvent(new CustomEvent('notifications-updated'));
+
+			if (topUp) {
+				await this.topUpAfterDismiss();
+			}
 		},
 
 		queueToast(notification) {
@@ -330,7 +431,8 @@ export function registerNotificationsStore(Alpine) {
 
 		async dismissAll() {
 			const ids = this.items.map((item) => item.id);
-			await Promise.all(ids.map((id) => this.dismiss(id)));
+			await Promise.all(ids.map((id) => this.dismiss(id, { topUp: false })));
+			await this.topUpAfterDismiss();
 		},
 
 		urlFor(template, id) {
