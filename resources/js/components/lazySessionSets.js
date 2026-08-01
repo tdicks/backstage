@@ -1,10 +1,32 @@
-export function lazySessionSets(url, activityUrl = null) {
+export function lazySessionSets(url, activityUrl = null, options = {}) {
 	return {
 		loaded: false,
 		refreshing: false,
 		backgroundRefreshing: false,
 		activityRefreshing: false,
 		error: '',
+		filterQuery: '',
+		filterMenuOpen: false,
+		selectedAttributeFilters: [],
+		visibleSetCount: 0,
+		totalSetCount: 0,
+		currentUserId: options.currentUserId ? String(options.currentUserId) : '',
+		filterOptions: [
+			{ key: 'my_sets', label: 'My sets' },
+			{ key: 'collaborating', label: "Sets I'm collaborating on" },
+			{ key: 'performing_on', label: "Set's I'm performing on" },
+			{ key: 'planned', label: 'Planned' },
+			{ key: 'performed', label: 'Performed' },
+			{ key: 'signups_open', label: 'Sign ups open' },
+			{ key: 'signups_closed', label: 'Sign ups closed' },
+			{ key: 'hidden', label: 'Hidden' },
+			{ key: 'free_for_all', label: 'Free for all mode' },
+			{ key: 'has_attachments', label: 'Has attachments' },
+		],
+		summarySearchCache: {},
+		summarySearchPendingByQuery: {},
+		summarySearchLoading: false,
+		summarySearchQuery: '',
 		activityRefreshProvider: null,
 		fragmentFocusApplied: false,
 		async init() {
@@ -105,21 +127,223 @@ export function lazySessionSets(url, activityUrl = null) {
 			});
 		},
 		canBackgroundRefreshSets() {
-			if (document.hidden || this.hasOpenSessionModal() || this.hasFocusedSetFormControl() || this.hasOpenSessionActionMenu()) {
+			if (document.hidden || this.hasOpenSessionModal() || this.hasFocusedSetFormControl() || this.hasOpenSessionActionMenu() || this.hasActiveFilters()) {
 				return false;
 			}
 
 			return true;
 		},
+		hasActiveFilters() {
+			return this.filterQuery.trim().length > 0
+				|| this.selectedAttributeFilters.length > 0;
+		},
+		selectedFilterLabel() {
+			if (!this.selectedAttributeFilters.length) {
+				return 'Filter';
+			}
+
+			if (this.selectedAttributeFilters.length === 1) {
+				const selectedKey = this.selectedAttributeFilters[0];
+				return this.filterOptions.find((option) => option.key === selectedKey)?.label || 'Filter';
+			}
+
+			return `Filter (${this.selectedAttributeFilters.length})`;
+		},
+		matchesNonTextFilters(setCard) {
+			if (this.selectedAttributeFilters.length === 0) {
+				return true;
+			}
+
+			const isPerformed = setCard.dataset.setPerformed === '1';
+			const isSignupsOpen = setCard.dataset.setSignupsOpen === '1';
+			const isHidden = setCard.dataset.setHidden === '1';
+			const isFreeForAll = setCard.dataset.setFreeForAll === '1';
+			const hasAttachments = setCard.dataset.setHasAttachments === '1';
+			const isOwnedByCurrentUser = this.currentUserId !== '' && String(setCard.dataset.setOwnerId || '') === this.currentUserId;
+			const isCollaborating = setCard.dataset.setCollaborating === '1';
+			const isPerformingOnSet = setCard.dataset.setPerforming === '1';
+
+			return this.selectedAttributeFilters.some((filterKey) => {
+				switch (filterKey) {
+					case 'my_sets':
+						return isOwnedByCurrentUser;
+					case 'collaborating':
+						return isCollaborating;
+					case 'performing_on':
+						return isPerformingOnSet;
+					case 'planned':
+						return !isPerformed;
+					case 'performed':
+						return isPerformed;
+					case 'signups_open':
+						return isSignupsOpen;
+					case 'signups_closed':
+						return !isSignupsOpen;
+					case 'hidden':
+						return isHidden;
+					case 'free_for_all':
+						return isFreeForAll;
+					case 'has_attachments':
+						return hasAttachments;
+					default:
+						return false;
+				}
+			});
+		},
+		textHaystack(setCard) {
+			return `${setCard.dataset.setName || ''} ${setCard.dataset.setOwnerName || ''} ${setCard.dataset.setParticipants || ''}`;
+		},
+		setSummaryText(setId) {
+			return this.summarySearchCache[String(setId)] || '';
+		},
+		matchesSongSummary(setCard, query) {
+			if (!query) {
+				return false;
+			}
+
+			const setId = String(setCard.dataset.setId || '');
+			if (!setId) {
+				return false;
+			}
+
+			return this.setSummaryText(setId).includes(query);
+		},
+		collectPendingSummarySearchCards(query, setCards) {
+			if (!query || query.length < 2) {
+				this.summarySearchPendingByQuery = {};
+				return;
+			}
+
+			const pendingBySetId = {};
+			setCards.forEach((setCard) => {
+				if (!this.matchesNonTextFilters(setCard)) {
+					return;
+				}
+
+				if (this.textHaystack(setCard).includes(query) || this.matchesSongSummary(setCard, query)) {
+					return;
+				}
+
+				const setId = String(setCard.dataset.setId || '');
+				const summaryUrl = setCard.dataset.setSummaryUrl;
+				if (!setId || !summaryUrl) {
+					return;
+				}
+
+				if (this.setSummaryText(setId) !== '') {
+					return;
+				}
+
+				pendingBySetId[setId] = summaryUrl;
+			});
+
+			this.summarySearchPendingByQuery = pendingBySetId;
+		},
+		summaryTextFromPayload(payload) {
+			const songs = payload?.songs || [];
+			return songs
+				.map((song) => `${song.artist || ''} ${song.title || ''}`.trim())
+				.filter(Boolean)
+				.join(' ')
+				.toLowerCase();
+		},
+		async fetchSummaryForSearch(setId, summaryUrl) {
+			try {
+				const response = await fetch(summaryUrl, {
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
+				});
+
+				if (!response.ok) {
+					return false;
+				}
+
+				const payload = await response.json();
+				this.summarySearchCache = {
+					...this.summarySearchCache,
+					[String(setId)]: this.summaryTextFromPayload(payload),
+				};
+
+				return true;
+			} catch (e) {
+				return false;
+			}
+		},
+		async runSummarySearch(query) {
+			if (this.summarySearchLoading || !query || query.length < 2) {
+				return;
+			}
+
+			this.summarySearchLoading = true;
+			this.summarySearchQuery = query;
+
+			try {
+				const entries = Object.entries(this.summarySearchPendingByQuery || {});
+				for (const [setId, summaryUrl] of entries) {
+					if (this.summarySearchQuery !== query || this.filterQuery.trim().toLowerCase() !== query) {
+						break;
+					}
+
+					await this.fetchSummaryForSearch(setId, summaryUrl);
+					this.applyFilters();
+				}
+			} finally {
+				this.summarySearchLoading = false;
+			}
+		},
+		matchesFilters(setCard) {
+			const query = this.filterQuery.trim().toLowerCase();
+
+			if (!this.matchesNonTextFilters(setCard)) {
+				return false;
+			}
+
+			if (!query) {
+				return true;
+			}
+
+			if (this.textHaystack(setCard).includes(query)) {
+				return true;
+			}
+
+			return this.matchesSongSummary(setCard, query);
+
+		},
+		applyFilters() {
+			const query = this.filterQuery.trim().toLowerCase();
+			const setCards = Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-id]') || []);
+			this.totalSetCount = setCards.length;
+			let visibleCount = 0;
+
+			setCards.forEach((setCard) => {
+				const visible = this.matchesFilters(setCard);
+				setCard.classList.toggle('hidden', !visible);
+				if (visible) {
+					visibleCount++;
+				}
+			});
+
+			this.visibleSetCount = visibleCount;
+			this.collectPendingSummarySearchCards(query, setCards);
+			this.runSummarySearch(query);
+		},
+		clearFilters() {
+			this.filterQuery = '';
+			this.selectedAttributeFilters = [];
+			this.filterMenuOpen = false;
+			this.applyFilters();
+		},
 		openSongIds() {
-			return Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-open="true"] [data-session-song-card][data-song-open="true"]') || [])
+			return Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-open="true"]:not(.hidden) [data-session-song-card][data-song-open="true"]') || [])
 				.map((card) => card.dataset.songId)
 				.filter(Boolean);
 		},
 		activitySongIds() {
 			const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
 
-			return Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-open="true"] [data-session-song-card][data-song-open="true"]') || [])
+			return Array.from(this.$refs.setsContainer?.querySelectorAll('[data-session-set-card][data-set-open="true"]:not(.hidden) [data-session-song-card][data-song-open="true"]') || [])
 				.filter((card) => {
 					const { top, bottom } = card.getBoundingClientRect();
 
@@ -255,6 +479,8 @@ export function lazySessionSets(url, activityUrl = null) {
 					if (window.Alpine) {
 						window.Alpine.initTree(container);
 					}
+
+					this.applyFilters();
 
 					if (isBackground && transitions.length > 0) {
 						this.highlightNewSongs(transitions);

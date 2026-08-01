@@ -236,7 +236,7 @@
     <div class="py-8">
         <div
             class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8"
-            x-data="lazySessionSets('{{ route('sessions.sets', $session) }}', '{{ route('sessions.activity', $session) }}')"
+            x-data="lazySessionSets('{{ route('sessions.sets', $session) }}', '{{ route('sessions.activity', $session) }}', { currentUserId: @js((string) auth()->id()) })"
             @refresh-session-sets.window="refresh()"
             x-on:refresh-session-activity.window="$store.approvals.refresh()"
             x-on:session-song-opened.window="$store.approvals.refresh()"
@@ -266,6 +266,96 @@
             @endif
 
             @if ($session->sets_count > 0)
+                <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-5">
+                    <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        <label class="sr-only" for="session-set-search">Search sets</label>
+                        <x-text-input id="session-set-search" x-model="filterQuery" @input.debounce.250ms="applyFilters()" placeholder="Search by set, owner, or song" class="block w-full" />
+
+                        <div class="relative" @click.outside="filterMenuOpen = false">
+                            <button type="button" @click="filterMenuOpen = !filterMenuOpen" :aria-expanded="filterMenuOpen.toString()" aria-haspopup="true" class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition hover:border-slate-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 sm:w-64">
+                                <span x-text="selectedFilterLabel()"></span>
+                                <x-heroicon-m-chevron-down class="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                            </button>
+
+                            <div x-show="filterMenuOpen" x-cloak x-transition.origin.top.right class="absolute right-0 z-30 mt-1 w-full min-w-72 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl sm:w-80">
+                                <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ownership</p>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="my_sets" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-user class="h-4 w-4 text-slate-600" aria-hidden="true" />
+                                    <span>My sets</span>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="collaborating" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-user-group class="h-4 w-4 text-indigo-600" aria-hidden="true" />
+                                    <span>Sets I&apos;m collaborating on</span>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="performing_on" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-musical-note class="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                                    <span>Set&apos;s I&apos;m performing on</span>
+                                </label>
+                                <div class="mx-3 border-t border-slate-200"></div>
+
+                                <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="planned" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
+                                    <span>Planned</span>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="performed" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-check-circle class="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                                    <span>Performed</span>
+                                </label>
+                                <div class="mx-3 border-t border-slate-200"></div>
+
+                                <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Sign ups</p>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="signups_open" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                                    <span>Sign ups open</span>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="signups_closed" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" aria-hidden="true" />
+                                    <span>Sign ups closed</span>
+                                </label>
+                                <div class="mx-3 border-t border-slate-200"></div>
+
+                                <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Visibility and mode</p>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="hidden" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
+                                    <span>Hidden</span>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="free_for_all" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
+                                    <span>Free for all mode</span>
+                                </label>
+                                <div class="mx-3 border-t border-slate-200"></div>
+
+                                <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Attachments</p>
+                                <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                                    <input type="checkbox" value="has_attachments" x-model="selectedAttributeFilters" @change="applyFilters()" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <x-heroicon-m-paper-clip class="h-4 w-4 text-violet-600" aria-hidden="true" />
+                                    <span>Has attachments</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
+                        <div class="flex items-center gap-3">
+                            <span x-show="summarySearchLoading" x-cloak class="text-xs text-slate-500">Searching set songs...</span>
+                            <span x-text="`${visibleSetCount} of ${totalSetCount} sets`"></span>
+                            <button type="button" @click="clearFilters()" x-show="hasActiveFilters()" x-cloak class="text-xs font-semibold uppercase tracking-wide text-amber-700 transition hover:text-amber-900">Reset filters</button>
+                        </div>
+                    </div>
+                </section>
+            @endif
+
+            @if ($session->sets_count > 0)
                 <div class="space-y-4" x-show="!loaded && !error" x-cloak>
                     <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                         <div class="flex items-center gap-3">
@@ -289,6 +379,9 @@
                     @endfor
                 </div>
                 <div x-ref="setsContainer" x-show="loaded" x-cloak x-bind:class="refreshing ? 'cursor-wait' : ''"></div>
+                <div x-show="loaded && totalSetCount > 0 && visibleSetCount === 0" x-cloak class="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+                    No sets match your current filters.
+                </div>
             @else
                 <div class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
                     No sets for this jam session yet.
