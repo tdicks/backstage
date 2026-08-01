@@ -52,6 +52,8 @@ class User extends Authenticatable
             'is_deleted_account' => 'boolean',
             'deleted_account_at' => 'datetime',
             'onboarding_dismissed_at' => 'datetime',
+            'last_seen_at' => 'datetime',
+            'last_signed_in_at' => 'datetime',
             'hide_from_directory' => 'boolean',
             'hide_from_slot_proposals' => 'boolean',
             'slot_coverage' => 'array',

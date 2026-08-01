@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\BandTemplate;
 use App\Models\Set;
+use App\Models\Slot;
 use App\Models\Song;
 use App\Models\SongRequest;
+use App\Models\User;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -41,13 +43,25 @@ class SongRequestController extends Controller
             'artist' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'jam_standard_song_id' => ['nullable', 'integer', 'exists:jam_standard_songs,id'],
+            'slot_names' => ['nullable', 'array'],
+            'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
+
+        $requestedSlotNames = collect($validated['slot_names'] ?? [])
+            ->map(fn ($slotName) => (string) $slotName)
+            ->filter(fn (string $slotName) => in_array($slotName, Slot::keys(), true))
+            ->unique()
+            ->values()
+            ->all();
 
         $songRequest = $set->songRequests()->create([
             'requester_user_id' => $request->user()->id,
+            'jam_standard_song_id' => $validated['jam_standard_song_id'] ?? null,
             'artist' => $validated['artist'],
             'title' => $validated['title'],
             'notes' => $validated['notes'] ?? null,
+            'requested_slot_names' => $requestedSlotNames,
             'status' => SongRequest::STATUS_PENDING,
         ]);
 
@@ -117,8 +131,15 @@ class SongRequestController extends Controller
                     ->where('set_id', $songRequest->set_id)
                     ->max('position')) + 1;
 
+                $requestedSlotNames = collect($songRequest->requested_slot_names ?? [])
+                    ->map(fn ($slotName) => (string) $slotName)
+                    ->filter(fn (string $slotName) => in_array($slotName, Slot::keys(), true))
+                    ->unique()
+                    ->values();
+
                 $song = Song::create([
                     'set_id' => $songRequest->set_id,
+                    'jam_standard_song_id' => $songRequest->jam_standard_song_id,
                     'artist' => $songRequest->artist,
                     'title' => $songRequest->title,
                     'notes' => $songRequest->notes,
@@ -136,6 +157,49 @@ class SongRequestController extends Controller
                             'name' => $templateSlot->name,
                             'position' => $nextSlotPosition++,
                         ]);
+                    }
+                }
+
+                if ($requestedSlotNames->isNotEmpty()) {
+                    $nextSlotPosition = ((int) $song->slots()->max('position')) + 1;
+
+                    foreach ($requestedSlotNames as $requestedSlotName) {
+                        $alreadyExists = $song->slots()
+                            ->where('name', $requestedSlotName)
+                            ->exists();
+
+                        if (! $alreadyExists) {
+                            $song->slots()->create([
+                                'name' => $requestedSlotName,
+                                'position' => $nextSlotPosition++,
+                            ]);
+                        }
+                    }
+
+                    $song->load('slots');
+
+                    foreach ($requestedSlotNames as $requestedSlotName) {
+                        $openSlot = $song->slots
+                            ->where('name', $requestedSlotName)
+                            ->first(fn ($slot) => $slot->user_id === null && blank($slot->manual_performer_name));
+
+                        if ($openSlot) {
+                            $openSlot->update([
+                                'user_id' => $songRequest->requester_user_id,
+                            ]);
+                        }
+                    }
+
+                    if ($songRequest->requester) {
+                        $coverageMap = $songRequest->requester->slotCoverageMap();
+
+                        foreach ($requestedSlotNames as $requestedSlotName) {
+                            $coverageMap[$requestedSlotName] = User::SLOT_COVERAGE_CAN;
+                        }
+
+                        $songRequest->requester->forceFill([
+                            'slot_coverage' => $coverageMap,
+                        ])->save();
                     }
                 }
 

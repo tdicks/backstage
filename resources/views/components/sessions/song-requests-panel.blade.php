@@ -1,6 +1,7 @@
 @props([
     'set',
     'templates',
+    'slotOptions',
     'canManageSet' => false,
     'isSetOwner' => false,
     'setLocked' => false,
@@ -42,6 +43,12 @@
                             <p class="text-sm text-slate-600">Requested by {{ $songRequest->requester_user_id === auth()->id() ? 'you' : $songRequest->requester->name }}</p>
                             @if ($songRequest->bandTemplate)
                                 <p class="text-sm text-slate-600">Requested template: {{ $songRequest->bandTemplate->name }}</p>
+                            @endif
+                            @if (! empty($songRequest->requested_slot_names))
+                                <p class="text-sm text-slate-600">
+                                    Can cover:
+                                    {{ collect($songRequest->requested_slot_names)->map(fn ($slotName) => $slotOptions[$slotName] ?? str($slotName)->replace('_', ' ')->title())->join(', ') }}
+                                </p>
                             @endif
                             @if ($songRequest->notes)
                                 <p class="mt-1 text-sm text-slate-700">{{ $songRequest->notes }}</p>

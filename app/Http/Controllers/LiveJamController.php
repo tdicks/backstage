@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamSession;
+use App\Models\JamStandardSong;
 use App\Models\Slot;
+use App\Models\SlotType;
 use App\Models\User;
+use App\Services\LiveQuickSetCandidateBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -21,6 +24,10 @@ class LiveJamController extends Controller
      */
     private const CACHE_TTL_SECONDS = 43200;
 
+    private const QUICK_SET_TIMING_CACHE_KEY = 'live-quick-set:timing-summary';
+
+    public function __construct(private LiveQuickSetCandidateBuilder $liveQuickSetCandidateBuilder) {}
+
     /**
      * Show the organiser management dashboard.
      */
@@ -36,6 +43,14 @@ class LiveJamController extends Controller
             ->get();
 
         $liveState = $this->getLiveState($jamSession->id);
+        $checkedInUserIds = $jamSession->signIns()->whereNotNull('signed_in_at')->pluck('user_id');
+        $checkedInUsers = User::query()->whereIn('id', $checkedInUserIds)->orderBy('name')->get(['id', 'name']);
+        $liveCatalogSongs = JamStandardSong::query()
+            ->active()
+            ->with(['slots', 'userSlots' => fn ($query) => $query->whereIn('user_id', $checkedInUserIds)])
+            ->get()
+            ->sortByDesc(fn (JamStandardSong $song) => $song->userSlots->count())
+            ->values();
 
         return view('sessions.live.manage', [
             'session' => $jamSession,
@@ -45,7 +60,32 @@ class LiveJamController extends Controller
             'assignmentUsers' => User::query()->orderBy('name')->get(['id', 'name']),
             'currentUserId' => $request->user()->id,
             'jamManager' => $jamSession->jamManager,
+            'checkedInUsers' => $checkedInUsers,
+            'liveCatalogSongs' => $liveCatalogSongs,
+            'liveQuickSetTransitionSeconds' => self::TRANSITION_SECONDS_PER_UNIQUE_USER,
+            'slotConflicts' => $this->slotConflicts(),
         ]);
+    }
+
+    /** @return array<string, list<string>> */
+    private function slotConflicts(): array
+    {
+        return collect(SlotType::query()
+            ->with('conflicts:key')
+            ->where('active', true)
+            ->get(['id', 'key'])
+            ->reduce(function (array $conflicts, SlotType $slotType): array {
+                $conflicts[$slotType->key] ??= [];
+
+                foreach ($slotType->conflicts->pluck('key') as $conflictingKey) {
+                    $conflicts[$slotType->key][] = $conflictingKey;
+                    $conflicts[$conflictingKey][] = $slotType->key;
+                }
+
+                return $conflicts;
+            }, []))
+            ->map(fn (array $conflictingKeys) => collect($conflictingKeys)->unique()->values()->all())
+            ->all();
     }
 
     /**
@@ -241,6 +281,71 @@ class LiveJamController extends Controller
             'updated_at' => $liveState['updated_at'] ?? null,
             'jam_manager' => $jamSession->jamManager?->only(['id', 'name']),
         ]);
+    }
+
+    public function quickSetData(Request $request, JamSession $jamSession): JsonResponse
+    {
+        $this->authorize('update', $jamSession);
+
+        $checkedInUsers = $jamSession->signIns()
+            ->whereNotNull('signed_in_at')
+            ->with('user:id,name,slot_coverage')
+            ->orderBy('signed_in_at')
+            ->get()
+            ->map(fn ($signIn) => $signIn->user)
+            ->filter()
+            ->values();
+        $startedAt = hrtime(true);
+        $songs = $this->liveQuickSetCandidateBuilder->build($checkedInUsers, $this->slotConflicts());
+        $calculationMilliseconds = round((hrtime(true) - $startedAt) / 1_000_000, 2);
+        $timing = $this->recordQuickSetTiming($jamSession, $calculationMilliseconds, $checkedInUsers->count(), $songs->count());
+
+        return response()->json([
+            'songs' => $songs,
+            'attendees' => $checkedInUsers->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'slot_coverage' => $user->slotCoverageMap(),
+            ])->values(),
+            'timing' => $timing,
+        ]);
+    }
+
+    /**
+     * @return array{calculation_milliseconds: float, checked_in_user_count: int, candidate_song_count: int, sample_count: int, average_milliseconds: float, maximum_milliseconds: float}
+     */
+    private function recordQuickSetTiming(JamSession $jamSession, float $calculationMilliseconds, int $checkedInUserCount, int $candidateSongCount): array
+    {
+        $summary = Cache::get(self::QUICK_SET_TIMING_CACHE_KEY, [
+            'sample_count' => 0,
+            'total_milliseconds' => 0.0,
+            'maximum_milliseconds' => 0.0,
+        ]);
+        $sampleCount = (int) ($summary['sample_count'] ?? 0) + 1;
+        $totalMilliseconds = (float) ($summary['total_milliseconds'] ?? 0.0) + $calculationMilliseconds;
+        $maximumMilliseconds = max((float) ($summary['maximum_milliseconds'] ?? 0.0), $calculationMilliseconds);
+
+        Cache::forever(self::QUICK_SET_TIMING_CACHE_KEY, [
+            'sample_count' => $sampleCount,
+            'total_milliseconds' => $totalMilliseconds,
+            'maximum_milliseconds' => $maximumMilliseconds,
+            'last_sample' => [
+                'jam_session_id' => $jamSession->id,
+                'calculation_milliseconds' => $calculationMilliseconds,
+                'checked_in_user_count' => $checkedInUserCount,
+                'candidate_song_count' => $candidateSongCount,
+                'recorded_at' => now()->toIso8601String(),
+            ],
+        ]);
+
+        return [
+            'calculation_milliseconds' => $calculationMilliseconds,
+            'checked_in_user_count' => $checkedInUserCount,
+            'candidate_song_count' => $candidateSongCount,
+            'sample_count' => $sampleCount,
+            'average_milliseconds' => round($totalMilliseconds / $sampleCount, 2),
+            'maximum_milliseconds' => $maximumMilliseconds,
+        ];
     }
 
     public function claimManager(Request $request, JamSession $jamSession): JsonResponse

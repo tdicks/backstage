@@ -162,6 +162,9 @@
                     <x-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')">
                         {{ __('Find a Slot') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
+                        {{ __('Jam Standards') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                         {{ __("Who's Who") }}
                     </x-nav-link>
@@ -348,6 +351,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')">
                 {{ __('Find a Slot') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
+                {{ __('Jam Standards') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                 {{ __("Who's Who") }}

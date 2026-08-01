@@ -790,6 +790,17 @@
                         <x-input-label for="request_notes_{{ $set->id }}" value="Notes" />
                         <x-textarea-input id="request_notes_{{ $set->id }}" name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                     </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-700">Slots I can cover for this song (optional)</p>
+                        <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                            @foreach ($slotOptions as $slotValue => $slotLabel)
+                                <label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
+                                    <input type="checkbox" name="slot_names[]" value="{{ $slotValue }}" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
+                                    {{ $slotLabel }}
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
                     <div class="flex justify-end gap-3">
                         <x-modal-secondary-button type="button" @click="openSongRequest = false; resetSongRequestAutocomplete()">Cancel</x-modal-secondary-button>
                         <x-modal-primary-button x-bind:disabled="requestSongBusy">Send Request</x-modal-primary-button>

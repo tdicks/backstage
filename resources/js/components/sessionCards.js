@@ -392,6 +392,9 @@ export function sessionSetCard(config) {
         requestTitleLookupTimer: null,
         requestArtistLookupToken: 0,
         requestTitleLookupToken: 0,
+        requestSongMode: 'manual',
+        requestCatalogSongId: '',
+        jamStandardSongs: config.jamStandardSongs ?? [],
         requestSongBusy: false,
         requestSongError: '',
         artistLookupUrl: config.artistLookupUrl,
@@ -1254,6 +1257,25 @@ export function sessionSetCard(config) {
             this.requestSongError = '';
             this.resetSongRequestAutocomplete();
         },
+        applyRequestCatalogSong() {
+            const selectedSongId = Number(this.requestCatalogSongId);
+            const selectedSong = this.jamStandardSongs.find((song) => Number(song.id) === selectedSongId);
+
+            if (!selectedSong) {
+                this.requestArtistQuery = '';
+                this.requestTitleQuery = '';
+                this.requestSelectedArtistName = '';
+                return;
+            }
+
+            this.requestArtistQuery = selectedSong.artist;
+            this.requestSelectedArtistName = selectedSong.artist;
+            this.requestTitleQuery = selectedSong.title;
+            this.requestArtistSuggestions = [];
+            this.requestTitleSuggestions = [];
+            this.showRequestArtistSuggestions = false;
+            this.showRequestTitleSuggestions = false;
+        },
         async submitSongRequest(event) {
             this.requestSongBusy = true;
             this.requestSongError = '';
@@ -1488,6 +1510,8 @@ export function sessionSetCard(config) {
             this.showTitleSuggestions = false;
         },
         resetSongRequestAutocomplete() {
+            this.requestSongMode = 'manual';
+            this.requestCatalogSongId = '';
             this.requestArtistQuery = '';
             this.requestTitleQuery = '';
             this.requestSelectedArtistName = '';
@@ -1509,6 +1533,10 @@ export function sessionSetCard(config) {
             }
         },
         queueRequestArtistLookup() {
+            if (this.requestSongMode !== 'manual') {
+                return;
+            }
+
             this.requestArtistLookupError = '';
             this.showRequestTitleSuggestions = false;
             this.requestTitleSuggestions = [];
@@ -1574,6 +1602,10 @@ export function sessionSetCard(config) {
             this.requestTitleLookupError = '';
         },
         queueRequestTitleLookup() {
+            if (this.requestSongMode !== 'manual') {
+                return;
+            }
+
             this.requestTitleLookupError = '';
 
             if (this.requestTitleLookupTimer) {

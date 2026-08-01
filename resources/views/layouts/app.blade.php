@@ -33,7 +33,7 @@
                 </header>
             @endisset
 
-            @if (session('status'))
+            @if (session('status') && ! request()->routeIs('jam-standards.*'))
                 <div
                     x-data="{ show: true }"
                     x-init="setTimeout(() => show = false, 3500)"
