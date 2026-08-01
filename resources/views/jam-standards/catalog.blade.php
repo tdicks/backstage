@@ -112,8 +112,8 @@
             </div>
             <div x-ref="performerCapabilityLegend" class="mt-3 flex items-center gap-2">
                 @if ($selectedPerformers->isNotEmpty())
-                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="Selected performers can play these slots"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /></span>
-                    <p class="text-xs font-medium text-slate-600">{{ $selectedPerformers->pluck('name')->join(', ') }} can play these slots</p>
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="Selected performers know these slots"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /></span>
+                    <p class="text-xs font-medium text-slate-600">{{ $selectedPerformers->pluck('name')->join(', ') }} know these parts</p>
                 @endif
             </div>
         </div>

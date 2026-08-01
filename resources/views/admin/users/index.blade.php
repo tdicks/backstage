@@ -217,13 +217,13 @@
                                                                     <input type="hidden" name="hide_from_directory" value="0">
                                                                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                                                         <input type="checkbox" name="hide_from_directory" value="1" @checked($user->hide_from_directory) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
-                                                                        Hide from Who's Who
+                                                                        Hide me from directories (Who's Who and Jam Standards search)
                                                                     </label>
 
                                                                     <input type="hidden" name="hide_from_slot_proposals" value="0">
                                                                     <label class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
                                                                         <input type="checkbox" name="hide_from_slot_proposals" value="1" @checked($user->hide_from_slot_proposals) class="rounded border-slate-300 text-emerald-600 shadow-sm focus:ring-emerald-500">
-                                                                        Hide from set proposal options
+                                                                        Hide me from slot recommendations and assignments
                                                                     </label>
 
                                                                     @if ($slotOptions)

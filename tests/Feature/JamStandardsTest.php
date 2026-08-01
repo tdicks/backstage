@@ -10,6 +10,7 @@ use App\Models\Set;
 use App\Models\Song;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -196,14 +197,14 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('Add Song');
 });
 
-test('catalog performer options exclude the current user', function () {
+test('catalog performer options include the current user', function () {
     $viewer = User::factory()->create();
     $performer = User::factory()->create();
 
     $response = $this->actingAs($viewer)->get(route('jam-standards.index'));
 
     expect($response->viewData('users')->pluck('id')->all())
-        ->not->toContain($viewer->id)
+        ->toContain($viewer->id)
         ->toContain($performer->id);
 });
 
@@ -452,7 +453,7 @@ test('catalog can be filtered by artist or capabilities shared by all selected p
         ->get(route('jam-standards.index', ['user_ids' => [$bassPlayer->id, $drummer->id]]))
         ->assertOk()
         ->assertSee('Rage Against the Machine - Killing in the Name')
-        ->assertSee('Bass Player, Drummer can play these slots')
+        ->assertSee('Bass Player, Drummer know these parts')
         ->assertSee('border-sky-300 bg-sky-50 text-sky-700', false)
         ->assertSee('border-emerald-300 bg-emerald-50 text-emerald-700', false)
         ->assertSee('Bass')
@@ -508,6 +509,64 @@ test('catalog search filters dynamic results by capabilities shared by all selec
         ->assertJsonPath('songs.0.performer_slots.drums.0', $drummer->id)
         ->assertJsonPath('performers.0.name', 'Bass Player')
         ->assertJsonPath('performers.1.name', 'Drummer');
+});
+
+test('catalog performer filtering excludes users hidden from directory', function () {
+    $viewer = User::factory()->create();
+    $visiblePerformer = User::factory()->create(['name' => 'Visible Performer', 'hide_from_directory' => false]);
+    $hiddenPerformer = User::factory()->create(['name' => 'Hidden Performer', 'hide_from_directory' => true]);
+
+    $catalogSong = JamStandardSong::query()->create([
+        'artist' => 'Soundgarden',
+        'title' => 'Black Hole Sun',
+        'is_active' => true,
+    ]);
+    $catalogSong->slots()->create(['name' => 'vocals', 'position' => 1]);
+
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $catalogSong->id,
+        'user_id' => $visiblePerformer->id,
+        'slot_name' => 'vocals',
+    ]);
+
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $catalogSong->id,
+        'user_id' => $hiddenPerformer->id,
+        'slot_name' => 'vocals',
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('jam-standards.index'))
+        ->assertOk()
+        ->assertSee('Visible Performer')
+        ->assertDontSee('Hidden Performer');
+
+    $this->actingAs($viewer)
+        ->getJson(route('jam-standards.index', ['user_ids' => [$visiblePerformer->id, $hiddenPerformer->id]]))
+        ->assertOk()
+        ->assertJsonCount(1, 'performers')
+        ->assertJsonPath('performers.0.name', 'Visible Performer');
+});
+
+test('catalog performer filter includes the current user for completeness', function () {
+    $viewer = User::factory()->create([
+        'name' => 'Current Viewer',
+        'hide_from_directory' => true,
+    ]);
+    $otherHiddenPerformer = User::factory()->create([
+        'name' => 'Other Hidden Performer',
+        'hide_from_directory' => true,
+    ]);
+
+    $response = $this->actingAs($viewer)
+        ->get(route('jam-standards.index'))
+        ->assertOk();
+
+    /** @var Collection<int, User> $users */
+    $users = $response->viewData('users');
+
+    expect($users->contains(fn (User $user) => $user->id === $viewer->id))->toBeTrue();
+    expect($users->contains(fn (User $user) => $user->id === $otherHiddenPerformer->id))->toBeFalse();
 });
 
 test('catalog pagination is included in normal and dynamic search results', function () {

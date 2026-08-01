@@ -455,7 +455,7 @@ export function jamStandardsCatalog(config) {
             badge.textContent = '\u2713';
             const label = document.createElement('p');
             label.className = 'text-xs font-medium text-slate-600';
-            label.textContent = `${performers.map((performer) => performer.name).join(', ')} can play these slots`;
+            label.textContent = `${performers.map((performer) => performer.name).join(', ')} know these parts`;
             this.$refs.performerCapabilityLegend.append(badge, label);
         },
         appendCatalogSong(song, performers = []) {

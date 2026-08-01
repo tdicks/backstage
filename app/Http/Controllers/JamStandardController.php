@@ -27,8 +27,12 @@ class JamStandardController extends Controller
             ->map(fn ($userId) => (int) $userId)
             ->unique()
             ->values();
+        $currentUserId = (int) $request->user()->id;
         $selectedPerformers = User::query()
             ->whereIn('id', $selectedPerformerIds)
+            ->where(fn ($query) => $query
+                ->where('hide_from_directory', false)
+                ->orWhere('id', $currentUserId))
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -122,7 +126,9 @@ class JamStandardController extends Controller
                 ->all(),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()
-                ->whereKeyNot($request->user()->id)
+                ->where(fn ($query) => $query
+                    ->where('hide_from_directory', false)
+                    ->orWhere('id', $currentUserId))
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'pendingRequests' => JamStandardSongRequest::query()
