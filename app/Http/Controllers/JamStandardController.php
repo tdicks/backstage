@@ -72,6 +72,10 @@ class JamStandardController extends Controller
             $song->setAttribute('recent_capability_counts', $recentCapabilityCounts[$song->id] ?? []);
         });
 
+        $knownSongCounts = JamStandardUserSlot::query()
+            ->selectRaw('user_id, count(distinct jam_standard_song_id) as known_song_count')
+            ->groupBy('user_id');
+
         if ($request->expectsJson()) {
             return response()->json([
                 'songs' => $catalogSongs->getCollection()->map(fn (JamStandardSong $song) => [
@@ -126,11 +130,16 @@ class JamStandardController extends Controller
                 ->all(),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'users' => User::query()
+                ->leftJoinSub($knownSongCounts, 'known_song_counts', fn ($join) => $join->on('users.id', '=', 'known_song_counts.user_id'))
                 ->where(fn ($query) => $query
                     ->where('hide_from_directory', false)
                     ->orWhere('id', $currentUserId))
-                ->orderBy('name')
-                ->get(['id', 'name']),
+                ->orderBy('users.name')
+                ->get([
+                    'users.id',
+                    'users.name',
+                    DB::raw('coalesce(known_song_counts.known_song_count, 0) as known_song_count'),
+                ]),
             'pendingRequests' => JamStandardSongRequest::query()
                 ->where('status', JamStandardSongRequest::STATUS_PENDING)
                 ->with(['requester', 'bandTemplate'])

@@ -101,7 +101,7 @@
                 <button type="button" @click="performerFilterOpen = ! performerFilterOpen" :aria-expanded="performerFilterOpen.toString()" aria-haspopup="true" class="flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"><span x-text="selectedPerformerFilterLabel()"></span><x-heroicon-m-chevron-down class="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" /></button>
                 <div x-show="performerFilterOpen" x-cloak x-transition.origin.top class="absolute z-30 mt-1 max-h-64 w-full min-w-56 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
                     @foreach ($users as $user)
-                        <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"><input type="checkbox" name="user_ids[]" value="{{ $user->id }}" x-model="selectedPerformerIds" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">{{ $user->name }}</label>
+                        <label class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"><input type="checkbox" name="user_ids[]" value="{{ $user->id }}" x-model="selectedPerformerIds" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">{{ $user->name }}@if (($user->known_song_count ?? 0) > 0) ({{ $user->known_song_count }})@endif</label>
                     @endforeach
                 </div>
             </div>

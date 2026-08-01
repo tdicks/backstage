@@ -208,6 +208,38 @@ test('catalog performer options include the current user', function () {
         ->toContain($performer->id);
 });
 
+test('catalog performer filter shows known song counts when available', function () {
+    $viewer = User::factory()->create();
+    $countedPerformer = User::factory()->create(['name' => 'Counted Performer']);
+    $uncountedPerformer = User::factory()->create(['name' => 'Uncounted Performer']);
+
+    $songOne = JamStandardSong::query()->create(['artist' => 'The Cure', 'title' => 'A Forest', 'is_active' => true]);
+    $songTwo = JamStandardSong::query()->create(['artist' => 'Joy Division', 'title' => 'Disorder', 'is_active' => true]);
+
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $songOne->id,
+        'user_id' => $countedPerformer->id,
+        'slot_name' => 'bass',
+    ]);
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $songOne->id,
+        'user_id' => $countedPerformer->id,
+        'slot_name' => 'drums',
+    ]);
+    JamStandardUserSlot::query()->create([
+        'jam_standard_song_id' => $songTwo->id,
+        'user_id' => $countedPerformer->id,
+        'slot_name' => 'bass',
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('jam-standards.index'))
+        ->assertOk()
+        ->assertSee('Counted Performer (2)')
+        ->assertSee('Uncounted Performer')
+        ->assertDontSee('Uncounted Performer (0)');
+});
+
 test('catalog selected songs persist across paginated fetches in the frontend component', function () {
     $component = file_get_contents(resource_path('js/components/jamStandardsCatalog.js'));
 
