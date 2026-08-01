@@ -74,6 +74,8 @@ class JamStandardQuickSetController extends Controller
                     'artist' => $catalogSong->artist,
                     'title' => $catalogSong->title,
                     'notes' => $catalogSong->notes,
+                    'duration' => $catalogSong->duration,
+                    'source' => $catalogSong->source,
                     'position' => $nextSongPosition++,
                 ]);
 
@@ -184,6 +186,8 @@ class JamStandardQuickSetController extends Controller
                     'artist' => $catalogSong->artist,
                     'title' => $catalogSong->title,
                     'notes' => $catalogSong->notes,
+                    'duration' => $catalogSong->duration,
+                    'source' => $catalogSong->source,
                     'position' => $nextSongPosition++,
                 ]);
 

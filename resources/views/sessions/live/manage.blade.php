@@ -8,6 +8,7 @@
             liveQuickSetAssignments: {},
             slotLabels: @js($slotOptions),
             slotConflicts: @js($slotConflicts),
+            liveQuickSetTransitionSeconds: @js($liveQuickSetTransitionSeconds),
             liveManagerId: @js($session->jam_manager_id),
             liveQuickSetSongs: [],
             liveQuickSetAttendees: [],
@@ -108,6 +109,26 @@
             isLiveQuickSetSongFullyAssigned(song) {
                 return song.slots.every(slot => Boolean(this.liveQuickSetAssignments[song.id]?.[slot.name]));
             },
+            selectedLiveQuickSetSongs() {
+                return this.liveQuickSetSongs.filter(song => this.selectedLiveSongIds.includes(song.id));
+            },
+            liveQuickSetHasDurationEstimate() {
+                const songs = this.selectedLiveQuickSetSongs();
+                return songs.length > 0 && songs.every(song => Number(song.duration) > 0 && song.source);
+            },
+            liveQuickSetAssignedUserCount() {
+                return new Set(this.selectedLiveQuickSetSongs().flatMap(song => Object.values(this.liveQuickSetAssignments[song.id] || {})).filter(Boolean).map(String)).size;
+            },
+            liveQuickSetTransitionDuration() {
+                return Math.max(0, this.liveQuickSetAssignedUserCount() - 1) * this.liveQuickSetTransitionSeconds;
+            },
+            liveQuickSetTotalDuration() {
+                return this.selectedLiveQuickSetSongs().reduce((total, song) => total + Number(song.duration || 0), 0) + this.liveQuickSetTransitionDuration();
+            },
+            formatLiveQuickSetDuration(seconds) {
+                const totalSeconds = Math.max(0, Math.round(seconds));
+                return `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`;
+            },
             slotLabel(slotName) { return this.slotLabels[slotName] || slotName.replaceAll('_', ' '); },
             init() { this.refreshLiveQuickSetData(); this.liveQuickSetPollTimer = setInterval(() => this.refreshLiveQuickSetData(), 5000); },
             destroy() { clearInterval(this.liveQuickSetPollTimer); },
@@ -183,14 +204,14 @@
                                     <template x-for="song in liveQuickSetSongs" :key="song.id">
                                         <label :class="selectedLiveSongIds.includes(song.id) ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-slate-200 text-slate-800 hover:border-emerald-300 hover:bg-emerald-50'" class="flex cursor-pointer items-start gap-3 border p-3 text-sm transition">
                                             <input type="checkbox" name="catalog_song_ids[]" :value="song.id" @change="toggleLiveSong(song.id, $event.target.checked)" class="mt-0.5 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
-                                            <span><span class="font-semibold" x-text="`${song.artist} - ${song.title}`"></span><span class="mt-1 block text-xs text-slate-500" x-text="`${song.capability_match_count} checked-in capability match${song.capability_match_count === 1 ? '' : 'es'}`"></span></span>
+                                            <span><span class="font-semibold" x-text="`${song.artist} - ${song.title}`"></span><span class="mt-1 block text-xs text-slate-500"><span x-text="`${song.capability_match_count} checked-in capability match${song.capability_match_count === 1 ? '' : 'es'}`"></span><span x-show="song.duration" x-cloak> &middot; <span x-text="formatLiveQuickSetDuration(song.duration)"></span></span></span></span>
                                         </label>
                                     </template>
                                 </div>
                                 <div x-show="liveQuickSetStep === 2" x-cloak class="max-h-[60vh] space-y-4 overflow-y-auto">
                                     <template x-for="song in liveQuickSetSongs" :key="song.id">
                                         <div x-show="selectedLiveSongIds.includes(song.id)" :class="isLiveQuickSetSongFullyAssigned(song) ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-slate-50'" class="border p-3">
-                                            <p class="font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></p>
+                                            <div class="flex flex-wrap items-baseline justify-between gap-2"><p class="font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></p><p x-show="song.duration" x-cloak class="text-xs text-slate-500" x-text="formatLiveQuickSetDuration(song.duration)"></p></div>
                                             <div class="mt-2 divide-y divide-slate-200">
                                             <template x-for="slot in song.slots" :key="slot.name">
                                                 <div class="py-2 first:pt-0 last:pb-0">
@@ -224,7 +245,7 @@
                                     </template>
                                 </div>
                                 <p x-show="liveQuickSetError" x-text="liveQuickSetError" x-cloak class="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
-                                <div class="mt-5 flex justify-between gap-3"><x-modal-secondary-button type="button" x-show="liveQuickSetStep === 2" @click="liveQuickSetStep = 1">Back</x-modal-secondary-button><span></span><x-modal-primary-button type="button" x-show="liveQuickSetStep === 1" @click="if (selectedLiveSongIds.length) liveQuickSetStep = 2">Next</x-modal-primary-button><x-modal-primary-button x-show="liveQuickSetStep === 2" x-bind:disabled="liveQuickSetSubmitting" class="disabled:cursor-not-allowed disabled:opacity-40" x-text="liveQuickSetSubmitting ? 'Creating...' : 'Create Set'"></x-modal-primary-button></div>
+                                <div class="mt-5 border-t border-slate-200 pt-4"><div x-show="selectedLiveSongIds.length" x-cloak class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"><span class="font-medium">Estimated set duration</span><span x-show="liveQuickSetHasDurationEstimate()" x-cloak class="font-semibold"><span x-text="formatLiveQuickSetDuration(liveQuickSetTotalDuration())"></span><span x-show="liveQuickSetAssignedUserCount() > 1" x-cloak class="ml-1 text-xs font-normal text-sky-700">including <span x-text="formatLiveQuickSetDuration(liveQuickSetTransitionDuration())"></span> for transitions</span></span><span x-show="!liveQuickSetHasDurationEstimate()" class="text-sky-700">Unavailable until every selected song has a Deezer duration.</span></div><div class="flex justify-between gap-3"><x-modal-secondary-button type="button" x-show="liveQuickSetStep === 2" @click="liveQuickSetStep = 1">Back</x-modal-secondary-button><span></span><x-modal-primary-button type="button" x-show="liveQuickSetStep === 1" @click="if (selectedLiveSongIds.length) liveQuickSetStep = 2">Next</x-modal-primary-button><x-modal-primary-button x-show="liveQuickSetStep === 2" x-bind:disabled="liveQuickSetSubmitting" class="disabled:cursor-not-allowed disabled:opacity-40" x-text="liveQuickSetSubmitting ? 'Creating...' : 'Create Set'"></x-modal-primary-button></div></div>
                             </form>
                         </div>
                     </div>

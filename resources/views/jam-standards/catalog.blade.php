@@ -42,7 +42,24 @@
                 The jam standards are a list of songs that many of our regulars know. Learning some of these is a great way to get started with our jam sessions. If you know a song that isn't on this list, you can request it be added.
             </p>
         </section>
+        @if (auth()->user()->is_admin && $pendingRequests->isNotEmpty())
+            <section class="mb-6 rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6">
+                <h3 class="text-lg font-semibold text-slate-900">Catalog Requests</h3>
+                <div x-ref="catalogRequests" class="mt-3 divide-y divide-slate-200 border border-slate-200 bg-white">
+                    @foreach ($pendingRequests as $songRequest)
+                        <div data-catalog-request-id="{{ $songRequest->id }}" class="flex flex-wrap items-center justify-between gap-3 p-3">
+                            <p class="text-sm text-slate-700"><span class="font-semibold">{{ $songRequest->artist }} - {{ $songRequest->title }}</span> requested by {{ $songRequest->requester->name }}</p>
+                            <div class="flex gap-2">
+                                <form method="POST" action="{{ route('jam-standards.requests.respond', $songRequest) }}" @submit.prevent="respondToCatalogRequest($event)">@csrf @method('PATCH')<input type="hidden" name="status" value="approved"><x-modal-primary-button>Approve</x-modal-primary-button></form>
+                                <form method="POST" action="{{ route('jam-standards.requests.respond', $songRequest) }}" @submit.prevent="respondToCatalogRequest($event)">@csrf @method('PATCH')<input type="hidden" name="status" value="rejected"><x-modal-secondary-button>Reject</x-modal-secondary-button></form>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
         <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6">
+            <h3 class="mb-3 text-lg font-semibold text-slate-900">Song Catalog</h3>
         <p x-show="statusMessage" x-text="statusMessage" x-cloak class="mb-4 border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"></p>
         @if (session('status'))
             <p class="mb-4 border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{{ session('status') }}</p>
@@ -152,22 +169,6 @@
             @endif
         </div>
 
-        @if (auth()->user()->is_admin && $pendingRequests->isNotEmpty())
-            <section class="mt-8 border-t border-slate-200 pt-6">
-                <h3 class="text-lg font-semibold text-slate-900">Catalog Requests</h3>
-                <div x-ref="catalogRequests" class="mt-3 divide-y divide-slate-200 border border-slate-200 bg-white">
-                    @foreach ($pendingRequests as $songRequest)
-                        <div data-catalog-request-id="{{ $songRequest->id }}" class="flex flex-wrap items-center justify-between gap-3 p-3">
-                            <p class="text-sm text-slate-700"><span class="font-semibold">{{ $songRequest->artist }} - {{ $songRequest->title }}</span> requested by {{ $songRequest->requester->name }}</p>
-                            <div class="flex gap-2">
-                                <form method="POST" action="{{ route('jam-standards.requests.respond', $songRequest) }}" @submit.prevent="respondToCatalogRequest($event)">@csrf @method('PATCH')<input type="hidden" name="status" value="approved"><x-modal-primary-button>Approve</x-modal-primary-button></form>
-                                <form method="POST" action="{{ route('jam-standards.requests.respond', $songRequest) }}" @submit.prevent="respondToCatalogRequest($event)">@csrf @method('PATCH')<input type="hidden" name="status" value="rejected"><x-modal-secondary-button>Reject</x-modal-secondary-button></form>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </section>
-        @endif
         </section>
 
         @if (auth()->user()->is_admin)
@@ -203,6 +204,8 @@
                         <form method="POST" :action="openAddSong ? '{{ route('jam-standards.store') }}' : '{{ route('jam-standards.requests.store') }}'" class="mt-4 space-y-4" @submit.prevent="openAddSong ? submitCatalogSong($event) : submitCatalogRequest($event)">
                             @csrf
                             <div class="grid gap-3 sm:grid-cols-2"><div class="relative"><x-input-label value="Artist" /><x-text-input name="artist" x-model="catalogArtistQuery" @input="queueCatalogArtistLookup()" @focus="showCatalogArtistSuggestions = catalogArtistSuggestions.length > 0" class="mt-1 block w-full text-slate-900 placeholder:text-slate-500" autocomplete="off" required /><p class="mt-1 text-xs text-slate-500">Start typing an artist to fetch Deezer suggestions.</p><p x-show="catalogArtistLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up Deezer artists...</p><ul x-show="showCatalogArtistSuggestions" x-cloak @click.outside="showCatalogArtistSuggestions = false" class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"><template x-for="artist in catalogArtistSuggestions" :key="artist"><li><button type="button" @click="selectCatalogArtistSuggestion(artist)" class="w-full px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-50" x-text="artist"></button></li></template></ul></div><div class="relative"><x-input-label value="Title" /><x-text-input name="title" x-model="catalogTitleQuery" @input="queueCatalogTitleLookup()" @focus="showCatalogTitleSuggestions = catalogTitleSuggestions.length > 0" class="mt-1 block w-full text-slate-900 placeholder:text-slate-500" autocomplete="off" required /><p class="mt-1 text-xs text-slate-500">Song suggestions are scoped to the selected artist.</p><p x-show="catalogTitleLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up Deezer songs...</p><ul x-show="showCatalogTitleSuggestions" x-cloak @click.outside="showCatalogTitleSuggestions = false" class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"><template x-for="track in catalogTitleSuggestions" :key="track.title"><li><button type="button" @click="selectCatalogTitleSuggestion(track)" class="w-full px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-50" x-text="track.title"></button></li></template></ul></div></div>
+                            <input type="hidden" name="duration" :value="catalogDeezerTitleSelected && catalogSelectedDeezerDuration ? catalogSelectedDeezerDuration : ''">
+                            <input type="hidden" name="source" :value="catalogDeezerTitleSelected ? 'deezer' : ''">
                             <fieldset><legend class="text-sm font-medium text-slate-700">Slots</legend><div class="mt-2 flex gap-4 text-sm"><label class="flex items-center gap-2 text-slate-700"><input type="radio" value="template" x-model="entryMode"> Band template</label><label class="flex items-center gap-2 text-slate-700"><input type="radio" value="manual" x-model="entryMode"> Choose manually</label></div></fieldset>
                             <div x-show="entryMode === 'template'"><x-input-label value="Band Template" /><select name="band_template_id" x-model="requestTemplateId" :disabled="entryMode !== 'template'" class="mt-1 block w-full rounded-md border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-500"><option value="">Choose a template</option>@foreach ($templates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach</select></div>
                             <div x-show="entryMode === 'manual'"><div class="grid grid-cols-2 gap-2 sm:grid-cols-3">@foreach ($slotOptions as $slotValue => $slotLabel)<label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="slot_names[]" value="{{ $slotValue }}" x-model="entrySlotNames" :disabled="entryMode !== 'manual'" class="rounded border-slate-300 text-amber-600">{{ $slotLabel }}</label>@endforeach</div></div>

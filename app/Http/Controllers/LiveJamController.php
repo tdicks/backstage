@@ -57,6 +57,7 @@ class LiveJamController extends Controller
             'jamManager' => $jamSession->jamManager,
             'checkedInUsers' => $checkedInUsers,
             'liveCatalogSongs' => $liveCatalogSongs,
+            'liveQuickSetTransitionSeconds' => self::TRANSITION_SECONDS_PER_UNIQUE_USER,
             'slotConflicts' => $this->slotConflicts(),
         ]);
     }
@@ -300,6 +301,8 @@ class LiveJamController extends Controller
                 'id' => $song->id,
                 'artist' => $song->artist,
                 'title' => $song->title,
+                'duration' => $song->duration,
+                'source' => $song->source,
                 'slots' => $song->slots->map(fn ($slot) => ['name' => $slot->name])->values(),
                 'capable_user_ids' => $song->userSlots->groupBy('slot_name')->map(fn ($slots) => $slots->pluck('user_id')->values())->all(),
                 'capability_match_count' => $song->userSlots->count(),

@@ -14,6 +14,8 @@ class JamStandardSong extends Model
         'artist',
         'title',
         'notes',
+        'duration',
+        'source',
         'band_template_id',
         'is_active',
         'created_by_user_id',
@@ -22,6 +24,7 @@ class JamStandardSong extends Model
     protected function casts(): array
     {
         return [
+            'duration' => 'integer',
             'is_active' => 'boolean',
         ];
     }

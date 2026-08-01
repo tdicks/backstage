@@ -23,7 +23,7 @@ test('live management shows quick set catalog controls with checked-in capabilit
     $session = JamSession::create(['name' => 'Live Catalog Jam', 'date' => now()->addDay(), 'description' => null, 'is_live' => true, 'jam_manager_id' => $admin->id]);
     JamSessionSignIn::query()->create(['jam_session_id' => $session->id, 'user_id' => $performer->id, 'signed_in_at' => now()]);
 
-    $catalogSong = JamStandardSong::query()->create(['artist' => 'Pixies', 'title' => 'Where Is My Mind?', 'is_active' => true]);
+    $catalogSong = JamStandardSong::query()->create(['artist' => 'Pixies', 'title' => 'Where Is My Mind?', 'duration' => 230, 'source' => 'deezer', 'is_active' => true]);
     $catalogSong->slots()->create(['name' => 'bass', 'position' => 1]);
     $catalogSong->userSlots()->create(['user_id' => $performer->id, 'slot_name' => 'bass']);
 
@@ -49,6 +49,10 @@ test('live management shows quick set catalog controls with checked-in capabilit
         ->assertSee('selectedLiveSongIds.includes(song.id)', false)
         ->assertSee('cursor-pointer', false)
         ->assertSee('submitLiveQuickSet($event.target)', false)
+        ->assertSee('Estimated set duration')
+        ->assertSee('liveQuickSetTransitionSeconds', false)
+        ->assertSee('liveQuickSetTotalDuration()', false)
+        ->assertSee('formatLiveQuickSetDuration(song.duration)', false)
         ->assertDontSee('live_song_slots', false)
         ->assertSee('Leave unassigned')
         ->assertSee('Other attendee');
@@ -57,6 +61,8 @@ test('live management shows quick set catalog controls with checked-in capabilit
         ->getJson(route('sessions.live.quick-set-data', $session))
         ->assertOk()
         ->assertJsonPath('songs.0.artist', 'Pixies')
+        ->assertJsonPath('songs.0.duration', 230)
+        ->assertJsonPath('songs.0.source', 'deezer')
         ->assertJsonPath('songs.0.capable_user_ids.bass.0', $performer->id)
         ->assertJsonPath('attendees.0.name', 'Checked In Bass');
 });

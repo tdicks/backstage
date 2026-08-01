@@ -20,6 +20,8 @@ class JamStandardSongRequest extends Model
         'artist',
         'title',
         'notes',
+        'duration',
+        'source',
         'slot_names',
         'requester_slot_names',
         'status',
@@ -28,7 +30,7 @@ class JamStandardSongRequest extends Model
 
     protected function casts(): array
     {
-        return ['slot_names' => 'array', 'requester_slot_names' => 'array', 'reviewed_at' => 'datetime'];
+        return ['duration' => 'integer', 'slot_names' => 'array', 'requester_slot_names' => 'array', 'reviewed_at' => 'datetime'];
     }
 
     public function requester(): BelongsTo

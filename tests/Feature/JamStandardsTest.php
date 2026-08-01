@@ -45,6 +45,24 @@ test('an admin can add a catalog song and receives duplicate warning for close m
     expect(JamStandardSong::query()->count())->toBe(2);
 });
 
+test('catalog song durations are persisted from Deezer selections', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($admin)
+        ->post(route('jam-standards.store'), [
+            'artist' => 'Blondie',
+            'title' => 'Heart of Glass',
+            'duration' => 294,
+            'source' => 'deezer',
+            'slot_names' => ['vocals'],
+        ])
+        ->assertRedirect(route('jam-standards.index'));
+
+    expect(JamStandardSong::query()->sole())
+        ->duration->toBe(294)
+        ->source->toBe('deezer');
+});
+
 test('catalog songs and catalog requests require a template or manual slots', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $user = User::factory()->create();
@@ -124,6 +142,9 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('catalog-song-coverage', false)
         ->assertSee('text-slate-900 placeholder:text-slate-500', false)
         ->assertSee('catalog-song-form', false)
+        ->assertSee('name="duration"', false)
+        ->assertSee('name="source"', false)
+        ->assertSee('catalogSelectedDeezerDuration', false)
         ->assertSee('Start typing an artist to fetch Deezer suggestions.')
         ->assertSee('Song suggestions are scoped to the selected artist.')
         ->assertSee('Looking up Deezer artists')
@@ -167,6 +188,30 @@ test('catalog performer options exclude the current user', function () {
     expect($response->viewData('users')->pluck('id')->all())
         ->not->toContain($viewer->id)
         ->toContain($performer->id);
+});
+
+test('pending catalog requests are shown in their own panel above the catalog table', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $requester = User::factory()->create();
+    JamStandardSong::query()->create(['artist' => 'Bauhaus', 'title' => 'Bela Lugosi\'s Dead', 'is_active' => true]);
+    JamStandardSongRequest::query()->create([
+        'requester_user_id' => $requester->id,
+        'artist' => 'Portishead',
+        'title' => 'Sour Times',
+        'slot_names' => ['bass'],
+        'requester_slot_names' => ['bass'],
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('jam-standards.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('Catalog Requests')
+        ->assertSee('x-ref="catalogRequests"', false)
+        ->assertSee('Portishead - Sour Times');
+
+    expect(strpos($response->getContent(), 'Catalog Requests'))
+        ->toBeLessThan(strpos($response->getContent(), '<table'));
 });
 
 test('an admin can update a catalog song and replace its slots', function () {
@@ -363,6 +408,8 @@ test('a user can request a catalog song and an admin approval adds it with reque
         ->post(route('jam-standards.requests.store'), [
             'artist' => 'Alice in Chains',
             'title' => 'Would?',
+            'duration' => 207,
+            'source' => 'deezer',
             'slot_names' => ['bass', 'vocals'],
             'requester_slot_names' => ['bass'],
         ])
@@ -377,6 +424,8 @@ test('a user can request a catalog song and an admin approval adds it with reque
     $catalogSong = JamStandardSong::query()->where('title', 'Would?')->firstOrFail();
 
     expect($catalogRequest->refresh()->status)->toBe(JamStandardSongRequest::STATUS_APPROVED)
+        ->and($catalogSong->duration)->toBe(207)
+        ->and($catalogSong->source)->toBe('deezer')
         ->and($catalogSong->slots()->pluck('name')->all())->toBe(['bass', 'vocals'])
         ->and($catalogSong->userSlots()->where('user_id', $user->id)->pluck('slot_name')->all())->toBe(['bass']);
 });
@@ -482,6 +531,8 @@ test('a user can create a quick set in a chosen session with hidden and free-for
     $catalogA = JamStandardSong::query()->create([
         'artist' => 'Thin Lizzy',
         'title' => 'The Boys Are Back in Town',
+        'duration' => 267,
+        'source' => 'deezer',
         'is_active' => true,
     ]);
 
@@ -521,6 +572,10 @@ test('a user can create a quick set in a chosen session with hidden and free-for
 
     expect($songs)->toHaveCount(2)
         ->and($songs->pluck('jam_standard_song_id')->all())->toBe([$catalogA->id, $catalogB->id]);
+
+    expect($songs->first())
+        ->duration->toBe(267)
+        ->source->toBe('deezer');
 
     $assignedSlots = $songs->first()->slots()->orderBy('position')->get();
 
@@ -614,6 +669,8 @@ test('an admin can create a live quick set with partial assignments', function (
     $catalogSong = JamStandardSong::query()->create([
         'artist' => 'Nirvana',
         'title' => 'Smells Like Teen Spirit',
+        'duration' => 301,
+        'source' => 'deezer',
         'is_active' => true,
     ]);
     $catalogSong->slots()->createMany([
@@ -646,7 +703,9 @@ test('an admin can create a live quick set with partial assignments', function (
     expect($vocals)->not()->toBeNull()
         ->and($bass)->not()->toBeNull()
         ->and($vocals->user_id)->toBe($performer->id)
-        ->and($bass->user_id)->toBeNull();
+        ->and($bass->user_id)->toBeNull()
+        ->and($song->duration)->toBe(301)
+        ->and($song->source)->toBe('deezer');
 });
 
 test('a live quick set returns its created set for an asynchronous request', function () {

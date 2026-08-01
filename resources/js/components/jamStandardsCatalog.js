@@ -17,6 +17,8 @@ export function jamStandardsCatalog(config) {
         catalogArtistQuery: '',
         catalogTitleQuery: '',
         catalogSelectedArtist: '',
+        catalogSelectedDeezerDuration: null,
+        catalogDeezerTitleSelected: false,
         catalogArtistSuggestions: [],
         catalogTitleSuggestions: [],
         showCatalogArtistSuggestions: false,
@@ -150,6 +152,8 @@ export function jamStandardsCatalog(config) {
             this.catalogArtistQuery = '';
             this.catalogTitleQuery = '';
             this.catalogSelectedArtist = '';
+            this.catalogSelectedDeezerDuration = null;
+            this.catalogDeezerTitleSelected = false;
             this.catalogArtistSuggestions = [];
             this.catalogTitleSuggestions = [];
             this.showCatalogArtistSuggestions = false;
@@ -218,12 +222,16 @@ export function jamStandardsCatalog(config) {
             this.setCatalogAutocompleteValue('artist', artist);
             this.catalogSelectedArtist = artist;
             this.setCatalogAutocompleteValue('title', '');
+            this.catalogSelectedDeezerDuration = null;
+            this.catalogDeezerTitleSelected = false;
             this.catalogArtistSuggestions = [];
             this.catalogTitleSuggestions = [];
             this.showCatalogArtistSuggestions = false;
             this.showCatalogTitleSuggestions = false;
         },
         queueCatalogTitleLookup() {
+            this.catalogSelectedDeezerDuration = null;
+            this.catalogDeezerTitleSelected = false;
             if (this.catalogTitleLookupTimer) {
                 clearTimeout(this.catalogTitleLookupTimer);
             }
@@ -266,6 +274,8 @@ export function jamStandardsCatalog(config) {
         },
         selectCatalogTitleSuggestion(track) {
             this.setCatalogAutocompleteValue('title', track.title);
+            this.catalogSelectedDeezerDuration = track.duration ?? null;
+            this.catalogDeezerTitleSelected = true;
             this.catalogTitleSuggestions = [];
             this.showCatalogTitleSuggestions = false;
         },
