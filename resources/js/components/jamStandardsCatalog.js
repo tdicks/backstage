@@ -400,7 +400,6 @@ export function jamStandardsCatalog(config) {
                     throw new Error('Search failed');
                 }
                 const payload = await response.json();
-                this.selectedSongIds = [];
                 this.catalogPage = payload.pagination.current_page;
                 this.renderCatalogSongs(payload.songs || [], payload.performers || [], payload.pagination);
                 window.history.replaceState({}, '', `${form.action}?${parameters.toString()}`);
@@ -466,6 +465,7 @@ export function jamStandardsCatalog(config) {
             selectionCell.className = 'cursor-pointer px-4 py-3';
             const selection = document.createElement('input');
             selection.type = 'checkbox';
+            selection.checked = this.selectedSongIds.includes(song.id);
             selection.className = 'cursor-pointer rounded border-slate-300 text-amber-600 focus:ring-amber-500';
             selection.setAttribute('aria-label', `Select ${song.artist} - ${song.title}`);
             selection.addEventListener('change', () => {

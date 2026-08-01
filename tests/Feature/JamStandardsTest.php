@@ -208,6 +208,14 @@ test('catalog performer options include the current user', function () {
         ->toContain($performer->id);
 });
 
+test('catalog selected songs persist across paginated fetches in the frontend component', function () {
+    $component = file_get_contents(resource_path('js/components/jamStandardsCatalog.js'));
+
+    expect($component)
+        ->not->toContain('this.selectedSongIds = [];')
+        ->toContain('selection.checked = this.selectedSongIds.includes(song.id);');
+});
+
 test('pending catalog requests are shown in their own panel above the catalog table', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $requester = User::factory()->create();
