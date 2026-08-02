@@ -124,6 +124,14 @@
                 </button>
             @endif
         </div>
+        <span
+            x-show="slotIsClaimable"
+            x-cloak
+            class="mt-1 inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700 md:hidden"
+            title="This slot can be claimed"
+        >
+            Claimable
+        </span>
         <p x-show="slotNotes" x-cloak x-text="slotNotes" class="mt-1 text-xs font-normal leading-5 text-slate-500 whitespace-pre-wrap">{{ $slotModel->notes }}</p>
     </td>
     <td class="px-3 py-3">
@@ -132,7 +140,7 @@
             <span
                 x-show="slotIsClaimable"
                 x-cloak
-                class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700"
+                class="hidden items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700 md:inline-flex"
                 title="This slot can be claimed"
             >
                 Claimable

@@ -475,7 +475,9 @@ export function sessionSetCard(config) {
             return this.canReorderSongs && !this.hasOpenDragBlockingModal();
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+            window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                detail: { setId: this.setId },
+            }));
         },
         initLazySetCard(rootElement) {
             this.lazyRootElement = rootElement;
@@ -1723,7 +1725,9 @@ export function sessionSongCard(config) {
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
         },
         refreshSessionSets() {
-            window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+            window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                detail: { setId: this.setId },
+            }));
         },
         async moveSlot(slotId, direction) {
             if (!this.canDragSlots() || this.busyAction) {
@@ -2203,6 +2207,70 @@ export function sessionSongRequestRow(config) {
         busy: false,
         error: '',
         bandTemplateId: config.initialBandTemplateId ? String(config.initialBandTemplateId) : '',
+        canChooseBandTemplate: Boolean(config.canChooseBandTemplate),
+        requestedSlotNames: Array.isArray(config.requestedSlotNames) ? config.requestedSlotNames : [],
+        slotConflicts: config.slotConflicts && typeof config.slotConflicts === 'object' ? config.slotConflicts : {},
+        templateSlotNamesByTemplateId: config.templateSlotNamesByTemplateId && typeof config.templateSlotNamesByTemplateId === 'object'
+            ? config.templateSlotNamesByTemplateId
+            : {},
+        templateNamesById: config.templateNamesById && typeof config.templateNamesById === 'object'
+            ? config.templateNamesById
+            : {},
+        approvedSlotNames: [],
+        init() {
+            this.approvedSlotNames = this.approvedSlotNames.filter((slotName) => this.requestedSlotNames.includes(slotName));
+        },
+        activeTemplateSlotNames() {
+            if (this.bandTemplateId === '') {
+                return [];
+            }
+
+            return this.templateSlotNamesByTemplateId[this.bandTemplateId] || [];
+        },
+        hasActiveTemplateSlots() {
+            return this.activeTemplateSlotNames().length > 0;
+        },
+        slotNeedsTemplateAddition(slotName) {
+            if (!this.hasActiveTemplateSlots()) {
+                return false;
+            }
+
+            return !this.activeTemplateSlotNames().includes(slotName);
+        },
+        hasAnyTemplateAdditions() {
+            return this.requestedSlotNames.some((slotName) => this.slotNeedsTemplateAddition(slotName));
+        },
+        activeTemplateName() {
+            if (this.bandTemplateId === '') {
+                return 'the band template';
+            }
+
+            return this.templateNamesById[this.bandTemplateId] || 'the band template';
+        },
+        templateAdditionHelperText() {
+            return `* Not in ${this.activeTemplateName()}. This slot will be added alongside the slots in the band template.`;
+        },
+        slotsConflict(firstSlotName, secondSlotName) {
+            if (firstSlotName === secondSlotName) {
+                return false;
+            }
+
+            const firstConflicts = this.slotConflicts[firstSlotName] || [];
+            const secondConflicts = this.slotConflicts[secondSlotName] || [];
+
+            return firstConflicts.includes(secondSlotName) || secondConflicts.includes(firstSlotName);
+        },
+        slotSelectionDisabled(slotName) {
+            if (this.busy) {
+                return true;
+            }
+
+            if (this.approvedSlotNames.includes(slotName)) {
+                return false;
+            }
+
+            return this.approvedSlotNames.some((selectedSlotName) => this.slotsConflict(selectedSlotName, slotName));
+        },
         async respond(status) {
             this.busy = true;
             this.error = '';
@@ -2212,8 +2280,12 @@ export function sessionSongRequestRow(config) {
                 status,
             };
 
-            if (status === 'accepted' && this.bandTemplateId !== '') {
+            if (status === 'accepted' && this.canChooseBandTemplate && this.bandTemplateId !== '') {
                 payload.band_template_id = Number(this.bandTemplateId);
+            }
+
+            if (status === 'accepted' && this.approvedSlotNames.length > 0) {
+                payload.approved_slot_names = [...this.approvedSlotNames];
             }
 
             try {
@@ -2706,6 +2778,11 @@ export function sessionSlotRow(config) {
             this.applySlotPayload(slot);
             window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot } }));
         },
+        owningSetId() {
+            const setCard = this.$el?.closest('[data-session-set-card][data-set-id]');
+
+            return setCard?.dataset?.setId || null;
+        },
         showToast(type, message) {
             const anchorRect = (this.$refs.toastAnchor || this.$refs.actionMenuButton || this.$el).getBoundingClientRect();
             const viewportPadding = 12;
@@ -2810,7 +2887,9 @@ export function sessionSlotRow(config) {
 
                 this.showActionFeedback('Request sent.');
                 this.hasPendingOwnRequest = true;
-                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                    detail: { setId: this.owningSetId() },
+                }));
             } catch (e) {
                 this.actionError = 'Could not send request. Try again.';
             } finally {
@@ -2850,7 +2929,9 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot assigned to you.');
-                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                    detail: { setId: this.owningSetId() },
+                }));
             } catch (e) {
                 this.actionError = e.message || 'Could not take slot. Try again.';
             } finally {
@@ -3216,7 +3297,9 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot updated.');
-                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                    detail: { setId: this.owningSetId() },
+                }));
             } catch (e) {
                 this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {

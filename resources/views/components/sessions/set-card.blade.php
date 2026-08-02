@@ -68,6 +68,7 @@
     data-set-id="{{ $set->id }}"
     class="rounded-xl border {{ $setCardClass }} p-6"
     x-bind:data-set-open="(!setCollapsed).toString()"
+    x-bind:data-song-requests-open="(!songRequestsCollapsed).toString()"
     x-data="sessionSetCard(@js([
         'setId' => $set->id,
         'initialSongRequestsPendingCount' => $set->songRequests->where('status', 'pending')->count(),
@@ -100,6 +101,7 @@
     x-on:session-song-request-processed.window="onSongRequestProcessed($event.detail)"
     @close-session-modals.window="closeSessionModals()"
     @close-session-action-menus.window="closeSessionActionMenus()"
+    @session-set-restore-state.window="if (String($event.detail.setId) === String(setId)) { setCollapsed = $event.detail.setCollapsed === true; songRequestsCollapsed = $event.detail.songRequestsCollapsed === true; if (!setCollapsed) loadSetBody(); }"
     @scroll.window="repositionActionMenu()"
     @resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"
     @keydown.escape.window="closeSessionModals(); openActionMenu = false"
@@ -939,7 +941,9 @@
 
                                         this.hidden = true;
                                         pendingSlotActivityCount = Math.max(0, pendingSlotActivityCount - 1);
-                                        window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                                        window.dispatchEvent(new CustomEvent('refresh-session-sets', {
+                                            detail: { setId: {{ $set->id }} },
+                                        }));
                                     } catch (e) {
                                         this.error = e.message || 'Could not update assignment. Try again.';
                                     } finally {

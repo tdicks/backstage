@@ -8,6 +8,7 @@ use App\Models\JamSessionAttendance;
 use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\Slot;
+use App\Models\SlotType;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\JamSessionAttendanceService;
@@ -278,6 +279,7 @@ class JamSessionController extends Controller
             'session' => $jamSession,
             'sessions' => $sessionOptions,
             'slotOptions' => Slot::options(),
+            'slotConflicts' => $this->slotConflicts(),
             'jamStandardSongs' => JamStandardSong::query()
                 ->active()
                 ->orderBy('artist')
@@ -299,6 +301,29 @@ class JamSessionController extends Controller
             'users' => $users,
             'assignmentUsers' => $this->attendanceService->assignmentUserOptions($jamSession, $users, request()->user()),
         ];
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function slotConflicts(): array
+    {
+        return collect(SlotType::query()
+            ->with('conflicts:key')
+            ->where('active', true)
+            ->get(['id', 'key'])
+            ->reduce(function (array $conflicts, SlotType $slotType): array {
+                $conflicts[$slotType->key] ??= [];
+
+                foreach ($slotType->conflicts->pluck('key') as $conflictingKey) {
+                    $conflicts[$slotType->key][] = $conflictingKey;
+                    $conflicts[$conflictingKey][] = $slotType->key;
+                }
+
+                return $conflicts;
+            }, []))
+            ->map(fn (array $conflictingKeys) => collect($conflictingKeys)->unique()->values()->all())
+            ->all();
     }
 
     /**

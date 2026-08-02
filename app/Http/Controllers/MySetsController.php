@@ -6,6 +6,7 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\SlotType;
 use App\Models\SongRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -219,6 +220,7 @@ class MySetsController extends Controller
             ->values();
 
         $bandTemplates = BandTemplate::query()
+            ->with('slots')
             ->orderBy('name')
             ->get();
 
@@ -231,6 +233,7 @@ class MySetsController extends Controller
             'approvalSessions' => $approvalSessions,
             'bandTemplates' => $bandTemplates,
             'slotOptions' => Slot::options(),
+            'slotConflicts' => $this->slotConflicts(),
         ]);
     }
 
@@ -239,5 +242,28 @@ class MySetsController extends Controller
         return response()->json([
             'count' => self::pendingApprovalCount($request->user()),
         ]);
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function slotConflicts(): array
+    {
+        return collect(SlotType::query()
+            ->with('conflicts:key')
+            ->where('active', true)
+            ->get(['id', 'key'])
+            ->reduce(function (array $conflicts, SlotType $slotType): array {
+                $conflicts[$slotType->key] ??= [];
+
+                foreach ($slotType->conflicts->pluck('key') as $conflictingKey) {
+                    $conflicts[$slotType->key][] = $conflictingKey;
+                    $conflicts[$conflictingKey][] = $slotType->key;
+                }
+
+                return $conflicts;
+            }, []))
+            ->map(fn (array $conflictingKeys) => collect($conflictingKeys)->unique()->values()->all())
+            ->all();
     }
 }

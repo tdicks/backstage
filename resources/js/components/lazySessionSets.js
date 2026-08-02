@@ -66,6 +66,49 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 
 			return state;
 		},
+		setUiState(root = null, setIds = null) {
+			const source = root || this.$refs.setsContainer;
+
+			if (!source) {
+				return {};
+			}
+
+			const state = {};
+			const setCards = source.querySelectorAll('[data-session-set-card][data-set-id]');
+			const setIdFilter = Array.isArray(setIds) && setIds.length > 0
+				? new Set(setIds.map((setId) => String(setId)))
+				: null;
+
+			setCards.forEach((setCard) => {
+				const setId = setCard.dataset.setId;
+
+				if (!setId) {
+					return;
+				}
+
+				if (setIdFilter && !setIdFilter.has(String(setId))) {
+					return;
+				}
+
+				state[setId] = {
+					isSetOpen: setCard.dataset.setOpen === 'true',
+					isSongRequestsOpen: setCard.dataset.songRequestsOpen === 'true',
+				};
+			});
+
+			return state;
+		},
+		restoreSetUiState(state = {}) {
+			Object.entries(state).forEach(([setId, cardState]) => {
+				window.dispatchEvent(new CustomEvent('session-set-restore-state', {
+					detail: {
+						setId,
+						setCollapsed: cardState.isSetOpen !== true,
+						songRequestsCollapsed: cardState.isSongRequestsOpen !== true,
+					},
+				}));
+			});
+		},
 		externalApprovalTransitions(previousState, nextState) {
 			const transitions = [];
 
@@ -434,6 +477,9 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 		},
 		async refresh(options = {}) {
 			const isBackground = options.background === true;
+			const preserveSetIds = Array.isArray(options.preserveSetIds)
+				? options.preserveSetIds.map((setId) => String(setId)).filter(Boolean)
+				: [];
 
 			if (this.refreshing || this.backgroundRefreshing) {
 				return;
@@ -448,6 +494,7 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 
 			try {
 				const previousState = this.setState();
+				const previousUiState = this.setUiState(null, preserveSetIds);
 				let transitions = [];
 
 				const response = await fetch(url, {
@@ -479,6 +526,8 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 					if (window.Alpine) {
 						window.Alpine.initTree(container);
 					}
+
+					this.restoreSetUiState(previousUiState);
 
 					this.applyFilters();
 

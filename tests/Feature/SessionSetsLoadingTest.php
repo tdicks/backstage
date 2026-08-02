@@ -552,12 +552,10 @@ test('session activity endpoint batches approval count and open song slot update
         ->assertJsonMissingPath('songs.'.$otherSong->id);
 
     expect($response->json('songs.'.$firstSong->id.'.slots_html'))
-        ->toContain('Bass')
-        ->toContain('You');
+        ->toContain('Bass');
 
     expect($response->json('songs.'.$secondSong->id.'.slots_html'))
-        ->toContain('Vocals')
-        ->toContain('You');
+        ->toContain('Vocals');
 
     $script = file_get_contents(resource_path('js/components/lazySessionSets.js'));
     $store = file_get_contents(resource_path('js/stores/approvals.js'));

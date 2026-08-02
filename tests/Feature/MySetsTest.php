@@ -2,6 +2,7 @@
 
 use App\Models\BandTemplate;
 use App\Models\JamSession;
+use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
@@ -439,6 +440,7 @@ test('song request approval card includes band template selector', function () {
         'artist' => 'Selector Artist',
         'title' => 'Selector Song',
         'notes' => null,
+        'requested_slot_names' => ['vocals'],
         'status' => SongRequest::STATUS_PENDING,
     ]);
 
@@ -450,7 +452,95 @@ test('song request approval card includes band template selector', function () {
         ->assertOk()
         ->assertSee('Band template (optional)')
         ->assertSee('name="band_template_id"', false)
+        ->assertSee('x-model="approvedSlotNames"', false)
+        ->assertSee("slotSelectionDisabled('vocals')", false)
         ->assertSee('Template Five Piece');
+});
+
+test('song request approval card hides band template selector for catalog requests', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Catalog Template Hidden Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Catalog Template Hidden Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $catalogSong = JamStandardSong::query()->create([
+        'artist' => 'Catalog My Sets Artist',
+        'title' => 'Catalog My Sets Song',
+        'is_active' => true,
+    ]);
+
+    SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Catalog My Sets Artist',
+        'title' => 'Catalog My Sets Song',
+        'notes' => null,
+        'jam_standard_song_id' => $catalogSong->id,
+        'requested_slot_names' => ['vocals'],
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertDontSee('name="band_template_id"', false)
+        ->assertSee('x-model="approvedSlotNames"', false)
+        ->assertSee("slotSelectionDisabled('vocals')", false);
+});
+
+test('song request approval card flags requested slots outside the selected template', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'My Sets Template Marker Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'My Sets Template Marker Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $template = BandTemplate::create(['name' => 'My Sets Template With Vocals']);
+    $template->slots()->create(['name' => 'vocals']);
+
+    SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'My Sets Marker Artist',
+        'title' => 'My Sets Marker Song',
+        'notes' => null,
+        'requested_slot_names' => ['vocals', 'drums'],
+        'band_template_id' => $template->id,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertSee("slotNeedsTemplateAddition('drums')", false)
+        ->assertSee('This slot will be added alongside the slots in the band template.');
 });
 
 test('set owner can accept proposal assignment for their set', function () {

@@ -2,10 +2,24 @@
     'set',
     'templates',
     'slotOptions',
+    'slotConflicts' => [],
     'canManageSet' => false,
     'isSetOwner' => false,
     'setLocked' => false,
 ])
+
+@php
+    $templateSlotNamesByTemplateId = $templates
+        ->mapWithKeys(fn ($template) => [
+            (string) $template->id => $template->slots->pluck('name')->values()->all(),
+        ])
+        ->all();
+    $templateNamesById = $templates
+        ->mapWithKeys(fn ($template) => [
+            (string) $template->id => $template->name,
+        ])
+        ->all();
+@endphp
 
 @if ($set->song_requests && $set->songRequests->where('status', 'pending')->isNotEmpty())
     <div class="rounded-md border border-amber-200 bg-amber-50/80 p-4" x-show="songRequestsPendingCount > 0" x-transition>
@@ -31,6 +45,11 @@
                         'respondUrl' => route('song-requests.respond', $songRequest),
                         'setId' => $set->id,
                         'initialBandTemplateId' => $songRequest->band_template_id,
+                        'canChooseBandTemplate' => blank($songRequest->jam_standard_song_id),
+                        'requestedSlotNames' => $songRequest->requested_slot_names ?? [],
+                        'slotConflicts' => $slotConflicts,
+                        'templateSlotNamesByTemplateId' => $templateSlotNamesByTemplateId,
+                        'templateNamesById' => $templateNamesById,
                         'decrementApprovalsCounter' => $isSetOwner,
                         'csrfToken' => csrf_token(),
                     ]))"
@@ -59,13 +78,32 @@
                         <div class="w-full sm:w-auto">
                             @if ($canManageSet && ! $setLocked)
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                                    <label class="sr-only" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
-                                    <select id="band_template_id_{{ $songRequest->id }}" x-model="bandTemplateId" x-bind:disabled="busy" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60">
-                                        <option value="">Template: None</option>
-                                        @foreach ($templates as $template)
-                                            <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
-                                        @endforeach
-                                    </select>
+                                    @if (blank($songRequest->jam_standard_song_id))
+                                        <label class="sr-only" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
+                                        <select id="band_template_id_{{ $songRequest->id }}" x-model="bandTemplateId" x-bind:disabled="busy" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60">
+                                            <option value="">Template: None</option>
+                                            @foreach ($templates as $template)
+                                                <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                    @if (! empty($songRequest->requested_slot_names))
+                                        <div class="w-52 rounded-lg border border-slate-300 bg-white p-2">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">Assign requester to slots (optional)</p>
+                                            <div class="mt-2 space-y-1.5">
+                                                @foreach ($songRequest->requested_slot_names as $requestedSlotName)
+                                                    <label class="flex items-center gap-2 text-xs text-slate-700">
+                                                        <input type="checkbox" value="{{ $requestedSlotName }}" x-model="approvedSlotNames" x-bind:disabled="slotSelectionDisabled('{{ $requestedSlotName }}')" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500">
+                                                        <span>
+                                                            {{ $slotOptions[$requestedSlotName] ?? str($requestedSlotName)->replace('_', ' ')->title() }}
+                                                            <span x-show="slotNeedsTemplateAddition('{{ $requestedSlotName }}')" class="text-rose-700" x-cloak>*</span>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            <p x-show="hasAnyTemplateAdditions()" x-text="templateAdditionHelperText()" class="mt-2 text-xs text-rose-700" x-cloak></p>
+                                        </div>
+                                    @endif
                                     <button
                                         type="button"
                                         @click="respond('accepted')"

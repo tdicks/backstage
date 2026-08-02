@@ -1,4 +1,17 @@
-@props(['approvalSessions', 'bandTemplates', 'slotOptions'])
+@props(['approvalSessions', 'bandTemplates', 'slotOptions', 'slotConflicts' => []])
+
+@php
+    $templateSlotNamesByTemplateId = $bandTemplates
+        ->mapWithKeys(fn ($template) => [
+            (string) $template->id => $template->slots->pluck('name')->values()->all(),
+        ])
+        ->all();
+    $templateNamesById = $bandTemplates
+        ->mapWithKeys(fn ($template) => [
+            (string) $template->id => $template->name,
+        ])
+        ->all();
+@endphp
 
 @foreach ($approvalSessions as $approvalSession)
     @php
@@ -118,14 +131,75 @@
                             <article
                                 class="rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-4"
                                 x-data="{
-                                    hidden: false, busy: false, error: '', bandTemplateId: '',
+                                    hidden: false,
+                                    busy: false,
+                                    error: '',
+                                    bandTemplateId: '',
+                                    canChooseBandTemplate: @js(blank($songRequest->jam_standard_song_id)),
+                                    approvedSlotNames: [],
+                                    slotConflicts: @js($slotConflicts),
+                                    templateSlotNamesByTemplateId: @js($templateSlotNamesByTemplateId),
+                                    templateNamesById: @js($templateNamesById),
+                                    activeTemplateSlotNames() {
+                                        if (this.bandTemplateId === '') {
+                                            return [];
+                                        }
+
+                                        return this.templateSlotNamesByTemplateId[this.bandTemplateId] || [];
+                                    },
+                                    hasActiveTemplateSlots() {
+                                        return this.activeTemplateSlotNames().length > 0;
+                                    },
+                                    slotNeedsTemplateAddition(slotName) {
+                                        if (!this.hasActiveTemplateSlots()) {
+                                            return false;
+                                        }
+
+                                        return !this.activeTemplateSlotNames().includes(slotName);
+                                    },
+                                    hasAnyTemplateAdditions() {
+                                        const requestedSlotNames = @js($songRequest->requested_slot_names ?? []);
+
+                                        return requestedSlotNames.some((slotName) => this.slotNeedsTemplateAddition(slotName));
+                                    },
+                                    activeTemplateName() {
+                                        if (this.bandTemplateId === '') {
+                                            return 'the band template';
+                                        }
+
+                                        return this.templateNamesById[this.bandTemplateId] || 'the band template';
+                                    },
+                                    templateAdditionHelperText() {
+                                        return `* Not in ${this.activeTemplateName()}. This slot will be added alongside the slots in the band template.`;
+                                    },
+                                    slotsConflict(firstSlotName, secondSlotName) {
+                                        if (firstSlotName === secondSlotName) {
+                                            return false;
+                                        }
+
+                                        const firstConflicts = this.slotConflicts[firstSlotName] || [];
+                                        const secondConflicts = this.slotConflicts[secondSlotName] || [];
+
+                                        return firstConflicts.includes(secondSlotName) || secondConflicts.includes(firstSlotName);
+                                    },
+                                    slotSelectionDisabled(slotName) {
+                                        if (this.busy) {
+                                            return true;
+                                        }
+
+                                        if (this.approvedSlotNames.includes(slotName)) {
+                                            return false;
+                                        }
+
+                                        return this.approvedSlotNames.some((selectedSlotName) => this.slotsConflict(selectedSlotName, slotName));
+                                    },
                                     async respond(status) {
                                         this.busy = true; this.error = '';
                                         try {
                                             const response = await fetch('{{ route('song-requests.respond', $songRequest) }}', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                                                body: JSON.stringify({ _method: 'PATCH', status, ...(status === 'accepted' && this.bandTemplateId !== '' ? { band_template_id: Number(this.bandTemplateId) } : {}) }),
+                                                body: JSON.stringify({ _method: 'PATCH', status, ...(status === 'accepted' && this.canChooseBandTemplate && this.bandTemplateId !== '' ? { band_template_id: Number(this.bandTemplateId) } : {}), ...(status === 'accepted' && this.approvedSlotNames.length > 0 ? { approved_slot_names: [...this.approvedSlotNames] } : {}) }),
                                             });
                                             if (!response.ok) { throw new Error('Could not update song request. Try again.'); }
                                             this.hidden = true; window.dispatchEvent(new CustomEvent('pending-approval-processed'));
@@ -143,21 +217,46 @@
                                             <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Song request</span>
                                         </div>
                                         <p class="mt-1 text-sm text-slate-700">Requested by {{ $songRequest->requester->name }}.</p>
+                                        @if (! empty($songRequest->requested_slot_names))
+                                            <p class="mt-1 text-sm text-slate-700">
+                                                Can cover:
+                                                {{ collect($songRequest->requested_slot_names)->map(fn ($slotName) => $slotOptions[$slotName] ?? str($slotName)->replace('_', ' ')->title())->join(', ') }}
+                                            </p>
+                                        @endif
                                         @if ($songRequest->notes)
                                             <p class="mt-1 text-sm text-slate-600">{{ $songRequest->notes }}</p>
                                         @endif
                                         <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
                                     </div>
                                     <div class="flex flex-col gap-2 sm:items-end">
-                                        <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
-                                            <span>Band template (optional)</span>
-                                            <select name="band_template_id" x-model="bandTemplateId" x-bind:disabled="busy" class="block w-52 rounded-md border-amber-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-300">
-                                                <option value="">No template</option>
-                                                @foreach ($bandTemplates as $bandTemplate)
-                                                    <option value="{{ $bandTemplate->id }}">{{ $bandTemplate->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </label>
+                                        @if (blank($songRequest->jam_standard_song_id))
+                                            <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                                <span>Band template (optional)</span>
+                                                <select name="band_template_id" x-model="bandTemplateId" x-bind:disabled="busy" class="block w-52 rounded-md border-amber-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-300">
+                                                    <option value="">No template</option>
+                                                    @foreach ($bandTemplates as $bandTemplate)
+                                                        <option value="{{ $bandTemplate->id }}">{{ $bandTemplate->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </label>
+                                        @endif
+                                        @if (! empty($songRequest->requested_slot_names))
+                                            <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                                <span>Assign requester to slots (optional)</span>
+                                                <div class="space-y-1 rounded-md border border-amber-200 bg-white px-2 py-1.5 w-52">
+                                                    @foreach ($songRequest->requested_slot_names as $requestedSlotName)
+                                                        <label class="flex items-center gap-2 text-xs font-medium normal-case tracking-normal text-slate-700">
+                                                            <input type="checkbox" value="{{ $requestedSlotName }}" x-model="approvedSlotNames" x-bind:disabled="slotSelectionDisabled('{{ $requestedSlotName }}')" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                                                            <span>
+                                                                {{ $slotOptions[$requestedSlotName] ?? str($requestedSlotName)->replace('_', ' ')->title() }}
+                                                                <span x-show="slotNeedsTemplateAddition('{{ $requestedSlotName }}')" class="text-rose-700" x-cloak>*</span>
+                                                            </span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                                <p x-show="hasAnyTemplateAdditions()" x-text="templateAdditionHelperText()" class="mt-1 text-xs normal-case tracking-normal text-rose-700" x-cloak></p>
+                                            </label>
+                                        @endif
                                         <div class="flex gap-2"><button type="button" @click="respond('accepted')" x-bind:disabled="busy" class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /><span>Approve</span></button><button type="button" @click="respond('rejected')" x-bind:disabled="busy" class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"><x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" /><span>Reject</span></button></div>
                                     </div>
                                 </div>

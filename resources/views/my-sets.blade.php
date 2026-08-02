@@ -171,6 +171,7 @@
                             :approval-sessions="$approvalSessions"
                             :band-templates="$bandTemplates"
                             :slot-options="$slotOptions"
+                            :slot-conflicts="$slotConflicts"
                         />
 
                         {{--
@@ -431,6 +432,30 @@
                                     busy: false,
                                     error: '',
                                     bandTemplateId: '',
+                                    requestedSlotNames: @js($songRequest->requested_slot_names ?? []),
+                                    slotConflicts: @js($slotConflicts ?? []),
+                                    approvedSlotNames: [],
+                                    slotsConflict(firstSlotName, secondSlotName) {
+                                        if (firstSlotName === secondSlotName) {
+                                            return false;
+                                        }
+
+                                        const firstConflicts = this.slotConflicts[firstSlotName] || [];
+                                        const secondConflicts = this.slotConflicts[secondSlotName] || [];
+
+                                        return firstConflicts.includes(secondSlotName) || secondConflicts.includes(firstSlotName);
+                                    },
+                                    slotSelectionDisabled(slotName) {
+                                        if (this.busy) {
+                                            return true;
+                                        }
+
+                                        if (this.approvedSlotNames.includes(slotName)) {
+                                            return false;
+                                        }
+
+                                        return this.approvedSlotNames.some((selectedSlotName) => this.slotsConflict(selectedSlotName, slotName));
+                                    },
                                     async respond(status) {
                                         this.busy = true;
                                         this.error = '';
@@ -442,6 +467,10 @@
 
                                         if (status === 'accepted' && this.bandTemplateId !== '') {
                                             payload.band_template_id = Number(this.bandTemplateId);
+                                        }
+
+                                        if (status === 'accepted' && this.approvedSlotNames.length > 0) {
+                                            payload.approved_slot_names = [...this.approvedSlotNames];
                                         }
 
                                         try {
@@ -502,6 +531,25 @@
                                                 @endforeach
                                             </select>
                                         </label>
+                                        @if (! empty($songRequest->requested_slot_names))
+                                            <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                                <span>Assign requester to slots (optional)</span>
+                                                <div class="space-y-1 rounded-md border border-amber-200 bg-white px-2 py-1.5 sm:w-52">
+                                                    @foreach ($songRequest->requested_slot_names as $requestedSlotName)
+                                                        <label class="flex items-center gap-2 text-xs font-medium normal-case tracking-normal text-slate-700">
+                                                            <input
+                                                                type="checkbox"
+                                                                value="{{ $requestedSlotName }}"
+                                                                x-model="approvedSlotNames"
+                                                                x-bind:disabled="slotSelectionDisabled('{{ $requestedSlotName }}')"
+                                                                class="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                                                            >
+                                                            <span>{{ $slotOptions[$requestedSlotName] ?? str($requestedSlotName)->replace('_', ' ')->title() }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </label>
+                                        @endif
                                         <div class="flex gap-2">
                                             <button
                                                 type="button"

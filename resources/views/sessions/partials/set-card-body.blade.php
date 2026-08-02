@@ -70,6 +70,7 @@
         :set="$set"
         :templates="$templates"
         :slot-options="$slotOptions"
+        :slot-conflicts="$slotConflicts"
         :can-manage-set="$canManageSet"
         :is-set-owner="$isSetOwner"
         :set-locked="$setLocked"

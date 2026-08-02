@@ -96,6 +96,62 @@ test('an owner can choose a band template when approving a song request', functi
     expect($song->slots()->pluck('name')->all())->toBe(['vocals', 'bass', 'drums']);
 });
 
+test('approving a catalog song request uses the catalog song template and ignores posted template choice', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Catalog Template Source Jam',
+        'date' => now()->addDays(4),
+        'description' => null,
+    ]);
+
+    $catalogTemplate = BandTemplate::create(['name' => 'Catalog Template']);
+    $catalogTemplate->slots()->create(['name' => 'vocals']);
+
+    $manualTemplate = BandTemplate::create(['name' => 'Manual Override Template']);
+    $manualTemplate->slots()->create(['name' => 'drums']);
+
+    $catalogSong = JamStandardSong::query()->create([
+        'artist' => 'Catalog Artist',
+        'title' => 'Catalog Song',
+        'band_template_id' => $catalogTemplate->id,
+        'is_active' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Catalog Template Source Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->post(route('song-requests.store', $set), [
+            'artist' => 'Catalog Artist',
+            'title' => 'Catalog Song',
+            'jam_standard_song_id' => $catalogSong->id,
+        ])
+        ->assertRedirect();
+
+    $songRequest = SongRequest::query()->firstOrFail();
+
+    $this->actingAs($owner)
+        ->patch(route('song-requests.respond', $songRequest), [
+            'status' => 'accepted',
+            'band_template_id' => $manualTemplate->id,
+        ])
+        ->assertRedirect();
+
+    $song = Song::query()->whereKey($songRequest->refresh()->song_id)->firstOrFail();
+
+    expect($song->slots()->pluck('name')->all())
+        ->toBe(['vocals'])
+        ->not->toContain('drums');
+});
+
 test('approving a song request applies requested slot capabilities to requester profile', function () {
     $owner = User::factory()->create();
     $requester = User::factory()->create();
@@ -135,9 +191,133 @@ test('approving a song request applies requested slot capabilities to requester 
     $requestedSlots = $song->slots()->whereIn('name', ['vocals', 'lead_guitar'])->get();
 
     expect($requestedSlots)->toHaveCount(2)
-        ->and($requestedSlots->pluck('user_id')->filter()->all())->toBe([$requester->id, $requester->id])
+        ->and($requestedSlots->pluck('user_id')->filter()->all())->toBe([])
         ->and($requester->fresh()->slotCoverageState('vocals'))->toBe(User::SLOT_COVERAGE_CAN)
         ->and($requester->fresh()->slotCoverageState('lead_guitar'))->toBe(User::SLOT_COVERAGE_CAN);
+});
+
+test('approving a song request can assign requester to multiple selected can-cover slots', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Selected Slot Assignment Jam',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Selected Slot Assignment Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->post(route('song-requests.store', $set), [
+            'artist' => 'Pixies',
+            'title' => 'Where Is My Mind?',
+            'slot_names' => ['vocals', 'drums', 'lead_guitar'],
+        ])
+        ->assertRedirect();
+
+    $songRequest = SongRequest::query()->firstOrFail();
+
+    $this->actingAs($owner)
+        ->patch(route('song-requests.respond', $songRequest), [
+            'status' => 'accepted',
+            'approved_slot_names' => ['vocals', 'drums'],
+        ])
+        ->assertRedirect();
+
+    $song = Song::query()->whereKey($songRequest->refresh()->song_id)->firstOrFail();
+    $vocalsSlot = $song->slots()->where('name', 'vocals')->firstOrFail();
+    $drumsSlot = $song->slots()->where('name', 'drums')->firstOrFail();
+    $leadGuitarSlot = $song->slots()->where('name', 'lead_guitar')->firstOrFail();
+
+    expect($vocalsSlot->user_id)->toBe($requester->id)
+        ->and($drumsSlot->user_id)->toBe($requester->id)
+        ->and($leadGuitarSlot->user_id)->toBeNull();
+});
+
+test('approving a song request rejects assigning slots outside can-cover selections', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Invalid Selected Slot Jam',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Invalid Selected Slot Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->post(route('song-requests.store', $set), [
+            'artist' => 'Nirvana',
+            'title' => 'Lithium',
+            'slot_names' => ['vocals'],
+        ])
+        ->assertRedirect();
+
+    $songRequest = SongRequest::query()->firstOrFail();
+
+    $this->actingAs($owner)
+        ->patch(route('song-requests.respond', $songRequest), [
+            'status' => 'accepted',
+            'approved_slot_names' => ['drums'],
+        ]);
+
+    expect($songRequest->fresh()->status)->toBe(SongRequest::STATUS_PENDING)
+        ->and($songRequest->song_id)->toBeNull();
+});
+
+test('approving a song request rejects selected slots that violate slot conflict rules', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Conflicting Selected Slots Jam',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Conflicting Selected Slots Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->post(route('song-requests.store', $set), [
+            'artist' => 'Conflict Band',
+            'title' => 'Conflict Song',
+            'slot_names' => ['lead_guitar', 'bass'],
+        ])
+        ->assertRedirect();
+
+    $songRequest = SongRequest::query()->firstOrFail();
+
+    $this->actingAs($owner)
+        ->patch(route('song-requests.respond', $songRequest), [
+            'status' => 'accepted',
+            'approved_slot_names' => ['lead_guitar', 'bass'],
+        ]);
+
+    expect($songRequest->fresh()->status)->toBe(SongRequest::STATUS_PENDING)
+        ->and($songRequest->song_id)->toBeNull();
 });
 
 test('a requester can remove their own pending song request via ajax', function () {
@@ -263,6 +443,7 @@ test('set cards render ajax song request approval controls for set owners', func
         'artist' => 'Owner Band',
         'title' => 'Owner Song',
         'notes' => null,
+        'requested_slot_names' => ['vocals'],
         'band_template_id' => $template->id,
         'status' => SongRequest::STATUS_PENDING,
     ]);
@@ -273,9 +454,99 @@ test('set cards render ajax song request approval controls for set owners', func
         ])
         ->assertOk()
         ->assertSee('x-model="bandTemplateId"', false)
+        ->assertSee('x-model="approvedSlotNames"', false)
+        ->assertSee("slotSelectionDisabled('vocals')", false)
         ->assertSee("@click=\"respond('accepted')\"", false)
         ->assertSee("@click=\"respond('rejected')\"", false)
         ->assertSee('decrementApprovalsCounter', false);
+});
+
+test('set cards hide band template selector for catalog song requests', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Catalog Approval Controls Jam',
+        'date' => now()->addDays(6),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Catalog Approval Controls Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $catalogSong = JamStandardSong::query()->create([
+        'artist' => 'Catalog Approval Artist',
+        'title' => 'Catalog Approval Song',
+        'is_active' => true,
+    ]);
+
+    $songRequest = SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Catalog Approval Artist',
+        'title' => 'Catalog Approval Song',
+        'notes' => null,
+        'jam_standard_song_id' => $catalogSong->id,
+        'requested_slot_names' => ['vocals'],
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$session, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertDontSee('id="band_template_id_'.$songRequest->id.'"', false)
+        ->assertSee('x-model="approvedSlotNames"', false)
+        ->assertSee("slotSelectionDisabled('vocals')", false);
+});
+
+test('set cards flag requested slots outside the selected band template', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Template Slot Marker Jam',
+        'date' => now()->addDays(6),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Template Slot Marker Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $template = BandTemplate::create(['name' => 'Template With Vocals Only']);
+    $template->slots()->create(['name' => 'vocals']);
+
+    SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Template Marker Artist',
+        'title' => 'Template Marker Song',
+        'notes' => null,
+        'requested_slot_names' => ['vocals', 'drums'],
+        'band_template_id' => $template->id,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$session, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee("slotNeedsTemplateAddition('drums')", false)
+        ->assertSee('templateAdditionHelperText()', false);
 });
 
 test('a non-owner can request a song via ajax and receive json success', function () {

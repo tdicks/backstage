@@ -9,11 +9,13 @@ use App\Models\Song;
 use App\Models\SongRequest;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\SlotCompatibility;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SongRequestController extends Controller
 {
@@ -106,10 +108,12 @@ class SongRequestController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:accepted,rejected'],
             'band_template_id' => ['nullable', 'integer', 'exists:band_templates,id'],
+            'approved_slot_names' => ['nullable', 'array'],
+            'approved_slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
 
         $user = $request->user();
-        $songRequest->load(['set.session', 'requester']);
+        $songRequest->load(['set.session', 'requester', 'jamStandardSong']);
 
         $isSetManager = $user->is_admin || $songRequest->set->owner_id === $user->id || $songRequest->set->isCollaborator($user);
         $isRequesterRejectingOwn = $songRequest->requester_user_id === $user->id
@@ -137,6 +141,18 @@ class SongRequestController extends Controller
                     ->unique()
                     ->values();
 
+                $approvedSlotNames = collect($validated['approved_slot_names'] ?? [])
+                    ->map(fn ($slotName) => (string) $slotName)
+                    ->filter(fn (string $slotName) => in_array($slotName, Slot::keys(), true))
+                    ->unique()
+                    ->values();
+
+                if ($approvedSlotNames->diff($requestedSlotNames)->isNotEmpty()) {
+                    throw ValidationException::withMessages([
+                        'approved_slot_names' => 'Choose only slots from the requester\'s selected "Can cover" options.',
+                    ]);
+                }
+
                 $song = Song::create([
                     'set_id' => $songRequest->set_id,
                     'jam_standard_song_id' => $songRequest->jam_standard_song_id,
@@ -146,7 +162,9 @@ class SongRequestController extends Controller
                     'position' => $nextSongPosition,
                 ]);
 
-                $templateId = $validated['band_template_id'] ?? $songRequest->band_template_id;
+                $templateId = $songRequest->jam_standard_song_id
+                    ? $songRequest->jamStandardSong?->band_template_id
+                    : ($validated['band_template_id'] ?? $songRequest->band_template_id);
 
                 if ($templateId) {
                     $template = BandTemplate::query()->with('slots')->findOrFail($templateId);
@@ -178,14 +196,30 @@ class SongRequestController extends Controller
 
                     $song->load('slots');
 
-                    foreach ($requestedSlotNames as $requestedSlotName) {
-                        $openSlot = $song->slots
-                            ->where('name', $requestedSlotName)
-                            ->first(fn ($slot) => $slot->user_id === null && blank($slot->manual_performer_name));
+                    if ($approvedSlotNames->isNotEmpty()) {
+                        foreach ($approvedSlotNames as $approvedSlotName) {
+                            /** @var Slot|null $approvedSlot */
+                            $approvedSlot = $song->slots
+                                ->where('name', $approvedSlotName)
+                                ->first(fn ($slot) => $slot->user_id === null && blank($slot->manual_performer_name));
 
-                        if ($openSlot) {
-                            $openSlot->update([
+                            if (! $approvedSlot) {
+                                throw ValidationException::withMessages([
+                                    'approved_slot_names' => 'One or more selected slots are no longer available for assignment.',
+                                ]);
+                            }
+
+                            SlotCompatibility::ensureUserCanPerformSlot(
+                                $songRequest->requester_user_id,
+                                $approvedSlot,
+                                $approvedSlotName,
+                                'approved_slot_names'
+                            );
+
+                            $approvedSlot->update([
                                 'user_id' => $songRequest->requester_user_id,
+                                'manual_performer_name' => null,
+                                'is_claimable_manual' => false,
                             ]);
                         }
                     }
