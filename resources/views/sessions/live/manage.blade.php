@@ -1060,16 +1060,36 @@
                 this.resetEditSetForm();
             },
 
+            canSelectUser(user) {
+                return user?.selectable !== false;
+            },
+
+            splitUserGroups(users) {
+                return users.reduce((groups, user) => {
+                    if (user.attendance_group === 'not_attending') {
+                        groups.notAttending.push(user);
+                        return groups;
+                    }
+
+                    groups.available.push(user);
+                    return groups;
+                }, { available: [], notAttending: [] });
+            },
+
             filteredEditUsers() {
                 const query = this.editAssignedUserQuery.trim().toLowerCase();
 
-                if (query === '') {
-                    return this.assignmentUsers.slice(0, 8);
-                }
-
-                return this.assignmentUsers
+                const filtered = query === ''
+                    ? this.assignmentUsers
+                    : this.assignmentUsers
                     .filter((user) => user.name.toLowerCase().includes(query))
-                    .slice(0, 8);
+                    ;
+
+                return filtered.slice(0, 16);
+            },
+
+            groupedEditUsers() {
+                return this.splitUserGroups(this.filteredEditUsers());
             },
 
             updateEditUserQuery() {
@@ -1079,6 +1099,10 @@
             },
 
             selectEditUser(user) {
+                if (!this.canSelectUser(user)) {
+                    return;
+                }
+
                 this.editAssignedUserId = String(user.id);
                 this.editAssignedUserQuery = user.name;
                 this.showEditUserSuggestions = false;

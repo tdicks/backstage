@@ -41,17 +41,34 @@
                                     autocomplete="off"
                                 />
                                 <div
-                                    x-show="showEditUserSuggestions && filteredEditUsers().length > 0"
-                            <div>
-                                <x-input-label :value="'Notes (optional)'" />
-                                <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
-                            </div>
+                                    x-show="showEditUserSuggestions && (groupedEditUsers().available.length > 0 || groupedEditUsers().notAttending.length > 0)"
                                     x-cloak
                                     class="absolute z-[120] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                                     @click.outside="showEditUserSuggestions = false"
                                 >
-                                    <template x-for="user in filteredEditUsers()" :key="user.id">
-                                        <button type="button" @click="selectEditUser(user)" class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none" x-text="user.name"></button>
+                                    <template x-if="groupedEditUsers().available.length > 0">
+                                        <div>
+                                            <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Available</p>
+                                            <template x-for="user in groupedEditUsers().available" :key="`available-${user.id}`">
+                                                <button type="button" @click="selectEditUser(user)" class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none" x-text="user.name"></button>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="groupedEditUsers().notAttending.length > 0">
+                                        <div class="border-t border-slate-200">
+                                            <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Not attending</p>
+                                            <p class="px-3 pb-2 text-[11px] text-slate-500">These users marked not attending for this session.</p>
+                                            <template x-for="user in groupedEditUsers().notAttending" :key="`not-attending-${user.id}`">
+                                                <button
+                                                    type="button"
+                                                    @click="if (canSelectUser(user)) { selectEditUser(user); }"
+                                                    :disabled="!canSelectUser(user)"
+                                                    class="w-full px-3 py-2 text-left text-sm transition focus:outline-none"
+                                                    :class="canSelectUser(user) ? 'text-slate-800 hover:bg-amber-50 focus:bg-amber-50' : 'cursor-not-allowed text-slate-400'"
+                                                    x-text="user.name"
+                                                ></button>
+                                            </template>
+                                        </div>
                                     </template>
                                 </div>
                             </div>
@@ -60,6 +77,10 @@
                             </p>
                             <p x-show="assignmentConflictMessage" x-text="assignmentConflictMessage" x-cloak class="mt-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900"></p>
                             <p class="mt-1 text-xs text-slate-500">Free typing will keep this as a manual performer name.</p>
+                        </div>
+                        <div>
+                            <x-input-label :value="'Notes (optional)'" />
+                            <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                         </div>
                         <p x-show="assignmentSaveError" x-text="assignmentSaveError" x-cloak class="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"></p>
                         <div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
@@ -111,18 +132,39 @@
                         />
                         <input type="hidden" name="user_id" x-bind:value="editAssignedUserId">
                         <div
-                            x-show="showEditUserSuggestions && filteredEditUsers().length > 0"
+                            x-show="showEditUserSuggestions && (groupedEditUsers().available.length > 0 || groupedEditUsers().notAttending.length > 0)"
                             x-cloak
                             class="absolute z-[120] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                             @click.outside="showEditUserSuggestions = false"
                         >
-                            <template x-for="user in filteredEditUsers()" :key="user.id">
-                                <button
-                                    type="button"
-                                    @click="selectEditUser(user)"
-                                    class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none"
-                                    x-text="user.name"
-                                ></button>
+                            <template x-if="groupedEditUsers().available.length > 0">
+                                <div>
+                                    <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Available</p>
+                                    <template x-for="user in groupedEditUsers().available" :key="`available-${user.id}`">
+                                        <button
+                                            type="button"
+                                            @click="selectEditUser(user)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none"
+                                            x-text="user.name"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="groupedEditUsers().notAttending.length > 0">
+                                <div class="border-t border-slate-200">
+                                    <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Not attending</p>
+                                    <p class="px-3 pb-2 text-[11px] text-slate-500">These users marked not attending for this session.</p>
+                                    <template x-for="user in groupedEditUsers().notAttending" :key="`not-attending-${user.id}`">
+                                        <button
+                                            type="button"
+                                            @click="if (canSelectUser(user)) { selectEditUser(user); }"
+                                            :disabled="!canSelectUser(user)"
+                                            class="w-full px-3 py-2 text-left text-sm transition focus:outline-none"
+                                            :class="canSelectUser(user) ? 'text-slate-800 hover:bg-amber-50 focus:bg-amber-50' : 'cursor-not-allowed text-slate-400'"
+                                            x-text="user.name"
+                                        ></button>
+                                    </template>
+                                </div>
                             </template>
                         </div>
                     </div>

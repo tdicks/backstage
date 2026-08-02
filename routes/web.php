@@ -10,6 +10,7 @@ use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeezerLookupController;
 use App\Http\Controllers\JamRegisterController;
+use App\Http\Controllers\JamSessionAttendanceController;
 use App\Http\Controllers\JamSessionController;
 use App\Http\Controllers\JamStandardCapabilityController;
 use App\Http\Controllers\JamStandardController;
@@ -127,6 +128,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{jamSession}/check-ins/check-in', [JamRegisterController::class, 'manualSignIn'])->name('sessions.check-ins.sign-in');
     Route::post('/sessions/{jamSession}/check-ins/{user}/check-out', [JamRegisterController::class, 'manualSignOut'])->name('sessions.check-ins.sign-out');
     Route::post('/sessions/{jamSession}/check-ins/sign-out-all', [JamRegisterController::class, 'signOutAll'])->name('sessions.check-ins.sign-out-all');
+    Route::get('/sessions/{jamSession}/attendance', [JamSessionAttendanceController::class, 'index'])->name('sessions.attendance.index');
+    Route::post('/sessions/{jamSession}/attendance', [JamSessionAttendanceController::class, 'update'])->name('sessions.attendance.update');
 
     Route::get('/sessions/{jamSession}/live', [LiveJamController::class, 'manage'])->name('sessions.live.manage');
     Route::get('/sessions/{jamSession}/live/quick-set-data', [LiveJamController::class, 'quickSetData'])->name('sessions.live.quick-set-data');

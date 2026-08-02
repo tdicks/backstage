@@ -2,6 +2,8 @@
     'song',
     'set',
     'users',
+    'assignmentUsers',
+    'notGoingUserIds',
     'slotOptions',
     'currentUserId',
     'jamSessionClosed' => false,
@@ -25,6 +27,8 @@
         :slot-model="$slot"
         :set="$set"
         :users="$users"
+        :assignment-users="$assignmentUsers"
+        :not-going-user-ids="$notGoingUserIds"
         :slot-options="$slotOptions"
         :current-user-id="$currentUserId"
         :jam-session-closed="$jamSessionClosed"

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamSession;
+use App\Models\JamSessionAttendance;
 use App\Models\JamSessionSignIn;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SongRequest;
+use App\Services\JamSessionAttendanceService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -112,6 +114,12 @@ class SetController extends Controller
     {
         $this->authorize('create', Set::class);
 
+        $attendanceService = app(JamSessionAttendanceService::class);
+
+        if (! $request->user()->is_admin && $attendanceService->isNotGoing($jamSession, $request->user())) {
+            return back()->with('status', 'You marked yourself as not attending this session. Set your attendance to Maybe or Going to create a set.');
+        }
+
         if ($jamSession->is_closed && ! $request->user()->is_admin) {
             return back()->with('status', 'This jam session is closed. No new sets can be created.');
         }
@@ -134,6 +142,8 @@ class SetController extends Controller
             'free_for_all' => (bool) ($validated['free_for_all'] ?? false),
             'song_requests' => true,
         ]);
+
+        $attendanceService->markGoingIfAllowed($jamSession, $request->user(), JamSessionAttendance::SOURCE_AUTO_SET);
 
         if ($set->is_hidden) {
             Cache::forever(self::newSetDeferredNotificationCacheKey($set), true);

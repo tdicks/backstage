@@ -7,6 +7,7 @@ use App\Models\JamStandardSong;
 use App\Models\Slot;
 use App\Models\SlotType;
 use App\Models\User;
+use App\Services\JamSessionAttendanceService;
 use App\Services\LiveQuickSetCandidateBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,10 @@ class LiveJamController extends Controller
 
     private const QUICK_SET_TIMING_CACHE_KEY = 'live-quick-set:timing-summary';
 
-    public function __construct(private LiveQuickSetCandidateBuilder $liveQuickSetCandidateBuilder) {}
+    public function __construct(
+        private LiveQuickSetCandidateBuilder $liveQuickSetCandidateBuilder,
+        private JamSessionAttendanceService $attendanceService,
+    ) {}
 
     /**
      * Show the organiser management dashboard.
@@ -57,7 +61,11 @@ class LiveJamController extends Controller
             'sets' => $sets,
             'liveState' => $liveState,
             'slotOptions' => Slot::options(),
-            'assignmentUsers' => User::query()->orderBy('name')->get(['id', 'name']),
+            'assignmentUsers' => $this->attendanceService->assignmentUserOptions(
+                $jamSession,
+                User::query()->orderBy('name')->get(['id', 'name']),
+                $request->user(),
+            ),
             'currentUserId' => $request->user()->id,
             'jamManager' => $jamSession->jamManager,
             'checkedInUsers' => $checkedInUsers,

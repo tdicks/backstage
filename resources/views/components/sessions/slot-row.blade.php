@@ -2,6 +2,8 @@
     'slotModel',
     'set',
     'users',
+    'assignmentUsers',
+    'notGoingUserIds',
     'slotOptions',
     'currentUserId',
     'jamSessionClosed' => false,
@@ -15,10 +17,27 @@
 @php
     $setLocked = $set->performed;
     $canEditSlot = ($canManageSet || ($set->session?->jam_manager_id === $currentUserId)) && ! $setLocked;
+    $viewer = auth()->user();
+    $currentUserNotGoing = in_array((int) $currentUserId, $notGoingUserIds->all(), true);
+    $assignedUserIsNotGoing = $slotModel->user_id !== null && in_array((int) $slotModel->user_id, $notGoingUserIds->all(), true);
+    $isClaimableByDropout = $assignedUserIsNotGoing;
     $noProposableUsersMessage = 'No users are currently available for slot proposals.';
-    $proposalUsers = $users
+    $proposalUsers = collect($assignmentUsers)
         ->where('id', '!=', $currentUserId)
-        ->where('hide_from_slot_proposals', false);
+        ->filter(function (array $option) use ($users, $viewer) {
+            $user = $users->firstWhere('id', (int) $option['id']);
+
+            if (! $user) {
+                return false;
+            }
+
+            if ($viewer?->is_admin) {
+                return true;
+            }
+
+            return ! $user->hide_from_slot_proposals;
+        })
+        ->values();
     $isAdminManagingOtherSet = auth()->user()?->is_admin && ! $isSetOwner;
     $slotManageMenuItemClass = $isAdminManagingOtherSet
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
@@ -44,16 +63,19 @@
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,
         'slotNotes' => $slotModel->notes ?? '',
         'slotIsOpen' => $slotModel->isOpen(),
+        'slotIsClaimable' => $isClaimableByDropout,
+        'assignedUserIsNotGoing' => $assignedUserIsNotGoing,
         'assignmentIsManual' => ! $slotModel->user_id && filled($slotModel->manual_performer_name),
         'initialEditAssignedUserId' => (string) ($slotModel->user_id ?? ''),
         'initialEditAssignedUserName' => $slotModel->user?->name ?? '',
         'initialEditManualPerformerName' => $slotModel->manual_performer_name ?? '',
         'editAssignedUserId' => (string) ($slotModel->user_id ?? ''),
         'currentUserId' => (string) $currentUserId,
+        'currentUserNotGoing' => $currentUserNotGoing,
         'assignedToCurrentUser' => $slotModel->user_id === $currentUserId,
         'hasPendingOwnRequest' => $slotModel->assignments->contains(fn ($a) => $a->status === 'pending' && $a->type === 'request' && $a->actor_user_id === $currentUserId),
-        'proposalUserOptions' => $proposalUsers->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
-        'users' => $users->map(fn ($user) => ['id' => (string) $user->id, 'name' => $user->name])->values(),
+        'proposalUserOptions' => $proposalUsers->values(),
+        'users' => collect($assignmentUsers)->values(),
         'requestSlotUrl' => route('slot-assignments.request', $slotModel),
         'takeSlotUrl' => route('slots.take', $slotModel),
         'proposeSlotUrl' => route('slot-assignments.propose', $slotModel),

@@ -39,9 +39,9 @@
                     type="button"
                     @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-40 {{ $isAdminManagingOtherSet ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50' : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100' }}"
-                    x-show="slotIsOpen && !assignedToCurrentUser"
+                    x-show="(slotIsOpen || slotIsClaimable) && !assignedToCurrentUser"
                     @click="openActionMenu = false; takeSlot()"
-                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }}) || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     @if ($set->free_for_all)
                         <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
@@ -60,9 +60,9 @@
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                    x-show="slotIsOpen && !assignedToCurrentUser"
+                    x-show="(slotIsOpen || slotIsClaimable) && !assignedToCurrentUser"
                     @click="openActionMenu = false; takeSlot()"
-                    x-bind:disabled="busyAction"
+                    x-bind:disabled="busyAction || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
                     <span>Take this slot</span>
@@ -72,9 +72,9 @@
                 <button
                     type="button"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                    x-show="slotIsOpen && !assignedToCurrentUser && !hasPendingOwnRequest"
+                    x-show="(slotIsOpen || slotIsClaimable) && !assignedToCurrentUser && !hasPendingOwnRequest"
                     @click="openActionMenu = false; requestSlot()"
-                    x-bind:disabled="busyAction"
+                    x-bind:disabled="busyAction || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-hand-raised class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span>Request slot</span>
@@ -94,14 +94,14 @@
                 </button>
             @endif
 
-            @if ($set->signups_open && $slotModel->isOpen())
+            @if ($set->signups_open)
                 <button
                     type="button"
                     @disabled($jamSessionClosed && !auth()->user()?->is_admin)
                     @click="openActionMenu = false; openProposeModal()"
-                    x-show="slotIsOpen"
+                    x-show="slotIsOpen || slotIsClaimable"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                    x-bind:disabled="busyAction || proposalUserOptions.length === 0 || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                    x-bind:disabled="busyAction || !hasAnySelectableProposalUsers() || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-user-plus class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span>Recommend someone else</span>

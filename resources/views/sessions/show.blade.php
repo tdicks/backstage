@@ -43,6 +43,309 @@
                         Share link copied
                     </div>
                 </span>
+                <div
+                    class="relative"
+                    x-data="{
+                        status: @js($attendanceStatus),
+                        requiresDropoutAction: @js((bool) $attendanceRequiresDropoutAction),
+                        sessionClosed: @js((bool) $session->is_closed),
+                        isAdmin: @js((bool) auth()->user()?->is_admin),
+                        isSaving: false,
+                        openDropoutChoices: false,
+                        dropoutAction: 'keep_claimable',
+                        openAdminDropoutChoices: false,
+                        adminDropoutAction: 'keep_claimable',
+                        adminDropoutUserId: null,
+                        adminDropoutUserName: '',
+                        attendanceModalOpen: false,
+                        attendanceListLoading: false,
+                        attendanceListError: '',
+                        attendanceUsers: [],
+                        async loadAttendanceUsers() {
+                            this.attendanceListLoading = true;
+                            this.attendanceListError = '';
+
+                            try {
+                                const response = await fetch(@js(route('sessions.attendance.index', $session)), {
+                                    headers: {
+                                        'Accept': 'application/json',
+                                    },
+                                });
+
+                                const payload = await response.json().catch(() => ({}));
+
+                                if (! response.ok) {
+                                    throw new Error(payload.message || 'Could not load attendance list.');
+                                }
+
+                                this.attendanceUsers = Array.isArray(payload.users) ? payload.users : [];
+                                this.sessionClosed = Boolean(payload.session_closed);
+                            } catch (error) {
+                                this.attendanceListError = error.message || 'Could not load attendance list.';
+                            } finally {
+                                this.attendanceListLoading = false;
+                            }
+                        },
+                        openAttendanceModal() {
+                            this.attendanceModalOpen = true;
+                            this.loadAttendanceUsers();
+                        },
+                        async submitStatus(nextStatus, action = null, promptOnRequirement = false, targetUserId = null) {
+                            if (this.sessionClosed) {
+                                return;
+                            }
+
+                            this.isSaving = true;
+
+                            try {
+                                const response = await fetch(@js(route('sessions.attendance.update', $session)), {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+                                    },
+                                    body: JSON.stringify({ status: nextStatus, dropout_action: action, user_id: targetUserId }),
+                                });
+
+                                const payload = await response.json().catch(() => ({}));
+
+                                if (! response.ok) {
+                                    if (promptOnRequirement && payload?.errors?.dropout_action) {
+                                        this.requiresDropoutAction = true;
+                                        this.openDropoutChoices = true;
+                                        return;
+                                    }
+
+                                    const error = Object.values(payload.errors || {}).flat()[0] || payload.message || 'Could not update attendance.';
+                                    throw new Error(error);
+                                }
+
+                                if (!targetUserId || String(targetUserId) === @js((string) auth()->id())) {
+                                    this.status = payload.status || nextStatus;
+                                }
+
+                                this.requiresDropoutAction = Boolean(payload.requires_dropout_action);
+                                if (Array.isArray(payload.users)) {
+                                    this.attendanceUsers = payload.users;
+                                }
+                                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+                            } catch (error) {
+                                console.warn('Attendance update failed.', error);
+                            } finally {
+                                this.isSaving = false;
+                            }
+                        },
+                        chooseStatus(nextStatus) {
+                            if (this.sessionClosed) {
+                                return;
+                            }
+
+                            if (nextStatus === 'not_going' && this.status !== 'not_going') {
+                                if (this.requiresDropoutAction) {
+                                    this.openDropoutChoices = true;
+                                    return;
+                                }
+
+                                this.submitStatus(nextStatus, null, true);
+                                return;
+                            }
+
+                            this.submitStatus(nextStatus);
+                        },
+                        confirmDropout() {
+                            this.openDropoutChoices = false;
+                            this.submitStatus('not_going', this.dropoutAction);
+                        },
+                        openAdminNotGoingPrompt(userId) {
+                            const user = this.attendanceUsers.find((item) => String(item.id) === String(userId));
+
+                            this.adminDropoutUserId = String(userId);
+                            this.adminDropoutUserName = user?.name || 'this user';
+                            this.adminDropoutAction = 'keep_claimable';
+                            this.openAdminDropoutChoices = true;
+                        },
+                        confirmAdminDropout() {
+                            if (!this.adminDropoutUserId) {
+                                this.openAdminDropoutChoices = false;
+                                return;
+                            }
+
+                            this.openAdminDropoutChoices = false;
+                            this.submitStatus('not_going', this.adminDropoutAction, false, this.adminDropoutUserId);
+                        },
+                        setUserStatus(userId, nextStatus) {
+                            if (!this.isAdmin || this.sessionClosed) {
+                                return;
+                            }
+
+                            if (nextStatus === 'not_going') {
+                                this.openAdminNotGoingPrompt(userId);
+                                return;
+                            }
+
+                            this.submitStatus(nextStatus, null, false, userId);
+                        },
+                        badgeClasses(status) {
+                            if (status === 'going') {
+                                return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+                            }
+
+                            if (status === 'maybe') {
+                                return 'border-slate-200 bg-slate-50 text-slate-700';
+                            }
+
+                            return 'border-rose-200 bg-rose-50 text-rose-700';
+                        },
+                    }"
+                    @keydown.escape.window="attendanceModalOpen = false; openDropoutChoices = false; openAdminDropoutChoices = false"
+                >
+                    <div class="inline-flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="openAttendanceModal()"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-300 shadow-sm transition hover:border-amber-400 hover:text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label="Open attendance"
+                            title="Open attendance"
+                        >
+                            <x-heroicon-m-user-group class="h-4 w-4" aria-hidden="true" />
+                            <span class="sr-only">Attendance</span>
+                        </button>
+
+                        <div class="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/85 p-1 shadow-sm">
+                        <button
+                            type="button"
+                            @click="chooseStatus('not_going')"
+                            :disabled="isSaving || sessionClosed"
+                            class="inline-flex items-center rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="status === 'not_going' ? 'border border-rose-700 bg-rose-950/70 text-rose-300' : 'border border-transparent text-slate-300 hover:border-rose-600 hover:bg-rose-950/60 hover:text-rose-300'"
+                        >
+                            Not going
+                        </button>
+                        <button
+                            type="button"
+                            @click="chooseStatus('maybe')"
+                            :disabled="isSaving || sessionClosed"
+                            class="inline-flex items-center rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="status === 'maybe' ? 'border border-slate-500 bg-slate-800 text-slate-100' : 'border border-transparent text-slate-300 hover:border-slate-500 hover:bg-slate-800 hover:text-slate-100'"
+                        >
+                            Maybe
+                        </button>
+                        <button
+                            type="button"
+                            @click="chooseStatus('going')"
+                            :disabled="isSaving || sessionClosed"
+                            class="inline-flex items-center rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :class="status === 'going' ? 'border border-emerald-700 bg-emerald-950/70 text-emerald-300' : 'border border-transparent text-slate-300 hover:border-emerald-700 hover:bg-emerald-950/60 hover:text-emerald-300'"
+                        >
+                            Going
+                        </button>
+                        </div>
+                    </div>
+
+                    <template x-teleport="body">
+                        <div x-cloak>
+                            <div x-show="attendanceModalOpen" x-cloak x-transition.opacity.duration.150ms data-drag-blocking-modal data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="attendanceModalOpen = false"></div>
+                            <div x-show="attendanceModalOpen" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
+                                <section class="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-left text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]" role="dialog" aria-modal="true" aria-label="Attendance list" @click.stop>
+                            <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+                                <div>
+                                    <h4 class="text-lg font-semibold text-slate-900">Attendance</h4>
+                                    <p class="mt-1 text-sm text-slate-600">Showing users marked Going or Not going.</p>
+                                </div>
+                                <button type="button" @click="attendanceModalOpen = false" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" aria-label="Close attendance modal" title="Close">
+                                    <x-heroicon-m-x-mark class="h-5 w-5" aria-hidden="true" />
+                                </button>
+                            </header>
+
+                            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                                <p x-show="attendanceListLoading" x-cloak class="text-sm text-slate-600">Loading attendance...</p>
+                                <p x-show="attendanceListError" x-cloak x-text="attendanceListError" class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+
+                                <template x-if="!attendanceListLoading && attendanceUsers.length === 0">
+                                    <p class="rounded-md border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">No users currently marked Going or Not going.</p>
+                                </template>
+
+                                <div x-show="attendanceUsers.length > 0" x-cloak class="space-y-2">
+                                    <template x-for="user in attendanceUsers" :key="user.id">
+                                        <article class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-slate-900" x-text="user.name"></p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide" :class="badgeClasses(user.status)" x-text="user.status === 'going' ? 'Going' : (user.status === 'not_going' ? 'Not going' : 'Maybe')"></span>
+                                                <template x-if="isAdmin">
+                                                    <div class="inline-flex items-center gap-1">
+                                                        <button type="button" @click="setUserStatus(user.id, 'not_going')" :disabled="isSaving || sessionClosed || user.status === 'not_going'" class="inline-flex items-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">Not Going</button>
+                                                        <button type="button" @click="setUserStatus(user.id, 'maybe')" :disabled="isSaving || sessionClosed || user.status === 'maybe'" class="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">Maybe</button>
+                                                        <button type="button" @click="setUserStatus(user.id, 'going')" :disabled="isSaving || sessionClosed || user.status === 'going'" class="inline-flex items-center rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">Going</button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </article>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <footer class="flex items-center justify-end gap-2 border-t border-slate-200 px-6 py-4">
+                                <x-modal-secondary-button type="button" @click="attendanceModalOpen = false">Close</x-modal-secondary-button>
+                            </footer>
+                                </section>
+                            </div>
+                        </div>
+                    </template>
+
+                    <x-prompt-modal
+                        open="openDropoutChoices"
+                        title="Before you mark not going"
+                        description="Choose what should happen to your current slots in this session."
+                        close-action="openDropoutChoices = false"
+                    >
+                        <div class="space-y-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300">
+                                <input type="radio" name="dropout_action" value="keep_claimable" x-model="dropoutAction" class="mt-0.5 border-slate-500 text-amber-500 focus:ring-amber-500">
+                                <span>Keep my slots assigned, but mark them claimable so others can take over.</span>
+                            </label>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300">
+                                <input type="radio" name="dropout_action" value="release_slots" x-model="dropoutAction" class="mt-0.5 border-slate-500 text-amber-500 focus:ring-amber-500">
+                                <span>Release all of my assigned slots now.</span>
+                            </label>
+                        </div>
+
+                        <x-slot name="actions">
+                            <button type="button" @click="openDropoutChoices = false" class="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-800">Cancel</button>
+                            <button type="button" @click="confirmDropout()" :disabled="isSaving" class="rounded-md border border-rose-500 bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
+                        </x-slot>
+                    </x-prompt-modal>
+
+                    <x-prompt-modal
+                        open="openAdminDropoutChoices"
+                        title="Set Not Going"
+                        description="Choose what should happen to the user's assigned slots in this session."
+                        close-action="openAdminDropoutChoices = false"
+                    >
+                        <p class="mb-3 text-xs text-slate-300">
+                            <span class="font-semibold" x-text="adminDropoutUserName"></span>
+                            will be marked as not going.
+                        </p>
+
+                        <div class="space-y-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300">
+                                <input type="radio" name="admin_dropout_action" value="keep_claimable" x-model="adminDropoutAction" class="mt-0.5 border-slate-500 text-amber-500 focus:ring-amber-500">
+                                <span>Keep their slots assigned, but mark them claimable so others can take over.</span>
+                            </label>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300">
+                                <input type="radio" name="admin_dropout_action" value="release_slots" x-model="adminDropoutAction" class="mt-0.5 border-slate-500 text-amber-500 focus:ring-amber-500">
+                                <span>Release all of their assigned slots now.</span>
+                            </label>
+                        </div>
+
+                        <x-slot name="actions">
+                            <button type="button" @click="openAdminDropoutChoices = false" class="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-800">Cancel</button>
+                            <button type="button" @click="confirmAdminDropout()" :disabled="isSaving" class="rounded-md border border-rose-500 bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
+                        </x-slot>
+                    </x-prompt-modal>
+                </div>
                 @can('update', $session)
                     <x-secondary-button @click="openEditSessionModal()" title="Edit Session" aria-label="Edit Session" class="gap-1.5">
                         <x-heroicon-m-pencil-square class="h-4 w-4" aria-hidden="true" />

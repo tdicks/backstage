@@ -30,21 +30,42 @@
                             required
                         />
                         <div
-                            x-show="showProposalUserSuggestions && filteredProposalUsers().length > 0"
+                            x-show="showProposalUserSuggestions && hasProposalSuggestions()"
                             x-cloak
                             class="absolute z-[120] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                             @click.outside="showProposalUserSuggestions = false"
                         >
-                            <template x-for="user in filteredProposalUsers()" :key="user.id">
-                                <button
-                                    type="button"
-                                    @click="selectProposalUser(user)"
-                                    class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none"
-                                    x-text="user.name"
-                                ></button>
+                            <template x-if="groupedProposalUsers().available.length > 0">
+                                <div>
+                                    <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Available</p>
+                                    <template x-for="user in groupedProposalUsers().available" :key="`available-${user.id}`">
+                                        <button
+                                            type="button"
+                                            @click="selectProposalUser(user)"
+                                            class="w-full px-3 py-2 text-left text-sm text-slate-800 transition hover:bg-amber-50 focus:bg-amber-50 focus:outline-none"
+                                            x-text="user.name"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="groupedProposalUsers().notAttending.length > 0">
+                                <div class="border-t border-slate-200">
+                                    <p class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Not attending</p>
+                                    <p class="px-3 pb-2 text-[11px] text-slate-500">These users marked not attending for this session.</p>
+                                    <template x-for="user in groupedProposalUsers().notAttending" :key="`not-attending-${user.id}`">
+                                        <button
+                                            type="button"
+                                            @click="if (canSelectUser(user)) { selectProposalUser(user); }"
+                                            :disabled="!canSelectUser(user)"
+                                            class="w-full px-3 py-2 text-left text-sm transition focus:outline-none"
+                                            :class="canSelectUser(user) ? 'text-slate-800 hover:bg-amber-50 focus:bg-amber-50' : 'cursor-not-allowed text-slate-400'"
+                                            x-text="user.name"
+                                        ></button>
+                                    </template>
+                                </div>
                             </template>
                         </div>
-                        <p x-show="showProposalUserSuggestions && proposeTargetUserQuery.trim() !== '' && filteredProposalUsers().length === 0" x-cloak class="mt-1 text-xs text-slate-500">
+                        <p x-show="showProposalUserSuggestions && proposeTargetUserQuery.trim() !== '' && !hasProposalSuggestions()" x-cloak class="mt-1 text-xs text-slate-500">
                             No matching users are available for recommendations.
                         </p>
                     </div>

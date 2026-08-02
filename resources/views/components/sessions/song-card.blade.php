@@ -2,6 +2,8 @@
     'song',
     'set',
     'users',
+    'assignmentUsers',
+    'notGoingUserIds',
     'templates',
     'slotOptions',
     'pendingSlotAssignments' => [],
@@ -349,6 +351,8 @@
                     :song="$song"
                     :set="$set"
                     :users="$users"
+                    :assignment-users="$assignmentUsers"
+                    :not-going-user-ids="$notGoingUserIds"
                     :slot-options="$slotOptions"
                     :current-user-id="auth()->id()"
                     :jam-session-closed="$jamSessionClosed"

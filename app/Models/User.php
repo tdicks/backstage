@@ -171,6 +171,11 @@ class User extends Authenticatable
         return $this->hasMany(NotificationPushSubscription::class);
     }
 
+    public function jamSessionAttendances(): HasMany
+    {
+        return $this->hasMany(JamSessionAttendance::class);
+    }
+
     public function activeNotifications(): MorphMany
     {
         return $this->notifications()->whereNull('dismissed_at');

@@ -2265,6 +2265,8 @@ export function sessionSlotRow(config) {
         slotLabel: config.slotLabel,
         slotNotes: config.slotNotes || '',
         slotIsOpen: config.slotIsOpen,
+        slotIsClaimable: Boolean(config.slotIsClaimable),
+        assignedUserIsNotGoing: Boolean(config.assignedUserIsNotGoing),
         assignmentIsManual: config.assignmentIsManual,
         initialEditAssignedUserId: config.initialEditAssignedUserId,
         initialEditAssignedUserName: config.initialEditAssignedUserName,
@@ -2272,6 +2274,7 @@ export function sessionSlotRow(config) {
         editAssignedUserId: config.editAssignedUserId,
         editAssignedUserName: config.initialEditAssignedUserName || config.initialEditManualPerformerName || '',
         currentUserId: config.currentUserId,
+        currentUserNotGoing: Boolean(config.currentUserNotGoing),
         assignedToCurrentUser: config.assignedToCurrentUser,
         hasPendingOwnRequest: config.hasPendingOwnRequest,
         canMoveSlotUp: config.canMoveSlotUp,
@@ -2336,15 +2339,32 @@ export function sessionSlotRow(config) {
             this.canMoveSlotUp = slotIndex > 0;
             this.canMoveSlotDown = slotIndex >= 0 && slotIndex < slotRows.length - 1;
         },
+        canSelectUser(user) {
+            return user?.selectable !== false;
+        },
+        splitUserGroups(users) {
+            return users.reduce((groups, user) => {
+                if (user.attendance_group === 'not_attending') {
+                    groups.notAttending.push(user);
+                    return groups;
+                }
+
+                groups.available.push(user);
+                return groups;
+            }, { available: [], notAttending: [] });
+        },
         filteredEditUsers() {
             const query = this.editAssignedUserQuery.trim().toLowerCase();
-            if (query === '') {
-                return this.users.slice(0, 8);
-            }
-
-            return this.users
+            const filtered = query === ''
+                ? this.users
+                : this.users
                 .filter((user) => user.name.toLowerCase().includes(query))
-                .slice(0, 8);
+                ;
+
+            return filtered.slice(0, 16);
+        },
+        groupedEditUsers() {
+            return this.splitUserGroups(this.filteredEditUsers());
         },
         updateEditUserQuery() {
             this.editAssignedUserId = '';
@@ -2352,6 +2372,10 @@ export function sessionSlotRow(config) {
             this.resetAssignmentConflict();
         },
         selectEditUser(user) {
+            if (!this.canSelectUser(user)) {
+                return;
+            }
+
             this.editAssignedUserId = String(user.id);
             this.editAssignedUserQuery = user.name;
             this.editAssignedUserName = user.name;
@@ -2381,11 +2405,20 @@ export function sessionSlotRow(config) {
                 return [];
             }
 
-            const users = query === ''
-                ? this.proposalUserOptions
-                : this.proposalUserOptions.filter((user) => user.name.toLowerCase().includes(query));
+            const users = this.proposalUserOptions.filter((user) => user.name.toLowerCase().includes(query));
 
-            return users.slice(0, 8);
+            return users.slice(0, 16);
+        },
+        groupedProposalUsers() {
+            return this.splitUserGroups(this.filteredProposalUsers());
+        },
+        hasProposalSuggestions() {
+            const groups = this.groupedProposalUsers();
+
+            return groups.available.length + groups.notAttending.length > 0;
+        },
+        hasAnySelectableProposalUsers() {
+            return this.proposalUserOptions.some((user) => this.canSelectUser(user));
         },
         updateProposalUserQuery() {
             const selectedUser = this.proposalUserOptions.find((user) => String(user.id) === String(this.proposeTargetUserId));
@@ -2396,6 +2429,10 @@ export function sessionSlotRow(config) {
             this.showProposalUserSuggestions = true;
         },
         selectProposalUser(user) {
+            if (!this.canSelectUser(user)) {
+                return;
+            }
+
             this.proposeTargetUserId = String(user.id);
             this.proposeTargetUserQuery = user.name;
             this.showProposalUserSuggestions = false;
@@ -2428,6 +2465,8 @@ export function sessionSlotRow(config) {
             this.slotLabel = slot.label;
             this.slotNotes = slot.notes || '';
             this.slotIsOpen = slot.is_open;
+            this.slotIsClaimable = Boolean(slot.is_claimable);
+            this.assignedUserIsNotGoing = Boolean(slot.assigned_user_not_going);
             this.assignmentIsManual = !slot.user_id && Boolean(slot.manual_performer_name);
             this.assignedToCurrentUser = Number(slot.user_id) === Number(this.currentUserId);
             this.assignedUserName = this.assignedToCurrentUser ? 'You' : (slot.user_name || 'Open');

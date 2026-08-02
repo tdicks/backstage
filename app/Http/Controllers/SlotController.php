@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\BandTemplate;
+use App\Models\JamSessionAttendance;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\JamSessionAttendanceService;
 use App\Services\NotificationService;
 use App\Services\SlotCompatibility;
 use App\SessionCardFragment;
@@ -23,6 +25,8 @@ class SlotController extends Controller
     public function store(Request $request, Song $song): JsonResponse|RedirectResponse
     {
         $this->authorize('update', $song);
+
+        $attendanceService = app(JamSessionAttendanceService::class);
 
         $validated = $request->validate([
             'addition_mode' => ['nullable', 'string', 'in:individual,template'],
@@ -63,6 +67,18 @@ class SlotController extends Controller
         }
 
         if (! empty($validated['user_id'])) {
+            $assignedUser = User::query()->find((int) $validated['user_id']);
+
+            if ($assignedUser && $attendanceService->isNotGoing($song->set->session, $assignedUser)) {
+                if ($request->user()->is_admin) {
+                    $attendanceService->resetToMaybeForAdminAssignment($song->set->session, $assignedUser);
+                } else {
+                    return back()->withErrors([
+                        'user_id' => 'This user marked themselves as not attending this session and cannot be assigned.',
+                    ]);
+                }
+            }
+
             SlotCompatibility::ensureUserCanPerformSlotInSong((int) $validated['user_id'], $song, $validated['name']);
         }
 
@@ -89,6 +105,8 @@ class SlotController extends Controller
     {
         $this->authorize('update', $slot);
 
+        $attendanceService = app(JamSessionAttendanceService::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -100,6 +118,27 @@ class SlotController extends Controller
 
         $conflictingSlot = null;
         if (! empty($validated['user_id'])) {
+            $assignedUser = User::query()->find((int) $validated['user_id']);
+
+            if ($assignedUser && $attendanceService->isNotGoing($slot->song->set->session, $assignedUser)) {
+                if ($request->user()->is_admin) {
+                    $attendanceService->resetToMaybeForAdminAssignment($slot->song->set->session, $assignedUser);
+                } else {
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'message' => 'This user marked themselves as not attending this session and cannot be assigned.',
+                            'errors' => [
+                                'user_id' => ['This user marked themselves as not attending this session and cannot be assigned.'],
+                            ],
+                        ], 422);
+                    }
+
+                    return back()->withErrors([
+                        'user_id' => 'This user marked themselves as not attending this session and cannot be assigned.',
+                    ]);
+                }
+            }
+
             $conflictingSlot = SlotCompatibility::conflictingSlotForSlot((int) $validated['user_id'], $slot, $validated['name']);
 
             if ($conflictingSlot && ! ($validated['replace_conflicting_assignment'] ?? false)) {
@@ -241,9 +280,21 @@ class SlotController extends Controller
 
         $set = $slot->song->set;
         $user = $request->user();
+        $attendanceService = app(JamSessionAttendanceService::class);
         $isSetManager = $set->owner_id === $user->id || $set->isCollaborator($user) || $user->is_admin;
         $isCollaborator = $set->isCollaborator($user);
-        $canFreeTake = $set->free_for_all && $slot->isOpen();
+        $slotIsClaimableDueToDropout = $attendanceService->slotIsClaimableDueToDropout($slot);
+        $canFreeTake = $set->free_for_all && ($slot->isOpen() || $slotIsClaimableDueToDropout);
+
+        if (! $user->is_admin && $attendanceService->isNotGoing($set->session, $user)) {
+            $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before claiming slots.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
 
         abort_if($set->performed, 403);
 
@@ -275,6 +326,8 @@ class SlotController extends Controller
             'user_id' => $request->user()->id,
             'manual_performer_name' => null,
         ]);
+
+        $attendanceService->markGoingIfAllowed($set->session, $user, JamSessionAttendance::SOURCE_AUTO_SLOT);
 
         // Notify set owner/collaborators if slot was taken without approval (collaborator or free for all mode)
         if ($isCollaborator || $canFreeTake) {
@@ -369,7 +422,11 @@ class SlotController extends Controller
 
     private function slotPayload(Slot $slot): array
     {
-        $slot->loadMissing('user');
+        $slot->loadMissing('user', 'song.set');
+        $attendanceService = app(JamSessionAttendanceService::class);
+
+        $assignedUserIsNotGoing = $slot->user !== null
+            && $attendanceService->isNotGoing($slot->song->set->session, $slot->user);
 
         return [
             'id' => $slot->id,
@@ -380,6 +437,8 @@ class SlotController extends Controller
             'user_name' => $slot->assignedPerformerName(),
             'manual_performer_name' => $slot->manual_performer_name,
             'is_open' => $slot->isOpen(),
+            'is_claimable' => $attendanceService->slotIsClaimableDueToDropout($slot),
+            'assigned_user_not_going' => $assignedUserIsNotGoing,
         ];
     }
 }

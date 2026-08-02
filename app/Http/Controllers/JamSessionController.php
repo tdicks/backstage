@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\BandTemplate;
 use App\Models\JamSession;
+use App\Models\JamSessionAttendance;
 use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\JamSessionAttendanceService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +21,8 @@ use Illuminate\View\View;
 
 class JamSessionController extends Controller
 {
+    public function __construct(private readonly JamSessionAttendanceService $attendanceService) {}
+
     private const LOADING_ONE_LINERS = [
         'Inserting the Spinal Tap video cassette...',
         'Dusting off the Marshall stack...',
@@ -136,6 +140,9 @@ class JamSessionController extends Controller
         return view('sessions.show', [
             'session' => $jamSession,
             'loadingOneLiner' => self::LOADING_ONE_LINERS[array_rand(self::LOADING_ONE_LINERS)],
+            'attendanceStatus' => $this->attendanceService->statusForUser($jamSession, request()->user()),
+            'attendanceStatuses' => JamSessionAttendance::statuses(),
+            'attendanceRequiresDropoutAction' => $this->attendanceService->userRequiresDropoutActionPrompt($jamSession, request()->user()),
         ]);
     }
 
@@ -199,7 +206,7 @@ class JamSessionController extends Controller
             ->unique()
             ->values();
 
-        $viewData = $this->slotRowViewData();
+        $viewData = $this->slotRowViewData($jamSession);
 
         $songs = $songIds->isEmpty()
             ? collect()
@@ -229,6 +236,12 @@ class JamSessionController extends Controller
                         'song' => $song,
                         'set' => $song->set,
                         'users' => $viewData['users'],
+                        'assignmentUsers' => $viewData['assignmentUsers'],
+                        'notGoingUserIds' => collect($viewData['assignmentUsers'])
+                            ->filter(fn (array $user) => $user['attendance_status'] === JamSessionAttendance::STATUS_NOT_GOING)
+                            ->pluck('id')
+                            ->map(fn ($id) => (int) $id)
+                            ->values(),
                         'slotOptions' => $viewData['slotOptions'],
                         'currentUserId' => $request->user()->id,
                         'isSetOwner' => $song->set->owner_id === $request->user()->id,
@@ -241,6 +254,14 @@ class JamSessionController extends Controller
 
     private function sessionSetsViewData(JamSession $jamSession): array
     {
+        $users = User::query()->orderBy('name')->get();
+        $assignmentUsers = $this->attendanceService->assignmentUserOptions($jamSession, $users, request()->user());
+        $notGoingUserIds = $assignmentUsers
+            ->filter(fn (array $user) => $user['attendance_status'] === JamSessionAttendance::STATUS_NOT_GOING)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
         return [
             'session' => $jamSession,
             'sessions' => JamSession::query()
@@ -254,15 +275,20 @@ class JamSessionController extends Controller
                 ->orderBy('title')
                 ->get(['id', 'artist', 'title']),
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
-            'users' => User::query()->orderBy('name')->get(),
+            'users' => $users,
+            'assignmentUsers' => $assignmentUsers,
+            'notGoingUserIds' => $notGoingUserIds,
         ];
     }
 
-    private function slotRowViewData(): array
+    private function slotRowViewData(JamSession $jamSession): array
     {
+        $users = User::query()->orderBy('name')->get();
+
         return [
             'slotOptions' => Slot::options(),
-            'users' => User::query()->orderBy('name')->get(),
+            'users' => $users,
+            'assignmentUsers' => $this->attendanceService->assignmentUserOptions($jamSession, $users, request()->user()),
         ];
     }
 

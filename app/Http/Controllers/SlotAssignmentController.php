@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\JamSessionAttendance;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
 use App\Models\User;
+use App\Services\JamSessionAttendanceService;
 use App\Services\NotificationService;
 use App\Services\SlotCompatibility;
 use App\Support\NotificationTypeCatalog;
@@ -20,6 +22,17 @@ class SlotAssignmentController extends Controller
     {
         $user = $request->user();
         $slot->load('song.set');
+        $attendanceService = app(JamSessionAttendanceService::class);
+
+        if (! $user->is_admin && $attendanceService->isNotGoing($slot->song->set->session, $user)) {
+            $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before requesting slots.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
 
         if (! $slot->song->set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
@@ -36,6 +49,8 @@ class SlotAssignmentController extends Controller
             'status' => SlotAssignment::STATUS_PENDING,
             'message' => $request->string('message')->toString() ?: null,
         ]);
+
+        $attendanceService->markGoingIfAllowed($slot->song->set->session, $user, JamSessionAttendance::SOURCE_AUTO_SLOT);
 
         app(NotificationService::class)->notifyUsers(
             NotificationTypeCatalog::SLOT_REQUEST_RECEIVED,
@@ -62,6 +77,7 @@ class SlotAssignmentController extends Controller
     {
         $actor = $request->user();
         $slot->load('song.set');
+        $attendanceService = app(JamSessionAttendanceService::class);
 
         if (! $slot->song->set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
@@ -77,6 +93,29 @@ class SlotAssignmentController extends Controller
             ],
             'message' => ['nullable', 'string'],
         ]);
+
+        $target = User::query()->findOrFail((int) $validated['target_user_id']);
+
+        if ($attendanceService->isNotGoing($slot->song->set->session, $target)) {
+            if ($actor->is_admin) {
+                $attendanceService->resetToMaybeForAdminAssignment($slot->song->set->session, $target);
+            } else {
+                $message = 'This user marked themselves as not attending this session and cannot be assigned.';
+
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $message,
+                        'errors' => [
+                            'target_user_id' => [$message],
+                        ],
+                    ], 422);
+                }
+
+                return back()->withErrors([
+                    'target_user_id' => $message,
+                ]);
+            }
+        }
 
         $slot->assignments()->create([
             'actor_user_id' => $actor->id,
@@ -119,6 +158,7 @@ class SlotAssignmentController extends Controller
 
         $user = $request->user();
         $slotAssignment->load('actor', 'target', 'slot.song.set');
+        $attendanceService = app(JamSessionAttendanceService::class);
 
         if ($slotAssignment->status === SlotAssignment::STATUS_AWAITING_TARGET_CONSENT) {
             if ($slotAssignment->type !== SlotAssignment::TYPE_PROPOSAL) {
@@ -136,6 +176,20 @@ class SlotAssignmentController extends Controller
             $ownerRecommended = $slotAssignment->actor_user_id === $slotAssignment->slot->song->set->owner_id;
             $targetAccepted = $validated['status'] === SlotAssignment::STATUS_ACCEPTED;
 
+            if ($targetAccepted && ! $user->is_admin && $attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->target)) {
+                $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before accepting recommendations.';
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+
+                return back()->with('status', $message);
+            }
+
+            if ($targetAccepted && $user->is_admin && $attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->target)) {
+                $attendanceService->resetToMaybeForAdminAssignment($slotAssignment->slot->song->set->session, $slotAssignment->target);
+            }
+
             DB::transaction(function () use ($slotAssignment, $targetAccepted, $ownerRecommended): void {
                 $slotAssignment->update([
                     'status' => $targetAccepted
@@ -150,6 +204,8 @@ class SlotAssignmentController extends Controller
             });
 
             if ($targetAccepted && $slotAssignment->target_user_id === $user->id) {
+                $attendanceService->markGoingIfAllowed($slotAssignment->slot->song->set->session, $user, JamSessionAttendance::SOURCE_AUTO_SLOT);
+
                 app(NotificationService::class)->notifyUsers(
                     NotificationTypeCatalog::SLOT_RECOMMENDATION_ACCEPTED,
                     $slotAssignment->actor ? [$slotAssignment->actor] : [],
@@ -165,6 +221,8 @@ class SlotAssignmentController extends Controller
 
             if ($request->expectsJson()) {
                 $slotAssignment->slot->load('user');
+                $assignedUserNotGoing = $slotAssignment->slot->user !== null
+                    && $attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->slot->user);
 
                 return response()->json([
                     'message' => match (true) {
@@ -179,6 +237,8 @@ class SlotAssignmentController extends Controller
                         'user_id' => $slotAssignment->slot->user_id,
                         'user_name' => $slotAssignment->slot->assignedPerformerName(),
                         'is_open' => $slotAssignment->slot->isOpen(),
+                        'is_claimable' => $assignedUserNotGoing,
+                        'assigned_user_not_going' => $assignedUserNotGoing,
                     ],
                 ]);
             }
@@ -210,6 +270,27 @@ class SlotAssignmentController extends Controller
             abort(403);
         }
 
+        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED && $slotAssignment->target) {
+            if ($attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->target)) {
+                if ($request->user()->is_admin) {
+                    $attendanceService->resetToMaybeForAdminAssignment($slotAssignment->slot->song->set->session, $slotAssignment->target);
+                } else {
+                    $message = 'This user marked themselves as not attending this session and cannot be assigned.';
+
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'message' => $message,
+                            'errors' => [
+                                'status' => [$message],
+                            ],
+                        ], 422);
+                    }
+
+                    return back()->with('status', $message);
+                }
+            }
+        }
+
         DB::transaction(function () use ($slotAssignment, $validated): void {
             $slotAssignment->update([
                 'status' => $validated['status'],
@@ -220,6 +301,10 @@ class SlotAssignmentController extends Controller
                 $this->assignSlotAndReleaseConflicts($slotAssignment);
             }
         });
+
+        if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED && $slotAssignment->target) {
+            $attendanceService->markGoingIfAllowed($slotAssignment->slot->song->set->session, $slotAssignment->target, JamSessionAttendance::SOURCE_AUTO_SLOT);
+        }
 
         if ($validated['status'] === SlotAssignment::STATUS_ACCEPTED && $slotAssignment->type === SlotAssignment::TYPE_REQUEST) {
             app(NotificationService::class)->notifyUsers(
@@ -237,6 +322,8 @@ class SlotAssignmentController extends Controller
 
         if ($request->expectsJson()) {
             $slotAssignment->slot->load('user');
+            $assignedUserNotGoing = $slotAssignment->slot->user !== null
+                && $attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->slot->user);
 
             return response()->json([
                 'message' => 'Assignment response recorded.',
@@ -247,6 +334,8 @@ class SlotAssignmentController extends Controller
                     'user_id' => $slotAssignment->slot->user_id,
                     'user_name' => $slotAssignment->slot->assignedPerformerName(),
                     'is_open' => $slotAssignment->slot->isOpen(),
+                    'is_claimable' => $assignedUserNotGoing,
+                    'assigned_user_not_going' => $assignedUserNotGoing,
                 ],
             ]);
         }

@@ -49,6 +49,8 @@
                 :song="$song"
                 :set="$set"
                 :users="$users"
+                :assignment-users="$assignmentUsers"
+                :not-going-user-ids="$notGoingUserIds"
                 :templates="$templates"
                 :slot-options="$slotOptions"
                 :pending-slot-assignments="$pendingSlotAssignments"

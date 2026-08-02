@@ -4,6 +4,8 @@
             :set="$set"
             :sessions="$sessions"
             :users="$users"
+            :assignment-users="$assignmentUsers"
+            :not-going-user-ids="$notGoingUserIds"
             :templates="$templates"
             :slot-options="$slotOptions"
             :jam-standard-songs="$jamStandardSongs"

@@ -2,6 +2,8 @@
     'set',
     'sessions',
     'users',
+    'assignmentUsers',
+    'notGoingUserIds',
     'templates',
     'slotOptions',
     'jamStandardSongs' => collect(),
@@ -37,6 +39,7 @@
     $setOwnerIconClass = $set->feature_set ? 'text-amber-700' : 'text-slate-500';
     $setDescriptionTextClass = $set->feature_set ? 'text-amber-900/90' : 'text-slate-700';
     $setHiddenIconClass = $set->feature_set ? 'text-amber-700' : 'text-sky-500';
+    $ownerIsNotGoing = in_array((int) $set->owner_id, $notGoingUserIds->all(), true);
     $isAdminManagingOtherSet = $isAdmin && ! $isSetOwner && ! $isCollaborator;
     $collaboratorNames = collect($set->collaboratorUserIds())
         ->map(fn ($userId) => $users->firstWhere('id', $userId)?->name)
@@ -59,6 +62,7 @@
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
     $setCardClass = match (true) {
+        $ownerIsNotGoing => 'border-rose-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(251_113_133_/_0.6),inset_0_0_20px_rgb(254_205_211_/_0.55)]',
         $set->feature_set && $set->is_hidden => 'border-sky-400 bg-amber-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
         $set->feature_set => 'border-amber-400 bg-amber-50/95 shadow-sm',
         $set->is_hidden => 'border-sky-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
@@ -167,6 +171,11 @@
                         {{ $set->owner->name }}@if ($set->collaboratorUserIds())<span class="md:hidden" x-show="collaboratorNames.length > 0" x-cloak> and collaborators</span><span class="hidden md:inline" x-show="collaboratorNames.length > 0" x-text="', ' + collaboratorNames.slice(0, 2).join(', ')" x-cloak></span>@endif
                     </span>
                 </span>
+                @if ($ownerIsNotGoing)
+                    <span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-rose-700" title="Set owner marked not attending">
+                        Owner cannot attend
+                    </span>
+                @endif
 
                 @if ($set->performed)
                     <span class="inline-flex items-center" title="Performed">

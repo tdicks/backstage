@@ -132,6 +132,11 @@ class JamSession extends Model
         return $this->hasMany(JamSessionSignIn::class)->latest('signed_in_at');
     }
 
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(JamSessionAttendance::class);
+    }
+
     public function jamManager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'jam_manager_id')
