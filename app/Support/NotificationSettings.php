@@ -133,13 +133,14 @@ final class NotificationSettings
     {
         $admin = self::adminPreferencesForType($type);
         $userPreferences = self::userPreferences($user)[$type];
+        $isSnoozed = $user->notificationsAreSnoozed();
 
         return [
             'enabled' => $admin['enabled'] && $userPreferences['enabled'],
-            'popup' => $admin['enabled'] && $admin['popup'] && $userPreferences['enabled'] && $userPreferences['popup'],
-            'email' => $admin['enabled'] && $admin['email'] && $userPreferences['enabled'] && $userPreferences['email'],
-            'push' => $admin['enabled'] && $admin['push'] && $userPreferences['enabled'] && $userPreferences['push'],
-            'text' => $admin['enabled'] && $admin['text'] && $userPreferences['enabled'] && $userPreferences['text'],
+            'popup' => $admin['enabled'] && $admin['popup'] && $userPreferences['enabled'] && $userPreferences['popup'] && ! $isSnoozed,
+            'email' => $admin['enabled'] && $admin['email'] && $userPreferences['enabled'] && $userPreferences['email'] && ! $isSnoozed,
+            'push' => $admin['enabled'] && $admin['push'] && $userPreferences['enabled'] && $userPreferences['push'] && ! $isSnoozed,
+            'text' => $admin['enabled'] && $admin['text'] && $userPreferences['enabled'] && $userPreferences['text'] && ! $isSnoozed,
         ];
     }
 

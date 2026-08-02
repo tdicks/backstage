@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 
-#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'is_deleted_account', 'deleted_account_at', 'bio', 'onboarding_dismissed_at', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences'])]
+#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'is_deleted_account', 'deleted_account_at', 'bio', 'onboarding_dismissed_at', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences', 'notifications_snoozed_until', 'notifications_snoozed_forever'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -58,6 +58,8 @@ class User extends Authenticatable
             'hide_from_slot_proposals' => 'boolean',
             'slot_coverage' => 'array',
             'notification_preferences' => 'array',
+            'notifications_snoozed_forever' => 'boolean',
+            'notifications_snoozed_until' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -182,5 +184,34 @@ class User extends Authenticatable
     public function sets()
     {
         return $this->hasManyDeep(Set::class, [Slot::class, Song::class]);
+    }
+
+    public function notificationsAreSnoozed(): bool
+    {
+        if ($this->notifications_snoozed_forever) {
+            return true;
+        }
+
+        if ($this->notifications_snoozed_until === null) {
+            return false;
+        }
+
+        return $this->notifications_snoozed_until->isFuture();
+    }
+
+    public function snoozeNotificationsUntil(?\DateTimeInterface $until = null): void
+    {
+        $this->forceFill([
+            'notifications_snoozed_until' => $until,
+            'notifications_snoozed_forever' => false,
+        ])->save();
+    }
+
+    public function resumeNotifications(): void
+    {
+        $this->forceFill([
+            'notifications_snoozed_until' => null,
+            'notifications_snoozed_forever' => false,
+        ])->save();
     }
 }

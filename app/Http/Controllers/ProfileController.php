@@ -6,6 +6,8 @@ use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Slot;
 use App\Models\User;
 use App\Support\NotificationSettings;
+use DateTimeImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,6 +78,58 @@ class ProfileController extends Controller
         ])->save();
 
         return Redirect::route('profile.edit')->with('status', 'Privacy updated.');
+    }
+
+    public function snoozeNotifications(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'duration' => ['nullable', 'string', 'in:8h,24h,until-tomorrow,forever'],
+        ]);
+
+        $user = $request->user();
+
+        $duration = $validated['duration'] ?? '8h';
+
+        if ($duration === 'forever') {
+            $user->forceFill([
+                'notifications_snoozed_until' => null,
+                'notifications_snoozed_forever' => true,
+            ])->save();
+
+            return $this->snoozeResponse($request, $user, 'Notifications snoozed.');
+        }
+
+        $until = match ($duration) {
+            '24h' => (new DateTimeImmutable('now'))->modify('+24 hours'),
+            'until-tomorrow' => (new DateTimeImmutable('today'))->modify('+1 day'),
+            default => (new DateTimeImmutable('now'))->modify('+8 hours'),
+        };
+
+        $user->snoozeNotificationsUntil($until);
+
+        return $this->snoozeResponse($request, $user, 'Notifications snoozed.');
+    }
+
+    public function resumeNotifications(Request $request): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+        $user->resumeNotifications();
+
+        return $this->snoozeResponse($request, $user, 'Notifications resumed.');
+    }
+
+    private function snoozeResponse(Request $request, User $user, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'snoozed' => $user->notificationsAreSnoozed(),
+                'snoozed_forever' => $user->notifications_snoozed_forever,
+                'snoozed_until' => $user->notifications_snoozed_until?->toIso8601String(),
+            ]);
+        }
+
+        return Redirect::route('profile.edit')->with('status', $message);
     }
 
     /**

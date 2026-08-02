@@ -105,6 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/privacy', [ProfileController::class, 'updatePrivacy'])->name('profile.privacy.update');
+    Route::post('/profile/notifications/snooze', [ProfileController::class, 'snoozeNotifications'])->name('profile.notifications.snooze');
+    Route::post('/profile/notifications/resume', [ProfileController::class, 'resumeNotifications'])->name('profile.notifications.resume');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

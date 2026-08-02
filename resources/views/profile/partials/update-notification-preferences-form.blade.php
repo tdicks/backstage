@@ -47,6 +47,65 @@
             </p>
         </div>
 
+        <div
+            class="rounded-lg border border-slate-200 bg-white px-4 py-4"
+            x-data="{
+                snoozed: @js($user->notificationsAreSnoozed()),
+                snoozedForever: @js($user->notifications_snoozed_forever),
+                snoozedUntil: @js($user->notifications_snoozed_until?->toIso8601String()),
+                statusMessage: '',
+                isUpdating: false,
+                async updateSnooze(url, duration = null) {
+                    this.isUpdating = true;
+                    this.statusMessage = '';
+
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+                            },
+                            body: JSON.stringify(duration ? { duration } : {}),
+                        });
+
+                        if (! response.ok) {
+                            throw new Error('Unable to update notification snooze settings.');
+                        }
+
+                        const result = await response.json();
+                        this.snoozed = result.snoozed;
+                        this.snoozedForever = result.snoozed_forever;
+                        this.snoozedUntil = result.snoozed_until;
+                        this.statusMessage = result.message;
+                    } catch (error) {
+                        this.statusMessage = error.message;
+                    } finally {
+                        this.isUpdating = false;
+                    }
+                },
+            }"
+        >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-sm font-semibold text-slate-900">Snooze notifications</p>
+                    <p class="mt-1 text-xs text-slate-600">
+                        <span x-show="! snoozed">Quiet hours are off. Pause notifications temporarily without changing your saved preferences.</span>
+                        <span x-show="snoozed && snoozedForever" x-cloak>Notifications are currently snoozed until resumed.</span>
+                        <span x-show="snoozed && ! snoozedForever" x-cloak>Notifications are currently snoozed until <span x-text="snoozedUntil ? new Date(snoozedUntil).toLocaleString() : 'further notice'"></span>.</span>
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" @click="updateSnooze(@js(route('profile.notifications.snooze')), '8h')" :disabled="isUpdating" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">Snooze 8 hours</button>
+                    <button type="button" @click="updateSnooze(@js(route('profile.notifications.snooze')), '24h')" :disabled="isUpdating" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">Snooze 24 hours</button>
+                    <button type="button" @click="updateSnooze(@js(route('profile.notifications.snooze')), 'forever')" :disabled="isUpdating" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">Snooze until resumed</button>
+                    <button type="button" x-show="snoozed" x-cloak @click="updateSnooze(@js(route('profile.notifications.resume')))" :disabled="isUpdating" class="rounded-md border border-slate-300 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-100 shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Resume notifications</button>
+                </div>
+            </div>
+            <p x-show="statusMessage" x-cloak x-text="statusMessage" class="mt-3 text-xs text-slate-600" aria-live="polite"></p>
+        </div>
+
         <div class="space-y-6">
             @forelse ($notificationOptions as $group)
                 @php($isAdminNotificationGroup = $group['category'] === 'admin')

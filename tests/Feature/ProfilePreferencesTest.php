@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\NotificationSettings;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -85,6 +86,76 @@ test('profile update stores mobile number and notification preferences', functio
     expect($user->notification_preferences['slot_request_received']['popup'])->toBeTrue();
     expect($user->notification_preferences['slot_request_received']['email'])->toBeFalse();
     expect($user->notification_preferences['slot_request_received']['push'])->toBeTrue();
+});
+
+test('notification snooze suppresses external delivery while preserving database delivery', function () {
+    $user = User::factory()->create([
+        'notifications_snoozed_until' => null,
+        'notifications_snoozed_forever' => false,
+    ]);
+
+    $user->forceFill([
+        'notifications_snoozed_until' => now()->addHours(2),
+    ])->save();
+
+    $preferences = NotificationSettings::effectiveDeliveryPreferences($user, NotificationTypeCatalog::SLOT_REQUEST_RECEIVED);
+
+    expect($preferences['enabled'])->toBeTrue();
+    expect($preferences['popup'])->toBeFalse();
+    expect($preferences['email'])->toBeFalse();
+    expect($preferences['push'])->toBeFalse();
+    expect($preferences['text'])->toBeFalse();
+});
+
+test('profile snooze routes update the user snooze state', function () {
+    $user = User::factory()->create([
+        'notifications_snoozed_until' => null,
+        'notifications_snoozed_forever' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('profile.notifications.snooze'), ['duration' => '8h'])
+        ->assertRedirect(route('profile.edit'));
+
+    $user->refresh();
+
+    expect($user->notifications_snoozed_forever)->toBeFalse();
+    expect($user->notifications_snoozed_until)->not->toBeNull();
+
+    $this->actingAs($user)
+        ->post(route('profile.notifications.resume'))
+        ->assertRedirect(route('profile.edit'));
+
+    $user->refresh();
+
+    expect($user->notifications_snoozed_forever)->toBeFalse();
+    expect($user->notifications_snoozed_until)->toBeNull();
+});
+
+test('profile snooze routes return updated state for AJAX requests', function () {
+    $user = User::factory()->create([
+        'notifications_snoozed_until' => now()->addHours(8),
+        'notifications_snoozed_forever' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('profile.notifications.snooze'), ['duration' => 'forever'])
+        ->assertOk()
+        ->assertJsonPath('message', 'Notifications snoozed.')
+        ->assertJsonPath('snoozed', true)
+        ->assertJsonPath('snoozed_forever', true)
+        ->assertJsonPath('snoozed_until', null);
+
+    expect($user->refresh()->notifications_snoozed_forever)->toBeTrue();
+    expect($user->notifications_snoozed_until)->toBeNull();
+
+    $this->actingAs($user)
+        ->postJson(route('profile.notifications.resume'))
+        ->assertOk()
+        ->assertJsonPath('message', 'Notifications resumed.')
+        ->assertJsonPath('snoozed', false)
+        ->assertJsonPath('snoozed_forever', false)
+        ->assertJsonPath('snoozed_until', null);
 });
 
 test('profile page shows notification preferences section', function () {

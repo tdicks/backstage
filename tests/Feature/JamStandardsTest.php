@@ -188,6 +188,7 @@ test('the admin catalog add modal submits asynchronously', function () {
         ->assertSee('Jam Standards')
         ->assertSee('The jam standards are a list of songs that many of our regulars know.')
         ->assertSee('Learning some of these is a great way to get started with our jam sessions.')
+        ->assertSee('Create Set', false)
         ->assertSee('border border-sky-200 bg-sky-50/80', false)
         ->assertSee('flex items-center gap-2 text-sm leading-6 text-sky-900', false)
         ->assertSee('h-5 w-5 text-sky-500', false)

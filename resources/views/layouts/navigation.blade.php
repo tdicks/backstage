@@ -471,6 +471,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-slate-100">Notifications</h3>
                         <p class="mt-1 text-xs text-slate-400" x-text="$store.notifications.unreadCount > 0 ? $store.notifications.unreadCount + ' unread' : 'All caught up'"></p>
+                        <span class="mt-2 inline-flex rounded-md bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-300 ring-1 ring-inset ring-sky-400/30" x-show="@js(auth()->user()->notificationsAreSnoozed())" x-cloak>Snoozed</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <button
