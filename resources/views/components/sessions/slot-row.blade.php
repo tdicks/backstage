@@ -60,6 +60,7 @@
         'opacity-70': draggingSlotId === {{ $slotModel->id }}
     }"
     x-data="sessionSlotRow(@js([
+        'setId' => $set->id,
         'slotId' => $slotModel->id,
         'assignedUserName' => $slotModel->user_id === $currentUserId ? 'You' : $slotModel->assignedPerformerName(),
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,

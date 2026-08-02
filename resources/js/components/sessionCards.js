@@ -2572,6 +2572,7 @@ export function sessionSlotRow(config) {
         currentUserNotGoing: Boolean(config.currentUserNotGoing),
         assignedToCurrentUser: config.assignedToCurrentUser,
         hasPendingOwnRequest: config.hasPendingOwnRequest,
+        setId: config.setId ? String(config.setId) : '',
         canMoveSlotUp: config.canMoveSlotUp,
         canMoveSlotDown: config.canMoveSlotDown,
         busyAction: false,
@@ -2779,6 +2780,10 @@ export function sessionSlotRow(config) {
             window.dispatchEvent(new CustomEvent('slot-updated', { detail: { slot } }));
         },
         owningSetId() {
+            if (this.setId) {
+                return this.setId;
+            }
+
             const setCard = this.$el?.closest('[data-session-set-card][data-set-id]');
 
             return setCard?.dataset?.setId || null;

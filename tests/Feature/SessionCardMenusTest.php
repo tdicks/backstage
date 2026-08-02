@@ -65,6 +65,7 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertSee('Add Slot')
         ->assertSee('Clear Slot')
         ->assertSee('Edit slot')
+        ->assertDontSee('Request slot')
         ->assertSee('Copy Direct Link')
         ->assertSee('Attachments')
         ->assertSee('#song-'.$song->id, false)
@@ -101,7 +102,12 @@ test('set action menu offers a table image export', function () {
     expect($slotActionMenu)
         ->toContain('openAttachmentsModal()')
         ->toContain('x-heroicon-m-paper-clip')
-        ->toContain('Attachments');
+        ->toContain('Attachments')
+        ->toContain("slotIsManuallyClaimable ? 'Remove claimable status' : 'Mark slot claimable'")
+        ->toContain('{{ $slotManageMenuItemClass }}')
+        ->toContain('<x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />');
+
+    expect(strpos($slotActionMenu, 'Edit slot'))->toBeLessThan(strpos($slotActionMenu, 'Mark slot claimable'));
 
     expect($slotRow)
         ->toContain('aria-label="Open slot attachments"')

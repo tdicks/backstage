@@ -435,7 +435,7 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 			}
 		},
 		patchOpenSongSlots(songs) {
-			if (this.hasOpenSessionModal()) {
+			if (this.hasOpenSessionModal() || this.hasOpenSessionActionMenu()) {
 				return;
 			}
 
@@ -446,14 +446,92 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 					return;
 				}
 
-				container.innerHTML = song.slots_html;
-
-				this.$nextTick(() => {
-					if (window.Alpine) {
-						window.Alpine.initTree(container);
-					}
-				});
+				this.patchSlotRows(container, song.slots_html);
 			});
+		},
+		patchSlotRows(container, nextSlotsHtml) {
+			const templateBody = document.createElement('tbody');
+			templateBody.innerHTML = nextSlotsHtml;
+
+			const nextRows = Array.from(templateBody.querySelectorAll('[data-slot-id]'));
+			if (nextRows.length === 0) {
+				if (container.innerHTML !== nextSlotsHtml) {
+					container.innerHTML = nextSlotsHtml;
+
+					this.$nextTick(() => {
+						if (window.Alpine) {
+							window.Alpine.initTree(container);
+						}
+					});
+				}
+
+				return;
+			}
+
+			const nextSlotIds = new Set(nextRows.map((row) => String(row.dataset.slotId || '')).filter(Boolean));
+
+			Array.from(container.querySelectorAll(':scope > [data-slot-id]')).forEach((existingRow) => {
+				const existingSlotId = String(existingRow.dataset.slotId || '');
+				if (existingSlotId !== '' && !nextSlotIds.has(existingSlotId)) {
+					existingRow.remove();
+				}
+			});
+
+			let pointer = container.firstElementChild;
+			const insertedOrReplacedRows = [];
+
+			nextRows.forEach((nextRow) => {
+				const slotId = String(nextRow.dataset.slotId || '');
+				if (slotId === '') {
+					return;
+				}
+
+				const nextRowHtml = nextRow.outerHTML;
+				const matchingRowAtPointer = pointer && pointer.matches('[data-slot-id]') && String(pointer.dataset.slotId || '') === slotId
+					? pointer
+					: null;
+
+				if (matchingRowAtPointer) {
+					if (matchingRowAtPointer.outerHTML !== nextRowHtml) {
+						const replacementRow = nextRow.cloneNode(true);
+						matchingRowAtPointer.replaceWith(replacementRow);
+						insertedOrReplacedRows.push(replacementRow);
+						pointer = replacementRow.nextElementSibling;
+					} else {
+						pointer = matchingRowAtPointer.nextElementSibling;
+					}
+
+					return;
+				}
+
+				const existingRow = container.querySelector(`:scope > [data-slot-id="${slotId}"]`);
+				if (!existingRow) {
+					const insertedRow = nextRow.cloneNode(true);
+					container.insertBefore(insertedRow, pointer);
+					insertedOrReplacedRows.push(insertedRow);
+					return;
+				}
+
+				if (existingRow.outerHTML !== nextRowHtml) {
+					const replacementRow = nextRow.cloneNode(true);
+					existingRow.replaceWith(replacementRow);
+					container.insertBefore(replacementRow, pointer);
+					insertedOrReplacedRows.push(replacementRow);
+					return;
+				}
+
+				container.insertBefore(existingRow, pointer);
+			});
+
+			if (insertedOrReplacedRows.length > 0) {
+				this.$nextTick(() => {
+					if (!window.Alpine) {
+						return;
+					}
+
+					insertedOrReplacedRows.forEach((row) => window.Alpine.initTree(row));
+				});
+			}
 		},
 		hasOpenSessionModal() {
 			return Array.from(document.querySelectorAll('[data-drag-blocking-modal]')).some((modal) => window.getComputedStyle(modal).display !== 'none');
