@@ -5,6 +5,7 @@ import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder'
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
 import { liveQuickSet } from './components/liveQuickSet';
+import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
 import { copyShareLink } from './utils/clipboard';
@@ -74,6 +75,7 @@ Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
 Alpine.data('liveQuickSet', liveQuickSet);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
+Alpine.data('adminManualSlotTransfer', adminManualSlotTransfer);
 
 window.addEventListener('notifications-updated', () => {
 	syncPendingTitleFromStores();

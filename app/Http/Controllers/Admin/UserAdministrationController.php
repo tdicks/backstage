@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Slot;
 use App\Models\User;
+use App\Services\ManualSlotTransferService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class UserAdministrationController extends Controller
 {
+    public function __construct(private readonly ManualSlotTransferService $manualSlotTransferService) {}
+
     public function index(Request $request): View
     {
         $this->authorizeAdmin($request);
@@ -48,6 +51,35 @@ class UserAdministrationController extends Controller
             'sort' => $sort,
             'direction' => $direction,
             'slotOptions' => Slot::options(),
+            'manualSlotTransferDataUrl' => route('admin.users.manual-slot-transfers.index'),
+            'manualSlotTransferApplyUrl' => route('admin.users.manual-slot-transfers.apply'),
+        ]);
+    }
+
+    public function manualSlotTransfers(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        return response()->json([
+            'slots' => $this->manualSlotTransferService->dataset(),
+        ]);
+    }
+
+    public function applyManualSlotTransfers(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        $validated = $request->validate([
+            'changes' => ['required', 'array'],
+            'changes.*.slot_id' => ['required', 'integer'],
+            'changes.*.user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
+        ]);
+
+        $results = $this->manualSlotTransferService->applyTransfers($validated['changes'], $request->user());
+
+        return response()->json([
+            'results' => $results,
+            'slots' => $this->manualSlotTransferService->dataset(),
         ]);
     }
 

@@ -36,6 +36,118 @@
                 ></div>
             </template>
 
+            <div
+                x-data="adminManualSlotTransfer({
+                    dataUrl: @js($manualSlotTransferDataUrl),
+                    applyUrl: @js($manualSlotTransferApplyUrl),
+                    csrfToken: @js(csrf_token()),
+                })"
+                @keydown.escape.window="if (open) { closeModal(); }"
+                class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm"
+            >
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-700">Manual Slot Assignments</h3>
+                        <p class="mt-1 text-sm text-slate-600">Reassign typed performer names to registered users on current open jam sessions.</p>
+                    </div>
+                    <button
+                        type="button"
+                        @click="openModal()"
+                        class="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                        <x-heroicon-m-arrow-path class="h-4 w-4" aria-hidden="true" />
+                        <span>Reassign Manual Slots</span>
+                    </button>
+                </div>
+
+                <template x-teleport="body">
+                    <div x-cloak>
+                        <div x-show="open" x-cloak x-transition.opacity.duration.150ms data-modal-overlay class="fixed inset-0 z-40 bg-black/40" @click="closeModal()"></div>
+                        <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 translate-y-1 scale-[0.98]" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-4 sm:items-center sm:pt-4">
+                            <section class="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-left text-slate-900 shadow-2xl sm:max-h-[calc(100vh-4rem)]" role="dialog" aria-modal="true" aria-label="Manual slot assignment transfer" @click.stop>
+                                <header class="border-b border-slate-200 px-6 py-4">
+                                    <h4 class="text-lg font-semibold text-slate-900">Reassign Manual Slots</h4>
+                                    <p class="mt-1 text-sm text-slate-600">Pick users for manually typed slot names. Suggested matches are listed first for each slot.</p>
+                                </header>
+
+                                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                                    <p x-show="loading" x-cloak class="text-sm text-slate-600">Loading manual slot assignments...</p>
+                                    <p x-show="error" x-cloak x-text="error" class="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+                                    <p x-show="feedback" x-cloak x-text="feedback" class="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"></p>
+
+                                    <template x-if="!loading && slots.length === 0">
+                                        <p class="rounded-md border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600">No manual slot assignments were found for current open jam sessions.</p>
+                                    </template>
+
+                                    <div x-show="slots.length > 0" x-cloak class="space-y-3">
+                                        <template x-for="slot in slots" :key="slot.slotId">
+                                            <article class="rounded-lg border border-slate-200 bg-white p-4">
+                                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                                    <div class="min-w-0">
+                                                        <p class="text-sm font-semibold text-slate-900" x-text="slot.manualPerformerName"></p>
+                                                        <p class="mt-1 text-xs text-slate-600">
+                                                            <span x-text="slot.slotLabel"></span>
+                                                            <span class="mx-1">-</span>
+                                                            <span x-text="slot.songArtist"></span>
+                                                            <span> - </span>
+                                                            <span x-text="slot.songTitle"></span>
+                                                        </p>
+                                                        <p class="text-xs text-slate-500">
+                                                            <span x-text="slot.setName"></span>
+                                                            <span class="mx-1">-</span>
+                                                            <a class="underline decoration-slate-300 underline-offset-2 hover:text-slate-700" :href="slot.sessionUrl" x-text="`${slot.sessionName} (${slot.sessionDateLabel})`"></a>
+                                                        </p>
+                                                    </div>
+                                                    <div class="w-full max-w-xs">
+                                                        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-600">Assign To</label>
+                                                        <select x-model="slot.selectedUserId" class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200">
+                                                            <option value="">No change</option>
+                                                            <template x-for="user in slot.userOptions" :key="`slot-${slot.slotId}-user-${user.id}`">
+                                                                <option :value="String(user.id)" x-text="user.name"></option>
+                                                            </template>
+                                                        </select>
+                                                        <p x-show="slot.status === 'error'" x-cloak x-text="slot.message" class="mt-2 text-xs text-rose-700"></p>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        </template>
+                                    </div>
+
+                                    <div x-show="completed.length > 0" x-cloak class="mt-5 space-y-2 border-t border-slate-200 pt-4">
+                                        <h5 class="text-xs font-semibold uppercase tracking-wide text-slate-600">Completed Transfers</h5>
+                                        <template x-for="slot in completed" :key="`completed-${slot.slotId}`">
+                                            <article class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                                                <p>
+                                                    <span class="font-semibold" x-text="slot.manualPerformerName"></span>
+                                                    <span> transferred to </span>
+                                                    <span class="font-semibold" x-text="slot.assignedUserName"></span>
+                                                </p>
+                                                <span class="text-xs" x-text="slot.message"></span>
+                                            </article>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <footer class="flex items-center justify-between gap-2 border-t border-slate-200 px-6 py-4">
+                                    <button
+                                        type="button"
+                                        @click="loadSlots()"
+                                        :disabled="loading || saving"
+                                        class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Refresh
+                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <x-modal-secondary-button type="button" @click="closeModal()">Close</x-modal-secondary-button>
+                                        <x-modal-primary-button type="button" @click="submit()" x-bind:disabled="saving || loading || !hasChanges()" class="disabled:cursor-not-allowed disabled:opacity-40">Apply Changes</x-modal-primary-button>
+                                    </div>
+                                </footer>
+                            </section>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <div class="rounded-lg border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
                 <form method="GET" action="{{ route('admin.users.index') }}" class="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px_180px_auto] md:items-end">
                     <div>

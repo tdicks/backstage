@@ -99,6 +99,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/users/{user}', [UserAdministrationController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/role', [UserAdministrationController::class, 'toggleRole'])->name('users.toggle-role');
         Route::post('/users/{user}/password-reset', [UserAdministrationController::class, 'sendPasswordResetLink'])->name('users.password-reset');
+        Route::get('/users/manual-slot-transfers', [UserAdministrationController::class, 'manualSlotTransfers'])->name('users.manual-slot-transfers.index');
+        Route::post('/users/manual-slot-transfers', [UserAdministrationController::class, 'applyManualSlotTransfers'])->name('users.manual-slot-transfers.apply');
         Route::get('/attachments', [AttachmentAdministrationController::class, 'index'])->name('attachments.index');
         Route::delete('/attachments/{attachment}', [AttachmentAdministrationController::class, 'destroy'])->name('attachments.destroy');
     });

@@ -20,6 +20,8 @@ final class NotificationTypeCatalog
 
     public const SLOT_MANUALLY_ASSIGNED = 'slot_manually_assigned';
 
+    public const SLOT_MANUAL_ASSIGNMENT_TRANSFERRED = 'slot_manual_assignment_transferred';
+
     public const SLOT_TAKEN_WITHOUT_APPROVAL = 'slot_taken_without_approval';
 
     public const SLOT_REQUEST_CLAIMABLE = 'slot_request_claimable';
@@ -99,6 +101,12 @@ final class NotificationTypeCatalog
             self::SLOT_MANUALLY_ASSIGNED => [
                 'label' => 'Slot manually assigned',
                 'description' => 'When someone manually assigns you to a slot on a set.',
+                'category' => 'slots',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SLOT_MANUAL_ASSIGNMENT_TRANSFERRED => [
+                'label' => 'Manual slot assignment transferred',
+                'description' => 'When an admin transfers a manually entered slot assignment to your account.',
                 'category' => 'slots',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],

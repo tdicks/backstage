@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\Controllers\MySetsController;
 use App\Models\JamSession;
 use App\Models\User;
+use App\Services\ManualSlotTransferService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Auth\Events\Registered;
@@ -40,6 +41,8 @@ class AppServiceProvider extends ServiceProvider
                     'action_label' => 'Manage users',
                 ]
             );
+
+            app(ManualSlotTransferService::class)->primeMatchesForNewUser($event->user);
         });
 
         View::composer('layouts.navigation', function ($view): void {
