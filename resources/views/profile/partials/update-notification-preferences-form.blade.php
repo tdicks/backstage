@@ -48,7 +48,7 @@
         </div>
 
         <div
-            class="rounded-lg border border-slate-200 bg-white px-4 py-4"
+            class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
             x-data="{
                 snoozed: @js($user->notificationsAreSnoozed()),
                 snoozedForever: @js($user->notifications_snoozed_forever),
