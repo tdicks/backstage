@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\JamSession;
+use App\Models\JamSessionAttendance;
 use App\Models\JamSessionSignIn;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +52,7 @@ test('a jam register code opens a preselected session', function () {
         ->assertSee('cameFromShortCode: true')
         ->assertSee('sessionUrl:')
         ->assertSee('registerUrl:')
-        ->assertSee("Can't find your name? Register a Backstage account here!")
+        ->assertSeeText("Can't find your name? Register a Backstage account here!")
         ->assertSee('x-show="cameFromShortCode && !showSessionLink"', false)
         ->assertSee('x-show="suggestions.length > 0"', false)
         ->assertSee('class="mt-3 block text-center text-sm font-medium text-slate-600', false)
@@ -92,6 +93,81 @@ test('it signs a user in and reports status', function () {
     $statusResponse->assertOk();
     $statusResponse->assertJsonPath('signed_in', true);
     $statusResponse->assertJsonPath('user.id', $user->id);
+});
+
+test('signing in marks maybe attendance as going', function () {
+    $session = createJamSession(['allow_checkins' => true]);
+    $user = User::factory()->create();
+
+    JamSessionAttendance::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $user->id,
+        'status' => JamSessionAttendance::STATUS_MAYBE,
+        'source' => JamSessionAttendance::SOURCE_SELF,
+        'status_changed_at' => now()->subHour(),
+    ]);
+
+    $this->postJson(route('jam-register.sign-in', $session), [
+        'user_id' => $user->id,
+    ])->assertOk();
+
+    $attendance = JamSessionAttendance::query()
+        ->where('jam_session_id', $session->id)
+        ->where('user_id', $user->id)
+        ->firstOrFail();
+
+    expect($attendance->status)->toBe(JamSessionAttendance::STATUS_GOING)
+        ->and($attendance->source)->toBe(JamSessionAttendance::SOURCE_AUTO_SIGN_IN);
+});
+
+test('signing in marks not going attendance as going', function () {
+    $session = createJamSession(['allow_checkins' => true]);
+    $user = User::factory()->create();
+
+    JamSessionAttendance::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $user->id,
+        'status' => JamSessionAttendance::STATUS_NOT_GOING,
+        'source' => JamSessionAttendance::SOURCE_SELF,
+        'status_changed_at' => now()->subHour(),
+    ]);
+
+    $this->postJson(route('jam-register.sign-in', $session), [
+        'user_id' => $user->id,
+    ])->assertOk();
+
+    $attendance = JamSessionAttendance::query()
+        ->where('jam_session_id', $session->id)
+        ->where('user_id', $user->id)
+        ->firstOrFail();
+
+    expect($attendance->status)->toBe(JamSessionAttendance::STATUS_GOING)
+        ->and($attendance->source)->toBe(JamSessionAttendance::SOURCE_AUTO_SIGN_IN);
+});
+
+test('signing in does not change attendance when already going', function () {
+    $session = createJamSession(['allow_checkins' => true]);
+    $user = User::factory()->create();
+
+    JamSessionAttendance::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $user->id,
+        'status' => JamSessionAttendance::STATUS_GOING,
+        'source' => JamSessionAttendance::SOURCE_SELF,
+        'status_changed_at' => now()->subHour(),
+    ]);
+
+    $this->postJson(route('jam-register.sign-in', $session), [
+        'user_id' => $user->id,
+    ])->assertOk();
+
+    $attendance = JamSessionAttendance::query()
+        ->where('jam_session_id', $session->id)
+        ->where('user_id', $user->id)
+        ->firstOrFail();
+
+    expect($attendance->status)->toBe(JamSessionAttendance::STATUS_GOING)
+        ->and($attendance->source)->toBe(JamSessionAttendance::SOURCE_SELF);
 });
 
 test('it signs a user out', function () {

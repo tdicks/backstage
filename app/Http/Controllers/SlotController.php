@@ -168,8 +168,10 @@ class SlotController extends Controller
         }
 
         $previousUserId = $slot->user_id;
+        $incomingUserId = ! empty($validated['user_id']) ? (int) $validated['user_id'] : null;
+        $resetClaimableOnAssignment = $incomingUserId !== null && (int) $previousUserId !== $incomingUserId;
 
-        DB::transaction(function () use ($slot, $validated, $manualPerformerName, $conflictingSlot): void {
+        DB::transaction(function () use ($slot, $validated, $manualPerformerName, $conflictingSlot, $resetClaimableOnAssignment): void {
             if ($conflictingSlot) {
                 $conflictingSlot->update([
                     'user_id' => null,
@@ -177,13 +179,19 @@ class SlotController extends Controller
                 ]);
             }
 
-            $slot->update([
+            $slotAttributes = [
                 'name' => $validated['name'],
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $validated['user_id'] ?? null,
                 'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
                 'position' => $validated['position'] ?? $slot->position,
-            ]);
+            ];
+
+            if ($resetClaimableOnAssignment) {
+                $slotAttributes['is_claimable_manual'] = false;
+            }
+
+            $slot->update($slotAttributes);
 
             if (! empty($validated['user_id'])) {
                 SlotAssignment::query()
@@ -283,8 +291,8 @@ class SlotController extends Controller
         $attendanceService = app(JamSessionAttendanceService::class);
         $isSetManager = $set->owner_id === $user->id || $set->isCollaborator($user) || $user->is_admin;
         $isCollaborator = $set->isCollaborator($user);
-        $slotIsClaimableDueToDropout = $attendanceService->slotIsClaimableDueToDropout($slot);
-        $canFreeTake = $set->free_for_all && ($slot->isOpen() || $slotIsClaimableDueToDropout);
+        $slotIsClaimable = $attendanceService->slotIsClaimable($slot);
+        $canFreeTake = $set->free_for_all && ($slot->isOpen() || $slotIsClaimable);
 
         if (! $user->is_admin && $attendanceService->isNotGoing($set->session, $user)) {
             $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before claiming slots.';
@@ -322,10 +330,25 @@ class SlotController extends Controller
             throw $exception;
         }
 
-        $slot->update([
-            'user_id' => $request->user()->id,
-            'manual_performer_name' => null,
-        ]);
+        DB::transaction(function () use ($slot, $request): void {
+            $slot->update([
+                'user_id' => $request->user()->id,
+                'manual_performer_name' => null,
+                'is_claimable_manual' => false,
+            ]);
+
+            // Clear only the claiming user's pending self-request for this slot.
+            SlotAssignment::query()
+                ->where('slot_id', $slot->id)
+                ->where('actor_user_id', $request->user()->id)
+                ->where('target_user_id', $request->user()->id)
+                ->where('type', SlotAssignment::TYPE_REQUEST)
+                ->where('status', SlotAssignment::STATUS_PENDING)
+                ->update([
+                    'status' => SlotAssignment::STATUS_ACCEPTED,
+                    'responded_at' => now(),
+                ]);
+        });
 
         $attendanceService->markGoingIfAllowed($set->session, $user, JamSessionAttendance::SOURCE_AUTO_SLOT);
 
@@ -362,6 +385,95 @@ class SlotController extends Controller
         }
 
         return back()->with('status', 'Slot assigned to you.');
+    }
+
+    public function updateClaimable(Request $request, Slot $slot): JsonResponse|RedirectResponse
+    {
+        $slot->loadMissing('song.set.session');
+
+        $user = $request->user();
+        $set = $slot->song->set;
+        $isSetManager = $user->is_admin
+            || $set->owner_id === $user->id
+            || $set->isCollaborator($user)
+            || $set->session->jam_manager_id === $user->id;
+        $isAssignee = (int) $slot->user_id === (int) $user->id;
+
+        if (! $isSetManager && ! $isAssignee) {
+            abort(403);
+        }
+
+        if ($slot->song->set->session->is_closed && ! $user->is_admin) {
+            $message = 'This session is closed. Slot claimability can only be changed by an admin.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if ($slot->user_id === null) {
+            $message = 'Only assigned slots can be marked claimable.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        $validated = $request->validate([
+            'is_claimable_manual' => ['required', 'boolean'],
+        ]);
+
+        $newValue = (bool) $validated['is_claimable_manual'];
+        $wasClaimable = (bool) $slot->is_claimable_manual;
+
+        $slot->update([
+            'is_claimable_manual' => $newValue,
+        ]);
+
+        if ($newValue && ! $wasClaimable) {
+            $pendingRequesterIds = SlotAssignment::query()
+                ->where('slot_id', $slot->id)
+                ->where('type', SlotAssignment::TYPE_REQUEST)
+                ->where('status', SlotAssignment::STATUS_PENDING)
+                ->pluck('actor_user_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($pendingRequesterIds->isNotEmpty()) {
+                $requesters = User::query()
+                    ->whereIn('id', $pendingRequesterIds->all())
+                    ->orderBy('name')
+                    ->get();
+
+                app(NotificationService::class)->notifyUsers(
+                    NotificationTypeCatalog::SLOT_REQUEST_CLAIMABLE,
+                    $requesters,
+                    $user,
+                    [
+                        'title' => 'Requested slot is now claimable',
+                        'body' => $slot->assignedPerformerName().' marked the '.(Slot::options()[$slot->name] ?? $slot->name).' slot on '.$slot->song->artist.' - '.$slot->song->title.' as claimable.',
+                        'action_url' => route('sessions.show', $slot->song->set->session).'#slot-'.$slot->id,
+                        'action_label' => 'Open slot',
+                    ]
+                );
+            }
+        }
+
+        $message = $newValue ? 'Slot marked claimable.' : 'Slot claimable status removed.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'slot' => $this->slotPayload($slot->fresh('user')),
+            ]);
+        }
+
+        return back()->with('status', $message);
     }
 
     public function release(Request $request, Slot $slot): JsonResponse|RedirectResponse
@@ -437,7 +549,8 @@ class SlotController extends Controller
             'user_name' => $slot->assignedPerformerName(),
             'manual_performer_name' => $slot->manual_performer_name,
             'is_open' => $slot->isOpen(),
-            'is_claimable' => $attendanceService->slotIsClaimableDueToDropout($slot),
+            'is_claimable' => $attendanceService->slotIsClaimable($slot),
+            'is_claimable_manual' => (bool) $slot->is_claimable_manual,
             'assigned_user_not_going' => $assignedUserIsNotGoing,
         ];
     }

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamSession;
+use App\Models\JamSessionAttendance;
 use App\Models\JamSessionSignIn;
 use App\Models\User;
+use App\Services\JamSessionAttendanceService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +15,8 @@ use Illuminate\View\View;
 
 class JamRegisterController extends Controller
 {
+    public function __construct(private readonly JamSessionAttendanceService $attendanceService) {}
+
     public function index(): View
     {
         return view('jam-register.index', [
@@ -246,6 +250,19 @@ class JamRegisterController extends Controller
                 'last_seen_at' => $signedInAt,
                 'last_signed_in_at' => $signedInAt,
             ]);
+
+        $user = User::query()
+            ->withoutGlobalScope(User::ACTIVE_ACCOUNTS_SCOPE)
+            ->findOrFail($userId);
+
+        if ($this->attendanceService->statusForUser($jamSession, $user) !== JamSessionAttendance::STATUS_GOING) {
+            $this->attendanceService->setStatus(
+                $jamSession,
+                $user,
+                JamSessionAttendance::STATUS_GOING,
+                JamSessionAttendance::SOURCE_AUTO_SIGN_IN,
+            );
+        }
 
         return $signIn->load('user:id,name');
     }

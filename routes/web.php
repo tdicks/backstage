@@ -161,6 +161,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/songs/{song}/slots/reorder', [SlotController::class, 'reorder'])->name('slots.reorder');
     Route::post('/slots/{slot}/take', [SlotController::class, 'take'])->name('slots.take');
     Route::post('/slots/{slot}/release', [SlotController::class, 'release'])->name('slots.release');
+    Route::patch('/slots/{slot}/claimable', [SlotController::class, 'updateClaimable'])->name('slots.claimable');
     Route::patch('/slots/{slot}', [SlotController::class, 'update'])->name('slots.update');
     Route::delete('/slots/{slot}', [SlotController::class, 'destroy'])->name('slots.destroy');
     Route::get('/slots/{slot}/attachments', [AttachmentController::class, 'slotIndex'])->name('slots.attachments.index');

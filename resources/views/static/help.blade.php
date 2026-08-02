@@ -48,6 +48,16 @@
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Attendance</h3>
+                    <p>
+                        Attendance helps everyone read the room before the jam starts. Use the controls in a session header to mark yourself as <span class="font-semibold text-slate-900">Going</span>, <span class="font-semibold text-slate-900">Maybe</span>, or <span class="font-semibold text-slate-900">Not going</span>.
+                    </p>
+                    <p>
+                        This is separate from sign-in. Sign-in records who is physically there on the day, while attendance is the planning signal people use ahead of time.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Find a Slot</h3>
                     <p>
                         Use the <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Find a Slot</span> page to browse open parts across upcoming sessions. The list is grouped by session and set. Use the Slot Coverage controls in your User Profile to influence what slots you see in the Slot Finder.
@@ -85,6 +95,9 @@
                     <p>
                         If you need to step away from a part you already claimed, use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-arrow-left-on-rectangle class="h-3.5 w-3.5" aria-hidden="true" /> Release slot</span>. Backstage also helps avoid impossible double-booking within the same set. If you are already down for a part that clashes with another one, it will tell you clearly instead of quietly changing the plan.
                     </p>
+                    <p>
+                        Assigned slots can also be marked claimable, so someone else can take over without clearing the assignment first. It is useful when you have put your name on a part but are happy for another player to take it if they want it. When that happens, the slot shows a <span class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700">Claimable</span> badge next to the player name.
+                    </p>
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
@@ -94,6 +107,9 @@
                     </p>
                     <p>
                         No approvals needed, no requests pending — just grab a spot and you are in. It is perfect for a quick-fire session or for last minute sets on the fly.
+                    </p>
+                    <p>
+                        Free for all also works with claimable assigned slots. If a part is marked with the purple <span class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700">Claimable</span> badge, players can take that slot directly in the same way they would take an open slot.
                     </p>
                 </div>
 

@@ -94,6 +94,19 @@
                 </button>
             @endif
 
+            @if ($canManageSet || $slotModel->user_id === auth()->id())
+                <button
+                    type="button"
+                    @click="openActionMenu = false; toggleSlotClaimable()"
+                    x-show="!slotIsOpen && !assignmentIsManual && !assignedUserIsNotGoing && (assignedToCurrentUser || {{ $canManageSet ? 'true' : 'false' }})"
+                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                >
+                    <x-heroicon-m-flag class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    <span x-text="slotIsManuallyClaimable ? 'Remove claimable status' : 'Mark slot claimable'"></span>
+                </button>
+            @endif
+
             @if ($set->signups_open)
                 <button
                     type="button"

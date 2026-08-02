@@ -237,7 +237,8 @@ class SlotAssignmentController extends Controller
                         'user_id' => $slotAssignment->slot->user_id,
                         'user_name' => $slotAssignment->slot->assignedPerformerName(),
                         'is_open' => $slotAssignment->slot->isOpen(),
-                        'is_claimable' => $assignedUserNotGoing,
+                        'is_claimable' => $attendanceService->slotIsClaimable($slotAssignment->slot),
+                        'is_claimable_manual' => (bool) $slotAssignment->slot->is_claimable_manual,
                         'assigned_user_not_going' => $assignedUserNotGoing,
                     ],
                 ]);
@@ -334,7 +335,8 @@ class SlotAssignmentController extends Controller
                     'user_id' => $slotAssignment->slot->user_id,
                     'user_name' => $slotAssignment->slot->assignedPerformerName(),
                     'is_open' => $slotAssignment->slot->isOpen(),
-                    'is_claimable' => $assignedUserNotGoing,
+                    'is_claimable' => $attendanceService->slotIsClaimable($slotAssignment->slot),
+                    'is_claimable_manual' => (bool) $slotAssignment->slot->is_claimable_manual,
                     'assigned_user_not_going' => $assignedUserNotGoing,
                 ],
             ]);
@@ -359,6 +361,7 @@ class SlotAssignmentController extends Controller
         $slotAssignment->slot->update([
             'user_id' => $slotAssignment->target_user_id,
             'manual_performer_name' => null,
+            'is_claimable_manual' => false,
         ]);
 
         $this->rejectSupersededSelfRequests($slotAssignment);

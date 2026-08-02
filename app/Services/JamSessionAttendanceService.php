@@ -7,11 +7,15 @@ use App\Models\JamSessionAttendance;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\Song;
 use App\Models\User;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Support\Collection;
 
 class JamSessionAttendanceService
 {
+    public function __construct(private readonly NotificationService $notificationService) {}
+
     public const DROPOUT_KEEP_CLAIMABLE = 'keep_claimable';
 
     public const DROPOUT_RELEASE_SLOTS = 'release_slots';
@@ -87,7 +91,7 @@ class JamSessionAttendanceService
         $currentStatus = $this->statusForUser($session, $user);
 
         if ($status === JamSessionAttendance::STATUS_NOT_GOING && $currentStatus !== JamSessionAttendance::STATUS_NOT_GOING) {
-            $this->handleDropoutTransition($session, $user, $dropoutAction ?? self::DROPOUT_KEEP_CLAIMABLE);
+            $this->handleDropoutTransition($session, $user, $dropoutAction ?? self::DROPOUT_KEEP_CLAIMABLE, $source);
         }
 
         $session->attendances()->updateOrCreate(
@@ -149,6 +153,17 @@ class JamSessionAttendanceService
             ->exists();
     }
 
+    public function slotIsManuallyClaimable(Slot $slot): bool
+    {
+        return $slot->user_id !== null && (bool) $slot->is_claimable_manual;
+    }
+
+    public function slotIsClaimable(Slot $slot): bool
+    {
+        return $this->slotIsManuallyClaimable($slot)
+            || $this->slotIsClaimableDueToDropout($slot);
+    }
+
     public function userRequiresDropoutActionPrompt(JamSession $session, User $user): bool
     {
         $hasSets = Set::query()
@@ -192,8 +207,10 @@ class JamSessionAttendanceService
             ->values();
     }
 
-    private function handleDropoutTransition(JamSession $session, User $user, string $dropoutAction): void
+    private function handleDropoutTransition(JamSession $session, User $user, string $dropoutAction, string $source): void
     {
+        $dropoutImpact = $this->dropoutImpactPayload($session, $user, $dropoutAction, $source);
+
         SlotAssignment::query()
             ->whereHas('slot.song.set', fn ($query) => $query->where('jam_session_id', $session->id))
             ->where('target_user_id', $user->id)
@@ -206,16 +223,144 @@ class JamSessionAttendanceService
                 'responded_at' => now(),
             ]);
 
-        if ($dropoutAction !== self::DROPOUT_RELEASE_SLOTS) {
+        if ($dropoutAction === self::DROPOUT_RELEASE_SLOTS) {
+            Slot::query()
+                ->whereHas('song.set', fn ($query) => $query->where('jam_session_id', $session->id))
+                ->where('user_id', $user->id)
+                ->update([
+                    'user_id' => null,
+                    'manual_performer_name' => null,
+                ]);
+        }
+
+        if ($dropoutImpact === null) {
             return;
         }
 
-        Slot::query()
+        $this->notificationService->notifyUsers(
+            NotificationTypeCatalog::SLOT_DROPPED_FROM_SET,
+            $dropoutImpact['recipients'],
+            $user,
+            $dropoutImpact['content'],
+        );
+    }
+
+    /**
+     * @return array{recipients: Collection<int, User>, content: array{title: string, body: string, action_url: string|null, action_label: string}}|null
+     */
+    private function dropoutImpactPayload(JamSession $session, User $user, string $dropoutAction, string $source): ?array
+    {
+        if ($source !== JamSessionAttendance::SOURCE_SELF) {
+            return null;
+        }
+
+        $affectedSlots = Slot::query()
             ->whereHas('song.set', fn ($query) => $query->where('jam_session_id', $session->id))
             ->where('user_id', $user->id)
-            ->update([
-                'user_id' => null,
-                'manual_performer_name' => null,
-            ]);
+            ->with('song.set')
+            ->get();
+
+        if ($affectedSlots->isEmpty()) {
+            return null;
+        }
+
+        $affectedSetIds = $affectedSlots
+            ->pluck('song.set.id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $affectedSets = Set::query()
+            ->whereIn('id', $affectedSetIds->all())
+            ->with('songs.slots')
+            ->get();
+
+        $managerIds = $affectedSets
+            ->flatMap(function (Set $set): array {
+                return [$set->owner_id, ...$set->collaboratorUserIds()];
+            })
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        $fellowPerformerIds = $affectedSets
+            ->flatMap(fn (Set $set) => $set->songs)
+            ->flatMap(fn ($song) => $song->slots)
+            ->pluck('user_id')
+            ->filter(fn ($id) => $id !== null)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id !== (int) $user->id)
+            ->unique();
+
+        $adminIds = User::query()
+            ->where('is_admin', true)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        $recipientIds = collect([$managerIds, $fellowPerformerIds, $adminIds])
+            ->flatten()
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id !== (int) $user->id)
+            ->unique()
+            ->values();
+
+        if ($recipientIds->isEmpty()) {
+            return null;
+        }
+
+        $slotOptions = Slot::options();
+        $setSummaries = $affectedSlots
+            ->groupBy(fn (Slot $slot) => (int) $slot->song->set->id)
+            ->map(function (Collection $setSlots) use ($slotOptions): string {
+                /** @var Set $set */
+                $set = $setSlots->first()->song->set;
+
+                $songSummaries = $setSlots
+                    ->groupBy(fn (Slot $slot) => (int) $slot->song_id)
+                    ->map(function (Collection $songSlots) use ($slotOptions): string {
+                        /** @var Song $song */
+                        $song = $songSlots->first()->song;
+                        $slotLabels = $songSlots
+                            ->map(fn (Slot $slot) => $slotOptions[$slot->name] ?? str($slot->name)->replace('_', ' ')->title()->toString())
+                            ->unique()
+                            ->values()
+                            ->implode(', ');
+
+                        return $song->artist.' - '.$song->title.' ('.$slotLabels.')';
+                    })
+                    ->values()
+                    ->implode('; ');
+
+                return $set->name.': '.$songSummaries;
+            })
+            ->values();
+
+        $setDetail = $setSummaries->take(3)->implode(' | ');
+        if ($setSummaries->count() > 3) {
+            $setDetail .= ' | +'.($setSummaries->count() - 3).' more set(s)';
+        }
+
+        $slotCount = $affectedSlots->count();
+        $slotCountText = $slotCount === 1 ? '1 slot' : $slotCount.' slots';
+        $slotOutcome = $dropoutAction === self::DROPOUT_RELEASE_SLOTS
+            ? 'They chose to release their '.$slotCountText.'.'
+            : 'Their '.$slotCountText.' remain assigned but are now claimable.';
+
+        $body = $user->name.' marked not going for '.$session->name.'. '.$slotOutcome.' Affected sets: '.$setDetail.'.';
+
+        $recipients = User::query()
+            ->whereIn('id', $recipientIds->all())
+            ->orderBy('name')
+            ->get();
+
+        return [
+            'recipients' => $recipients,
+            'content' => [
+                'title' => $user->name.' dropped out of '.$session->name,
+                'body' => $body,
+                'action_url' => route('sessions.show', $session),
+                'action_label' => 'Open session',
+            ],
+        ];
     }
 }

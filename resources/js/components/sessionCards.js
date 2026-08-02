@@ -1,6 +1,7 @@
 import { isInteractiveDragSource } from '../utils/drag';
 
 export function registerSessionCards(Alpine) {
+    Alpine.data('sessionAttendanceControl', sessionAttendanceControl);
     Alpine.data('sessionSetCard', sessionSetCard);
     Alpine.data('sessionSongCard', sessionSongCard);
     Alpine.data('sessionSlotRow', sessionSlotRow);
@@ -2254,6 +2255,227 @@ export function sessionSongRequestRow(config) {
     };
 }
 
+export function sessionAttendanceControl(config) {
+    return {
+        currentUserId: String(config.currentUserId),
+        status: config.status,
+        requiresDropoutAction: Boolean(config.requiresDropoutAction),
+        sessionClosed: Boolean(config.sessionClosed),
+        isPastSession: Boolean(config.isPastSession),
+        isAdmin: Boolean(config.isAdmin),
+        isSaving: false,
+        openDropoutChoices: false,
+        dropoutAction: 'keep_claimable',
+        openAdminDropoutChoices: false,
+        adminDropoutAction: 'keep_claimable',
+        adminDropoutUserId: null,
+        adminDropoutUserName: '',
+        attendanceModalOpen: false,
+        attendanceListLoading: false,
+        attendanceListError: '',
+        attendanceUsers: [],
+        async loadAttendanceUsers() {
+            this.attendanceListLoading = true;
+            this.attendanceListError = '';
+
+            try {
+                const response = await fetch(config.attendanceIndexUrl, {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(payload.message || 'Could not load attendance list.');
+                }
+
+                this.attendanceUsers = Array.isArray(payload.users) ? payload.users : [];
+                this.sessionClosed = Boolean(payload.session_closed);
+            } catch (error) {
+                this.attendanceListError = error.message || 'Could not load attendance list.';
+            } finally {
+                this.attendanceListLoading = false;
+            }
+        },
+        openAttendanceModal() {
+            this.attendanceModalOpen = true;
+            this.loadAttendanceUsers();
+        },
+        statusButtonLabel(status) {
+            if (this.isPastSession && status === 'not_going') {
+                return "Couldn't attend";
+            }
+
+            if (this.isPastSession && status === 'going') {
+                return 'Attended';
+            }
+
+            if (status === 'not_going') {
+                return 'Not going';
+            }
+
+            if (status === 'going') {
+                return 'Going';
+            }
+
+            return 'Maybe';
+        },
+        shouldShowStatusButton(nextStatus) {
+            if (!this.isPastSession) {
+                return true;
+            }
+
+            if (this.status === 'not_going') {
+                return nextStatus === 'not_going';
+            }
+
+            if (this.status === 'going') {
+                return nextStatus === 'going';
+            }
+
+            return false;
+        },
+        hasVisibleStatusButtons() {
+            return this.shouldShowStatusButton('not_going')
+                || this.shouldShowStatusButton('maybe')
+                || this.shouldShowStatusButton('going');
+        },
+        canManageAttendanceForUser(user) {
+            return this.isAdmin
+                && !this.isPastSession
+                && String(user?.id ?? '') !== this.currentUserId;
+        },
+        modalStatusLabel(status) {
+            if (this.isPastSession && status === 'not_going') {
+                return "Couldn't attend";
+            }
+
+            if (this.isPastSession && status === 'going') {
+                return 'Attended';
+            }
+
+            if (status === 'not_going') {
+                return 'Not going';
+            }
+
+            if (status === 'going') {
+                return 'Going';
+            }
+
+            return 'Maybe';
+        },
+        async submitStatus(nextStatus, action = null, promptOnRequirement = false, targetUserId = null) {
+            if (this.sessionClosed || this.isPastSession) {
+                return;
+            }
+
+            this.isSaving = true;
+
+            try {
+                const response = await fetch(config.attendanceUpdateUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body: JSON.stringify({ status: nextStatus, dropout_action: action, user_id: targetUserId }),
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    if (promptOnRequirement && payload?.errors?.dropout_action) {
+                        this.requiresDropoutAction = true;
+                        this.openDropoutChoices = true;
+                        return;
+                    }
+
+                    const error = Object.values(payload.errors || {}).flat()[0] || payload.message || 'Could not update attendance.';
+                    throw new Error(error);
+                }
+
+                if (!targetUserId || String(targetUserId) === String(config.currentUserId)) {
+                    this.status = payload.status || nextStatus;
+                }
+
+                this.requiresDropoutAction = Boolean(payload.requires_dropout_action);
+                if (Array.isArray(payload.users)) {
+                    this.attendanceUsers = payload.users;
+                }
+                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
+            } catch (error) {
+                console.warn('Attendance update failed.', error);
+            } finally {
+                this.isSaving = false;
+            }
+        },
+        chooseStatus(nextStatus) {
+            if (this.sessionClosed || this.isPastSession) {
+                return;
+            }
+
+            if (nextStatus === 'not_going' && this.status !== 'not_going') {
+                if (this.requiresDropoutAction) {
+                    this.openDropoutChoices = true;
+                    return;
+                }
+
+                this.submitStatus(nextStatus, null, true);
+                return;
+            }
+
+            this.submitStatus(nextStatus);
+        },
+        confirmDropout() {
+            this.openDropoutChoices = false;
+            this.submitStatus('not_going', this.dropoutAction);
+        },
+        openAdminNotGoingPrompt(userId) {
+            const user = this.attendanceUsers.find((item) => String(item.id) === String(userId));
+
+            this.adminDropoutUserId = String(userId);
+            this.adminDropoutUserName = user?.name || 'this user';
+            this.adminDropoutAction = 'keep_claimable';
+            this.openAdminDropoutChoices = true;
+        },
+        confirmAdminDropout() {
+            if (!this.adminDropoutUserId) {
+                this.openAdminDropoutChoices = false;
+                return;
+            }
+
+            this.openAdminDropoutChoices = false;
+            this.submitStatus('not_going', this.adminDropoutAction, false, this.adminDropoutUserId);
+        },
+        setUserStatus(userId, nextStatus) {
+            if (!this.isAdmin || this.sessionClosed || this.isPastSession) {
+                return;
+            }
+
+            if (nextStatus === 'not_going') {
+                this.openAdminNotGoingPrompt(userId);
+                return;
+            }
+
+            this.submitStatus(nextStatus, null, false, userId);
+        },
+        badgeClasses(status) {
+            if (status === 'going') {
+                return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+            }
+
+            if (status === 'maybe') {
+                return 'border-slate-200 bg-slate-50 text-slate-700';
+            }
+
+            return 'border-rose-200 bg-rose-50 text-rose-700';
+        },
+    };
+}
+
 export function sessionSlotRow(config) {
     return {
         openPropose: false,
@@ -2266,6 +2488,7 @@ export function sessionSlotRow(config) {
         slotNotes: config.slotNotes || '',
         slotIsOpen: config.slotIsOpen,
         slotIsClaimable: Boolean(config.slotIsClaimable),
+        slotIsManuallyClaimable: Boolean(config.slotIsManuallyClaimable),
         assignedUserIsNotGoing: Boolean(config.assignedUserIsNotGoing),
         assignmentIsManual: config.assignmentIsManual,
         initialEditAssignedUserId: config.initialEditAssignedUserId,
@@ -2466,6 +2689,7 @@ export function sessionSlotRow(config) {
             this.slotNotes = slot.notes || '';
             this.slotIsOpen = slot.is_open;
             this.slotIsClaimable = Boolean(slot.is_claimable);
+            this.slotIsManuallyClaimable = Boolean(slot.is_claimable_manual);
             this.assignedUserIsNotGoing = Boolean(slot.assigned_user_not_going);
             this.assignmentIsManual = !slot.user_id && Boolean(slot.manual_performer_name);
             this.assignedToCurrentUser = Number(slot.user_id) === Number(this.currentUserId);
@@ -2586,6 +2810,7 @@ export function sessionSlotRow(config) {
 
                 this.showActionFeedback('Request sent.');
                 this.hasPendingOwnRequest = true;
+                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
             } catch (e) {
                 this.actionError = 'Could not send request. Try again.';
             } finally {
@@ -2625,8 +2850,50 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot assigned to you.');
+                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
             } catch (e) {
                 this.actionError = e.message || 'Could not take slot. Try again.';
+            } finally {
+                this.busyAction = false;
+            }
+        },
+        async toggleSlotClaimable() {
+            if (this.setLocked) {
+                return;
+            }
+
+            this.busyAction = true;
+            this.actionError = '';
+            this.clearActionFeedback();
+
+            try {
+                const response = await fetch(config.toggleSlotClaimableUrl, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': config.csrfToken,
+                    },
+                    body: JSON.stringify({
+                        is_claimable_manual: !this.slotIsManuallyClaimable,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const message = await this.failedResponseMessage(response, 'Could not update claimable status. Try again.');
+                    if (message === null) {
+                        return;
+                    }
+
+                    throw new Error(message);
+                }
+
+                const payload = await response.json();
+                this.syncSlot(payload.slot);
+                this.showActionFeedback(payload.message || 'Slot claimable status updated.');
+            } catch (e) {
+                this.actionError = e.message || 'Could not update claimable status. Try again.';
             } finally {
                 this.busyAction = false;
             }
@@ -2949,6 +3216,7 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot updated.');
+                window.dispatchEvent(new CustomEvent('refresh-session-sets'));
             } catch (e) {
                 this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {

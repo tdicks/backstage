@@ -19,6 +19,8 @@ class JamSessionAttendance extends Model
 
     public const SOURCE_AUTO_SLOT = 'auto_slot';
 
+    public const SOURCE_AUTO_SIGN_IN = 'auto_sign_in';
+
     public const SOURCE_ADMIN_ASSIGNMENT = 'admin_assignment';
 
     public const SOURCE_ADMIN_OVERRIDE = 'admin_override';

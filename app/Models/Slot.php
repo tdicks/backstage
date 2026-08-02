@@ -26,6 +26,7 @@ class Slot extends Model
         'notes',
         'user_id',
         'manual_performer_name',
+        'is_claimable_manual',
         'position',
     ];
 
@@ -33,6 +34,7 @@ class Slot extends Model
     {
         return [
             'position' => 'integer',
+            'is_claimable_manual' => 'boolean',
         ];
     }
 

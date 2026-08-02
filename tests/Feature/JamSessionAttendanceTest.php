@@ -8,6 +8,7 @@ use App\Models\SlotAssignment;
 use App\Models\Song;
 use App\Models\User;
 use App\Services\JamSessionAttendanceService;
+use App\Support\NotificationTypeCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -357,6 +358,95 @@ test('switching to not going with release action releases assigned slots and rej
     expect(SlotAssignment::query()->first()?->status)->toBe(SlotAssignment::STATUS_REJECTED);
 });
 
+test('self dropout sends one consolidated notification per impacted recipient with claimable messaging', function () {
+    $ownerAdmin = User::factory()->create(['is_admin' => true]);
+    $collaborator = User::factory()->create();
+    $fellowPerformer = User::factory()->create();
+    $dropoutUser = User::factory()->create(['name' => 'Taylor Dropout']);
+
+    $session = makeAttendanceSession(['name' => 'Midweek Jam']);
+    $set = makeAttendanceSet($ownerAdmin, $session, [
+        'name' => 'Impact Set',
+        'collaborator_ids' => [$collaborator->id],
+    ]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'The Comets',
+        'title' => 'Orbit',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    $dropoutSlot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'notes' => null,
+        'position' => 1,
+        'user_id' => $dropoutUser->id,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'notes' => null,
+        'position' => 2,
+        'user_id' => $fellowPerformer->id,
+    ]);
+
+    $this->actingAs($dropoutUser)
+        ->postJson(route('sessions.attendance.update', $session), [
+            'status' => JamSessionAttendance::STATUS_NOT_GOING,
+            'dropout_action' => JamSessionAttendanceService::DROPOUT_KEEP_CLAIMABLE,
+        ])
+        ->assertOk();
+
+    expect($dropoutSlot->fresh()->user_id)->toBe($dropoutUser->id);
+
+    $ownerNotification = $ownerAdmin->notifications()
+        ->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)
+        ->latest()
+        ->first();
+
+    expect($ownerAdmin->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(1);
+    expect($collaborator->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(1);
+    expect($fellowPerformer->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(1);
+    expect($dropoutUser->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(0);
+
+    expect((string) ($ownerNotification?->data['body'] ?? ''))->toContain('remain assigned but are now claimable');
+    expect((string) ($ownerNotification?->data['body'] ?? ''))->toContain('Impact Set');
+    expect((string) ($ownerNotification?->data['body'] ?? ''))->toContain('The Comets - Orbit (Drums)');
+});
+
+test('self dropout release action includes admin recipients and release messaging', function () {
+    $owner = User::factory()->create();
+    $unrelatedAdmin = User::factory()->create(['is_admin' => true]);
+    $dropoutUser = User::factory()->create(['name' => 'Jordan Dropout']);
+
+    $session = makeAttendanceSession(['name' => 'Saturday Jam']);
+    $set = makeAttendanceSet($owner, $session, ['name' => 'Release Set']);
+    $slot = makeAttendanceSlot($set, 'vocals');
+    $slot->update(['user_id' => $dropoutUser->id]);
+
+    $this->actingAs($dropoutUser)
+        ->postJson(route('sessions.attendance.update', $session), [
+            'status' => JamSessionAttendance::STATUS_NOT_GOING,
+            'dropout_action' => JamSessionAttendanceService::DROPOUT_RELEASE_SLOTS,
+        ])
+        ->assertOk();
+
+    expect($slot->fresh()->user_id)->toBeNull();
+
+    $adminNotification = $unrelatedAdmin->notifications()
+        ->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)
+        ->latest()
+        ->first();
+
+    expect($owner->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(1);
+    expect($unrelatedAdmin->notifications()->where('data->type_key', NotificationTypeCatalog::SLOT_DROPPED_FROM_SET)->count())->toBe(1);
+    expect((string) ($adminNotification?->data['body'] ?? ''))->toContain('They chose to release their 1 slot.');
+});
+
 test('slot suggestion UIs include not attending section heading', function () {
     $owner = User::factory()->create();
     $user = User::factory()->create();
@@ -377,4 +467,57 @@ test('slot suggestion UIs include not attending section heading', function () {
         ->assertOk()
         ->assertSee('Not attending')
         ->assertSee('attendance_group', false);
+});
+
+test('jam register sign-in promotes not going attendance to going', function () {
+    $user = User::factory()->create();
+    $session = makeAttendanceSession([
+        'allow_checkins' => true,
+        'is_hidden' => false,
+    ]);
+
+    JamSessionAttendance::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $user->id,
+        'status' => JamSessionAttendance::STATUS_NOT_GOING,
+        'source' => JamSessionAttendance::SOURCE_SELF,
+        'status_changed_at' => now()->subHour(),
+    ]);
+
+    $this->postJson(route('jam-register.sign-in', $session), [
+        'user_id' => $user->id,
+    ])->assertOk();
+
+    $attendance = JamSessionAttendance::query()
+        ->where('jam_session_id', $session->id)
+        ->where('user_id', $user->id)
+        ->firstOrFail();
+
+    expect($attendance->status)->toBe(JamSessionAttendance::STATUS_GOING)
+        ->and($attendance->source)->toBe(JamSessionAttendance::SOURCE_AUTO_SIGN_IN);
+});
+
+test('past sessions render attendance controls in history mode', function () {
+    $user = User::factory()->create();
+    $session = makeAttendanceSession([
+        'date' => now()->subDay()->toDateString(),
+    ]);
+
+    JamSessionAttendance::query()->create([
+        'jam_session_id' => $session->id,
+        'user_id' => $user->id,
+        'status' => JamSessionAttendance::STATUS_NOT_GOING,
+        'source' => JamSessionAttendance::SOURCE_SELF,
+        'status_changed_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('sessions.show', $session))
+        ->assertOk()
+        ->assertSee('isPastSession: true', false)
+        ->assertSee("shouldShowStatusButton('not_going')", false)
+        ->assertSee('hasVisibleStatusButtons()', false)
+        ->assertSee("statusButtonLabel('going')", false)
+        ->assertSee('modalStatusLabel(user.status)', false)
+        ->assertSee('canManageAttendanceForUser(user)', false);
 });

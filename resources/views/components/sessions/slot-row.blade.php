@@ -20,7 +20,9 @@
     $viewer = auth()->user();
     $currentUserNotGoing = in_array((int) $currentUserId, $notGoingUserIds->all(), true);
     $assignedUserIsNotGoing = $slotModel->user_id !== null && in_array((int) $slotModel->user_id, $notGoingUserIds->all(), true);
+    $isClaimableManual = $slotModel->user_id !== null && (bool) $slotModel->is_claimable_manual;
     $isClaimableByDropout = $assignedUserIsNotGoing;
+    $isSlotClaimable = $isClaimableManual || $isClaimableByDropout;
     $noProposableUsersMessage = 'No users are currently available for slot proposals.';
     $proposalUsers = collect($assignmentUsers)
         ->where('id', '!=', $currentUserId)
@@ -63,7 +65,8 @@
         'slotLabel' => $slotOptions[$slotModel->name] ?? $slotModel->name,
         'slotNotes' => $slotModel->notes ?? '',
         'slotIsOpen' => $slotModel->isOpen(),
-        'slotIsClaimable' => $isClaimableByDropout,
+        'slotIsClaimable' => $isSlotClaimable,
+        'slotIsManuallyClaimable' => $isClaimableManual,
         'assignedUserIsNotGoing' => $assignedUserIsNotGoing,
         'assignmentIsManual' => ! $slotModel->user_id && filled($slotModel->manual_performer_name),
         'initialEditAssignedUserId' => (string) ($slotModel->user_id ?? ''),
@@ -78,6 +81,7 @@
         'users' => collect($assignmentUsers)->values(),
         'requestSlotUrl' => route('slot-assignments.request', $slotModel),
         'takeSlotUrl' => route('slots.take', $slotModel),
+        'toggleSlotClaimableUrl' => route('slots.claimable', $slotModel),
         'proposeSlotUrl' => route('slot-assignments.propose', $slotModel),
         'releaseSlotUrl' => route('slots.release', $slotModel),
         'updateSlotUrl' => route('slots.update', $slotModel),
@@ -123,7 +127,17 @@
         <p x-show="slotNotes" x-cloak x-text="slotNotes" class="mt-1 text-xs font-normal leading-5 text-slate-500 whitespace-pre-wrap">{{ $slotModel->notes }}</p>
     </td>
     <td class="px-3 py-3">
-        <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canEditSlot" />
+        <div class="inline-flex items-center gap-2">
+            <x-sessions.slot-assignee-pill :slot-model="$slotModel" :can-edit-slot="$canEditSlot" />
+            <span
+                x-show="slotIsClaimable"
+                x-cloak
+                class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700"
+                title="This slot can be claimed"
+            >
+                Claimable
+            </span>
+        </div>
     </td>
     <td x-ref="toastAnchor" class="relative px-3 py-3 text-right">
         <div class="flex items-center justify-end gap-2 md:items-start">

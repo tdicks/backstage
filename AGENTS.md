@@ -29,6 +29,14 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## Alpine.js Placement Policy
+
+- Keep Blade Alpine attributes declarative: use `x-data` for config only, plus UI bindings like `x-show`, `x-bind`, and `x-on`.
+- Place non-trivial Alpine logic in JavaScript modules under `resources/js/components` and register components in `resources/js/app.js`.
+- Non-trivial logic includes branching flows, async requests, payload construction, status/label mapping, filtering/grouping, and reusable state transitions.
+- Avoid embedding multi-line objects/functions directly in Blade `x-data` attributes.
+- Small inline expressions are allowed only when they are simple UI toggles and do not perform async/network work.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
