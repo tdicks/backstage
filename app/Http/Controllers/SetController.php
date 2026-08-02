@@ -181,6 +181,34 @@ class SetController extends Controller
 
         $validated = $request->validate($rules);
 
+        $targetSessionId = (int) ($validated['jam_session_id'] ?? $set->jam_session_id);
+
+        if ($targetSessionId !== (int) $set->jam_session_id) {
+            $targetSession = JamSession::query()
+                ->visibleTo($request->user())
+                ->where('is_archived', false)
+                ->select(['id', 'date', 'is_closed', 'is_archived'])
+                ->find($targetSessionId);
+
+            if (! $targetSession) {
+                return back()
+                    ->withErrors(['jam_session_id' => 'Choose a valid jam session to move this set.'])
+                    ->withInput();
+            }
+
+            if (! $isAdmin && $targetSession->is_closed) {
+                return back()
+                    ->withErrors(['jam_session_id' => 'Sets can only be moved to open jam sessions.'])
+                    ->withInput();
+            }
+
+            if (! $isAdmin && $targetSession->date->isBefore(today())) {
+                return back()
+                    ->withErrors(['jam_session_id' => 'Sets can only be moved to today or future jam sessions.'])
+                    ->withInput();
+            }
+        }
+
         $wasAcceptingSongRequests = (bool) $set->song_requests;
         $wasHidden = (bool) $set->is_hidden;
 

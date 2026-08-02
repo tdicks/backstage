@@ -88,6 +88,101 @@ test('lazy session sets endpoint renders slot rows without a blade error', funct
         ->assertSee('x-show="songRequestsPendingCount > 0"', false);
 });
 
+test('edit set modal keeps closed jam sessions disabled in session list', function () {
+    $owner = User::factory()->create();
+
+    $openSession = JamSession::query()->create([
+        'name' => 'Editable Open Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $closedSession = JamSession::query()->create([
+        'name' => 'Locked Session Option',
+        'date' => now()->addWeeks(2)->toDateString(),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $pastSession = JamSession::query()->create([
+        'name' => 'Past Session Option',
+        'date' => now()->subDay()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Set With Session Picker',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $openSession->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$openSession, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee($closedSession->name)
+        ->assertSee('(Closed)')
+        ->assertDontSee($pastSession->name);
+
+    $modal = file_get_contents(resource_path('views/components/sessions/set-edit-modal.blade.php'));
+
+    expect($modal)->toContain('! $isAdmin && $isClosedSessionOption');
+});
+
+test('admin edit set modal includes past sessions and enables closed sessions except archived sessions', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $openSession = JamSession::query()->create([
+        'name' => 'Admin Open Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'is_archived' => false,
+    ]);
+
+    $closedPastSession = JamSession::query()->create([
+        'name' => 'Admin Closed Past Session',
+        'date' => now()->subDays(2)->toDateString(),
+        'description' => null,
+        'is_closed' => true,
+        'is_archived' => false,
+    ]);
+
+    $archivedSession = JamSession::query()->create([
+        'name' => 'Archived Session Option',
+        'date' => now()->addDays(3)->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'is_archived' => true,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Admin Set With Session Picker',
+        'description' => null,
+        'owner_id' => $admin->id,
+        'jam_session_id' => $openSession->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('sessions.sets.body', [$openSession, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee($closedPastSession->name.' ('.$closedPastSession->date->format('M j, Y').') (Closed)')
+        ->assertDontSee('value="'.$closedPastSession->id.'" disabled', false)
+        ->assertDontSee($archivedSession->name);
+});
+
 test('set card bodies load through the viewport observer or an explicit expansion', function () {
     $script = file_get_contents(resource_path('js/components/sessionCards.js'));
     $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));

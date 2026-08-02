@@ -21,7 +21,12 @@
                 <x-input-label :value="'Jam Session'" />
                 <select name="jam_session_id" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" required>
                     @foreach ($sessions as $jamSessionOption)
-                        <option value="{{ $jamSessionOption->id }}" @selected($set->jam_session_id === $jamSessionOption->id)>{{ $jamSessionOption->name }} ({{ $jamSessionOption->date->format('M j, Y') }})</option>
+                        @php
+                            $isClosedSessionOption = (bool) ($jamSessionOption->is_closed ?? false);
+                            $isCurrentSessionOption = (int) $set->jam_session_id === (int) $jamSessionOption->id;
+                            $disableSessionOption = ! $isAdmin && $isClosedSessionOption && ! $isCurrentSessionOption;
+                        @endphp
+                        <option value="{{ $jamSessionOption->id }}" @selected($isCurrentSessionOption) @disabled($disableSessionOption)>{{ $jamSessionOption->name }} ({{ $jamSessionOption->date->format('M j, Y') }}){{ $isClosedSessionOption ? ' (Closed)' : '' }}</option>
                     @endforeach
                 </select>
             </div>

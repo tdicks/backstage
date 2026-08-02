@@ -358,3 +358,123 @@ test('set owner can change which jam session the set belongs to', function () {
 
     expect($set->refresh()->jam_session_id)->toBe($targetSession->id);
 });
+
+test('set owner cannot move a set to a closed jam session', function () {
+    $owner = User::factory()->create();
+
+    $originalSession = JamSession::create([
+        'name' => 'Open Source Session',
+        'date' => now()->addDays(6),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $closedTargetSession = JamSession::create([
+        'name' => 'Closed Target Session',
+        'date' => now()->addDays(7),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Locked Destination Guard Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $originalSession->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->from(route('sessions.show', $originalSession))
+        ->patch(route('sets.update', $set), [
+            'name' => 'Locked Destination Guard Set',
+            'description' => null,
+            'performed' => 0,
+            'jam_session_id' => $closedTargetSession->id,
+        ])
+        ->assertRedirect(route('sessions.show', $originalSession))
+        ->assertSessionHasErrors('jam_session_id');
+
+    expect($set->refresh()->jam_session_id)->toBe($originalSession->id);
+});
+
+test('set owner cannot move a set to a past jam session', function () {
+    $owner = User::factory()->create();
+
+    $originalSession = JamSession::create([
+        'name' => 'Current Session',
+        'date' => now()->addDays(2),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $pastTargetSession = JamSession::create([
+        'name' => 'Past Session',
+        'date' => now()->subDay(),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Past Destination Guard Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $originalSession->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->from(route('sessions.show', $originalSession))
+        ->patch(route('sets.update', $set), [
+            'name' => 'Past Destination Guard Set',
+            'description' => null,
+            'performed' => 0,
+            'jam_session_id' => $pastTargetSession->id,
+        ])
+        ->assertRedirect(route('sessions.show', $originalSession))
+        ->assertSessionHasErrors('jam_session_id');
+
+    expect($set->refresh()->jam_session_id)->toBe($originalSession->id);
+});
+
+test('admin can move a set to closed and past jam sessions', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+    $owner = User::factory()->create();
+
+    $originalSession = JamSession::create([
+        'name' => 'Admin Source Session',
+        'date' => now()->addDays(4),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $closedPastSession = JamSession::create([
+        'name' => 'Admin Closed Past Session',
+        'date' => now()->subDays(2),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Admin Movable Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $originalSession->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $this->actingAs($admin)
+        ->patch(route('sets.update', $set), [
+            'name' => 'Admin Movable Set',
+            'description' => null,
+            'performed' => 0,
+            'jam_session_id' => $closedPastSession->id,
+            'owner_id' => $owner->id,
+        ])
+        ->assertRedirect();
+
+    expect($set->refresh()->jam_session_id)->toBe($closedPastSession->id);
+});

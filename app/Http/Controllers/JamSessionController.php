@@ -38,6 +38,10 @@ class JamSessionController extends Controller
         "Trotting down the Witch's Brew for a pint...",
         "Searching for Status Quo's fourth chord...",
         'Yeah but these go to eleven...',
+        'Unravelling the last sound guy\'s terrible cable management...',
+        'Unboxing more cowbells...',
+        'Searching for the lyrics to Wonderwall...',
+        '"I know it sounds like 6/8 but it\'s actually 4/4!"',
     ];
 
     public function index(): View
@@ -254,6 +258,7 @@ class JamSessionController extends Controller
 
     private function sessionSetsViewData(JamSession $jamSession): array
     {
+        $viewer = request()->user();
         $users = User::query()->orderBy('name')->get();
         $assignmentUsers = $this->attendanceService->assignmentUserOptions($jamSession, $users, request()->user());
         $notGoingUserIds = $assignmentUsers
@@ -262,12 +267,16 @@ class JamSessionController extends Controller
             ->map(fn ($id) => (int) $id)
             ->values();
 
+        $sessionOptions = JamSession::query()
+            ->visibleTo($viewer)
+            ->where('is_archived', false)
+            ->when(! $viewer?->is_admin, fn ($query) => $query->whereDate('date', '>=', today()->toDateString()))
+            ->orderByDesc('date')
+            ->get(['id', 'name', 'date', 'is_closed']);
+
         return [
             'session' => $jamSession,
-            'sessions' => JamSession::query()
-                ->visibleTo(request()->user())
-                ->orderByDesc('date')
-                ->get(['id', 'name', 'date']),
+            'sessions' => $sessionOptions,
             'slotOptions' => Slot::options(),
             'jamStandardSongs' => JamStandardSong::query()
                 ->active()
