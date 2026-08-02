@@ -420,7 +420,7 @@
         <div
             class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8"
             x-data="lazySessionSets('{{ route('sessions.sets', $session) }}', '{{ route('sessions.activity', $session) }}', { currentUserId: @js((string) auth()->id()) })"
-            @refresh-session-sets.window="refresh({ preserveSetIds: $event.detail && $event.detail.setId ? [String($event.detail.setId)] : [] })"
+            @refresh-session-sets.window="refresh({ preserveSetIds: $event.detail && $event.detail.setId ? [String($event.detail.setId)] : [], forceOpenSetIds: $event.detail && $event.detail.setId ? [String($event.detail.setId)] : [] })"
             x-on:refresh-session-activity.window="$store.approvals.refresh()"
             x-on:session-song-opened.window="$store.approvals.refresh()"
         >

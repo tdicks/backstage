@@ -1678,6 +1678,7 @@ export function sessionSongCard(config) {
         actionMenuStyle: '',
         directLinkCopied: false,
         songCollapsed: false,
+        setId: config.setId,
         songId: config.songId,
         songKey: config.songKey,
         canMoveSongUp: config.canMoveSongUp,
@@ -2934,9 +2935,7 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot assigned to you.');
-                window.dispatchEvent(new CustomEvent('refresh-session-sets', {
-                    detail: { setId: this.owningSetId() },
-                }));
+                window.dispatchEvent(new CustomEvent('refresh-session-activity'));
             } catch (e) {
                 this.actionError = e.message || 'Could not take slot. Try again.';
             } finally {
@@ -3302,9 +3301,7 @@ export function sessionSlotRow(config) {
                 const payload = await response.json();
                 this.syncSlot(payload.slot);
                 this.showActionFeedback(payload.message || 'Slot updated.');
-                window.dispatchEvent(new CustomEvent('refresh-session-sets', {
-                    detail: { setId: this.owningSetId() },
-                }));
+                window.dispatchEvent(new CustomEvent('refresh-session-activity'));
             } catch (e) {
                 this.actionError = e.message || 'Could not save slot. Try again.';
             } finally {

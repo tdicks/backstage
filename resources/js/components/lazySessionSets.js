@@ -109,6 +109,19 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 				}));
 			});
 		},
+		forceOpenSetCards(setIds = []) {
+			setIds.forEach((setId) => {
+				const setCard = this.$refs.setsContainer?.querySelector(`[data-session-set-card][data-set-id="${setId}"]`);
+				if (!setCard || setCard.dataset.setOpen === 'true') {
+					return;
+				}
+
+				const toggleButton = setCard.querySelector('[aria-label="Toggle set details"]');
+				if (toggleButton) {
+					toggleButton.click();
+				}
+			});
+		},
 		externalApprovalTransitions(previousState, nextState) {
 			const transitions = [];
 
@@ -558,6 +571,9 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 			const preserveSetIds = Array.isArray(options.preserveSetIds)
 				? options.preserveSetIds.map((setId) => String(setId)).filter(Boolean)
 				: [];
+			const forceOpenSetIds = Array.isArray(options.forceOpenSetIds)
+				? options.forceOpenSetIds.map((setId) => String(setId)).filter(Boolean)
+				: [];
 
 			if (this.refreshing || this.backgroundRefreshing) {
 				return;
@@ -573,6 +589,35 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 			try {
 				const previousState = this.setState();
 				const previousUiState = this.setUiState(null, preserveSetIds);
+
+				forceOpenSetIds.forEach((setId) => {
+					const setStorageKey = this.currentUserId !== ''
+						? `backstage:u${this.currentUserId}:set:${setId}`
+						: '';
+
+					if (setStorageKey !== '') {
+						window.localStorage.setItem(setStorageKey, '0');
+					}
+
+					const existingState = previousUiState[setId];
+					if (existingState) {
+						previousUiState[setId] = {
+							...existingState,
+							isSetOpen: true,
+						};
+						return;
+					}
+
+					const setCard = this.$refs.setsContainer?.querySelector(`[data-session-set-card][data-set-id="${setId}"]`);
+					if (!setCard) {
+						return;
+					}
+
+					previousUiState[setId] = {
+						isSetOpen: true,
+						isSongRequestsOpen: setCard.dataset.songRequestsOpen === 'true',
+					};
+				});
 				let transitions = [];
 
 				const response = await fetch(url, {
@@ -597,30 +642,70 @@ export function lazySessionSets(url, activityUrl = null, options = {}) {
 				}
 
 				const container = this.$refs.setsContainer;
-				container.innerHTML = html;
+				const targetedSetIds = new Set(preserveSetIds);
+				const replacedSetCards = [];
+
+				if (targetedSetIds.size > 0) {
+					targetedSetIds.forEach((setId) => {
+						const currentCard = container.querySelector(`[data-session-set-card][data-set-id="${setId}"]`);
+						if (!currentCard) {
+							return;
+						}
+
+						const nextCard = nextRoot.querySelector(`[data-session-set-card][data-set-id="${setId}"]`);
+						if (!nextCard) {
+							currentCard.remove();
+							return;
+						}
+
+						if (currentCard.outerHTML === nextCard.outerHTML) {
+							return;
+						}
+
+						const replacementCard = nextCard.cloneNode(true);
+						currentCard.replaceWith(replacementCard);
+						replacedSetCards.push(replacementCard);
+					});
+
+					if (replacedSetCards.length === 0) {
+						container.innerHTML = html;
+					}
+				} else {
+					container.innerHTML = html;
+				}
 				this.loaded = true;
 
 				this.$nextTick(() => {
 					if (window.Alpine) {
-						window.Alpine.initTree(container);
+						if (replacedSetCards.length > 0) {
+							replacedSetCards.forEach((card) => window.Alpine.initTree(card));
+						} else {
+							window.Alpine.initTree(container);
+						}
 					}
 
-					this.restoreSetUiState(previousUiState);
+					window.requestAnimationFrame(() => {
+						this.restoreSetUiState(previousUiState);
 
-					this.applyFilters();
+						if (forceOpenSetIds.length > 0) {
+							window.requestAnimationFrame(() => this.forceOpenSetCards(forceOpenSetIds));
+						}
 
-					if (isBackground && transitions.length > 0) {
-						this.highlightNewSongs(transitions);
-					}
+						this.applyFilters();
 
-					if (!this.fragmentFocusApplied && window.location.hash) {
-						window.focusSessionFragmentTarget();
-						this.fragmentFocusApplied = true;
-					}
+						if (isBackground && transitions.length > 0) {
+							this.highlightNewSongs(transitions);
+						}
 
-					if (!window.location.hash) {
-						this.fragmentFocusApplied = true;
-					}
+						if (!this.fragmentFocusApplied && window.location.hash) {
+							window.focusSessionFragmentTarget();
+							this.fragmentFocusApplied = true;
+						}
+
+						if (!window.location.hash) {
+							this.fragmentFocusApplied = true;
+						}
+					});
 				});
 			} catch (e) {
 				if (!isBackground) {

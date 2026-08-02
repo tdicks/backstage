@@ -34,6 +34,7 @@
     data-song-id="{{ $song->id }}"
     x-bind:data-song-open="(!songCollapsed).toString()"
     x-data="sessionSongCard(@js([
+        'setId' => $set->id,
         'songId' => $song->id,
         'songKey' => 'backstage:u'.auth()->id().':song:'.$song->id,
         'canReorderSongs' => $canReorderSongs,

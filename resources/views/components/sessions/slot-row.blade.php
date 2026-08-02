@@ -217,9 +217,9 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="pointer-events-none absolute left-1/2 top-1/2 z-[70] w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 -translate-y-1/2"
+            class="pointer-events-none mt-2 flex justify-start"
         >
-            <div class="rounded-md border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-medium tracking-wide text-slate-700 shadow-sm shadow-slate-200/70 backdrop-blur-sm">
+            <div class="rounded-md border border-emerald-200 bg-emerald-50/95 px-3 py-1.5 text-xs font-medium tracking-wide text-emerald-800 whitespace-nowrap shadow-sm shadow-emerald-200/70 backdrop-blur-sm">
                 <span x-text="actionFeedback"></span>
             </div>
         </div>
