@@ -95,10 +95,10 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <div class="relative inline-flex items-center" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
+                    <div class="relative inline-flex h-full items-center" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
                         <button
                             @click="openJamSessions = !openJamSessions"
-                            class="inline-flex items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('sessions.*') ? 'border-amber-400 text-slate-100 focus:border-amber-300' : 'border-transparent text-slate-300 hover:text-slate-100 hover:border-slate-500 focus:text-slate-100 focus:border-slate-500' }} focus:outline-none"
+                            class="inline-flex h-full items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('sessions.*') ? 'border-amber-400 text-slate-100 focus:border-amber-300' : 'border-transparent text-slate-300 hover:text-slate-100 hover:border-slate-500 focus:text-slate-100 focus:border-slate-500' }} focus:outline-none"
                         >
                             <span>{{ __('Jam Sessions') }}</span>
                             <x-heroicon-m-chevron-down class="ms-1 h-4 w-4" aria-hidden="true" />
