@@ -23,6 +23,7 @@ use App\Http\Controllers\NoticeDismissalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPushSubscriptionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\SetCollaboratorController;
 use App\Http\Controllers\SetController;
 use App\Http\Controllers\ShareController;
@@ -70,6 +71,11 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/sit-in', '/find-a-slot')->name('sit-in.index');
 
     Route::view('/help', 'static.help')->name('help');
+    Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('recycle-bin.index');
+    Route::get('/recycle-bin/count', [RecycleBinController::class, 'count'])->name('recycle-bin.count');
+    Route::get('/recycle-bin/items', [RecycleBinController::class, 'items'])->name('recycle-bin.items');
+    Route::patch('/recycle-bin/sets/{setId}/restore', [RecycleBinController::class, 'restoreSet'])->name('recycle-bin.sets.restore');
+    Route::patch('/recycle-bin/sessions/{sessionId}/restore', [RecycleBinController::class, 'restoreSession'])->name('recycle-bin.sessions.restore');
 
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/my-sets/count', [MySetsController::class, 'count'])->name('my-sets.count');

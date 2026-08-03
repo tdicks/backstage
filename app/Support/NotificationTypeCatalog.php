@@ -40,6 +40,10 @@ final class NotificationTypeCatalog
 
     public const SET_UPDATED = 'set_updated';
 
+    public const SET_DELETED = 'set_deleted';
+
+    public const JAM_SESSION_DELETED = 'jam_session_deleted';
+
     public const ADMIN_USER_REGISTERED = 'admin_user_registered';
 
     public const ADMIN_ACCESS_GRANTED_TO_USER = 'admin_access_granted_to_user';
@@ -162,6 +166,18 @@ final class NotificationTypeCatalog
                 'label' => 'Set updated',
                 'description' => 'When a set you are involved in moves session or has songs added or removed.',
                 'category' => 'sets',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::SET_DELETED => [
+                'label' => 'Set deleted',
+                'description' => 'When a set you are involved in is deleted.',
+                'category' => 'sets',
+                'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
+            ],
+            self::JAM_SESSION_DELETED => [
+                'label' => 'Jam session deleted',
+                'description' => 'When a jam session you are involved in is deleted.',
+                'category' => 'jam_sessions',
                 'defaults' => ['enabled' => true, 'popup' => true, 'email' => true, 'text' => false],
             ],
             self::ADMIN_USER_REGISTERED => [

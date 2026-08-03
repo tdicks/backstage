@@ -276,7 +276,19 @@ class SetController extends Controller
     {
         $this->authorize('delete', $set);
 
+        $set->loadMissing('session', 'songs.slots.user');
+
+        $set->deleted_by_user_id = request()->user()->id;
+        $set->save();
         $set->delete();
+
+        $notificationService = app(NotificationService::class);
+        $notificationService->notifyUsersWithContentResolver(
+            NotificationTypeCatalog::SET_DELETED,
+            $notificationService->involvedUsersForSet($set),
+            request()->user(),
+            fn ($recipient) => $notificationService->setDeletedContent($set, $recipient, request()->user())
+        );
 
         return back()->with('status', 'Set removed.');
     }

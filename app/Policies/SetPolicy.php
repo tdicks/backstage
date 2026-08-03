@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Set;
 use App\Models\User;
+
 class SetPolicy
 {
     /**
@@ -51,7 +52,8 @@ class SetPolicy
      */
     public function restore(User $user, Set $set): bool
     {
-        return $user->is_admin || $set->owner_id === $user->id;
+        return $user->is_admin
+            || ($set->owner_id === $user->id && (int) $set->deleted_by_user_id === (int) $user->id);
     }
 
     /**

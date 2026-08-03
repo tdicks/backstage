@@ -6,9 +6,11 @@ import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
 import { liveQuickSet } from './components/liveQuickSet';
 import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
+import { recycleBinPage } from './components/recycleBin';
 import { adminNotices } from './components/adminNotices';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
+import { registerRecycleBinStore } from './stores/recycleBin';
 import { copyShareLink } from './utils/clipboard';
 import { isInteractiveDragSource } from './utils/drag';
 import { focusSessionFragmentTarget } from './utils/sessionFragments';
@@ -68,6 +70,7 @@ syncModalScrollLock();
 
 registerApprovalsStore(Alpine);
 registerNotificationsStore(Alpine);
+registerRecycleBinStore(Alpine);
 registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
@@ -77,6 +80,7 @@ Alpine.data('liveQuickSet', liveQuickSet);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 Alpine.data('adminManualSlotTransfer', adminManualSlotTransfer);
+Alpine.data('recycleBinPage', recycleBinPage);
 Alpine.data('adminNotices', adminNotices);
 
 window.addEventListener('notifications-updated', () => {
