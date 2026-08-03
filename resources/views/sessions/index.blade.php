@@ -24,7 +24,10 @@
                                         <x-text-input id="date" type="date" name="date" class="mt-1 block w-full" required />
                                     </div>
                                     <div>
-                                        <x-input-label for="description" value="Description (Markdown)" />
+                                        <div class="flex items-center gap-2">
+                                            <x-input-label for="description" value="Description (Markdown)" />
+                                            <x-markdown-help modal-name="session-create-markdown-help" title="Session Description Markdown Help" />
+                                        </div>
                                         <x-textarea-input id="description" name="description" rows="5" class="mt-1 w-full" />
                                     </div>
                                     <div>

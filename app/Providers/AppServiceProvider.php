@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\Controllers\MySetsController;
 use App\Models\JamSession;
 use App\Models\User;
+use App\Services\AppNoticeService;
 use App\Services\ManualSlotTransferService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
@@ -79,6 +80,11 @@ class AppServiceProvider extends ServiceProvider
             $view->with('pendingApprovalCount', $pendingApprovalCount);
             $view->with('pendingTitleCount', $pendingTotal);
             $view->with('documentTitle', $titlePrefix.$pageName.' | Backstage');
+        });
+
+        View::composer('layouts.app', function ($view): void {
+            $view->with('appNoticesByLocation', app(AppNoticeService::class)->forRequest(request(), request()->user()));
+            $view->with('noticeDismissUrlTemplate', route('notices.dismiss', ['notice' => '__NOTICE_ID__']));
         });
     }
 

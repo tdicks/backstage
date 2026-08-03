@@ -11,12 +11,55 @@ $maxWidth = [
     'lg' => 'sm:max-w-lg',
     'xl' => 'sm:max-w-xl',
     '2xl' => 'sm:max-w-2xl',
-][$maxWidth];
+    '3xl' => 'sm:max-w-3xl',
+    '4xl' => 'sm:max-w-4xl',
+    '5xl' => 'sm:max-w-5xl',
+    '6xl' => 'sm:max-w-6xl',
+][$maxWidth] ?? 'sm:max-w-2xl';
 @endphp
 
 <div
     x-data="{
+        modalName: @js($name),
         show: @js($show),
+        stack() {
+            if (!Array.isArray(window.__backstageModalStack)) {
+                window.__backstageModalStack = []
+            }
+
+            return window.__backstageModalStack
+        },
+        pushToStack() {
+            const modalStack = this.stack()
+            const existingIndex = modalStack.indexOf(this.modalName)
+
+            if (existingIndex !== -1) {
+                modalStack.splice(existingIndex, 1)
+            }
+
+            modalStack.push(this.modalName)
+        },
+        removeFromStack() {
+            const modalStack = this.stack()
+            const existingIndex = modalStack.lastIndexOf(this.modalName)
+
+            if (existingIndex !== -1) {
+                modalStack.splice(existingIndex, 1)
+            }
+        },
+        isTopModal() {
+            const modalStack = this.stack()
+
+            return modalStack.length > 0 && modalStack[modalStack.length - 1] === this.modalName
+        },
+        openModal() {
+            this.show = true
+            this.pushToStack()
+        },
+        closeModal() {
+            this.show = false
+            this.removeFromStack()
+        },
         focusables() {
             // All focusable element types...
             let selector = 'a, button, input:not([type=\'hidden\']), textarea, select, details, [tabindex]:not([tabindex=\'-1\'])'
@@ -31,13 +74,26 @@ $maxWidth = [
         nextFocusableIndex() { return (this.focusables().indexOf(document.activeElement) + 1) % (this.focusables().length + 1) },
         prevFocusableIndex() { return Math.max(0, this.focusables().indexOf(document.activeElement)) -1 },
     }"
-    x-init="$watch('show', value => { if (value) { {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }} } else { $dispatch('modal-closed', { name: '{{ $name }}' }) } })"
-    x-on:open-modal.window="$event.detail == '{{ $name }}' ? show = true : null"
-    x-on:close-modal.window="$event.detail == '{{ $name }}' ? show = false : null"
-    x-on:close.stop="show = false"
-    x-on:keydown.escape.window="show = false"
-    x-on:keydown.tab.prevent="$event.shiftKey || nextFocusable().focus()"
-    x-on:keydown.shift.tab.prevent="prevFocusable().focus()"
+    x-init="
+        if (show) {
+            pushToStack()
+        }
+
+        $watch('show', value => {
+            if (value) {
+                {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
+            } else {
+                removeFromStack()
+                $dispatch('modal-closed', { name: modalName })
+            }
+        })
+    "
+    x-on:open-modal.window="$event.detail == modalName ? openModal() : null"
+    x-on:close-modal.window="$event.detail == modalName ? closeModal() : null"
+    x-on:close.stop="closeModal()"
+    x-on:keydown.escape.window="if (show && isTopModal()) { closeModal() }"
+    x-on:keydown.tab.prevent="if (show && isTopModal()) { $event.shiftKey || nextFocusable().focus() }"
+    x-on:keydown.shift.tab.prevent="if (show && isTopModal()) { prevFocusable().focus() }"
     x-show="show"
     data-modal-overlay
     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6 sm:px-0"
@@ -46,7 +102,7 @@ $maxWidth = [
     <div
         x-show="show"
         class="fixed inset-0 z-40 transform transition-all"
-        x-on:click="show = false"
+        x-on:click="if (isTopModal()) { closeModal() }"
         x-transition:enter="ease-out duration-150"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
