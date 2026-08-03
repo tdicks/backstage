@@ -265,7 +265,7 @@
                                 <x-dropdown-link :href="route('admin.notices.index')">
                                     {{ __('Notices') }}
                                 </x-dropdown-link>
-                                <x-dropdown-link :href="route('band-templates.index')">
+                                <x-dropdown-link :href="route('admin.band-templates.index')">
                                     {{ __('Band Templates') }}
                                 </x-dropdown-link>
                             </div>
@@ -439,7 +439,7 @@
                         <x-responsive-nav-link :href="route('admin.notices.index')">
                             {{ __('Notices') }}
                         </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('band-templates.index')">
+                        <x-responsive-nav-link :href="route('admin.band-templates.index')">
                             {{ __('Band Templates') }}
                         </x-responsive-nav-link>
                     </div>

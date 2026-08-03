@@ -14,7 +14,7 @@ class BandTemplateController extends Controller
     {
         $this->authorize('viewAny', BandTemplate::class);
 
-        return view('band-templates.index', [
+        return view('admin.band-templates.index', [
             'templates' => BandTemplate::query()->with('slots')->orderBy('name')->get(),
             'slotOptions' => Slot::options(),
         ]);

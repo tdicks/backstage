@@ -120,6 +120,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/notices/{notice}/dismissals', [NoticeAdministrationController::class, 'clearDismissals'])->name('notices.dismissals.clear');
         Route::patch('/notices/{notice}', [NoticeAdministrationController::class, 'update'])->name('notices.update');
         Route::delete('/notices/{notice}', [NoticeAdministrationController::class, 'destroy'])->name('notices.destroy');
+
+        Route::resource('band-templates', BandTemplateController::class)->except(['show', 'create', 'edit']);
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -197,8 +199,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/lookups/deezer/artists', [DeezerLookupController::class, 'artists'])->name('lookups.deezer.artists');
     Route::get('/lookups/deezer/tracks', [DeezerLookupController::class, 'tracks'])->name('lookups.deezer.tracks');
-
-    Route::resource('band-templates', BandTemplateController::class)->except(['show', 'create', 'edit']);
 });
 
 require __DIR__.'/auth.php';

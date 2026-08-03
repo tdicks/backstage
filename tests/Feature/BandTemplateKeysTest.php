@@ -13,7 +13,7 @@ test('admin can create a band template with a keys slot', function () {
     ]);
 
     $this->actingAs($admin)
-        ->post(route('band-templates.store'), [
+        ->post(route('admin.band-templates.store'), [
             'name' => 'Keys Template',
             'slot_names' => ['vocals', 'keys'],
         ])
@@ -34,7 +34,7 @@ test('admin can create a band template with a custom slot type', function () {
     ]);
 
     $this->actingAs($admin)
-        ->post(route('band-templates.store'), [
+        ->post(route('admin.band-templates.store'), [
             'name' => 'Custom Template',
             'slot_names' => ['sick_licks'],
         ])
@@ -51,7 +51,7 @@ test('band templates page links to slot conflict configuration', function () {
     ]);
 
     $this->actingAs($admin)
-        ->get(route('band-templates.index'))
+        ->get(route('admin.band-templates.index'))
         ->assertOk()
         ->assertSee('Band Templates')
         ->assertSee('Slot Conflicts')

@@ -19,7 +19,7 @@
                                     <h3 class="text-lg font-semibold text-slate-900">Create Band Template</h3>
                                 </div>
                                 <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-                                    <form method="POST" action="{{ route('band-templates.store') }}" class="space-y-4">
+                                    <form method="POST" action="{{ route('admin.band-templates.store') }}" class="space-y-4">
                                         @csrf
                                         <div>
                                             <x-input-label :value="'Template Name'" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
@@ -86,7 +86,7 @@
                                             <h4 class="text-lg font-semibold text-slate-900">Edit Template</h4>
                                         </div>
                                         <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-                                            <form id="edit_template_form_{{ $template->id }}" method="POST" action="{{ route('band-templates.update', $template) }}" class="space-y-4">
+                                            <form id="edit_template_form_{{ $template->id }}" method="POST" action="{{ route('admin.band-templates.update', $template) }}" class="space-y-4">
                                                 @csrf
                                                 @method('PATCH')
                                                 <div>
@@ -107,7 +107,7 @@
                                             </form>
                                         </div>
                                         <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
-                                            <form method="POST" action="{{ route('band-templates.destroy', $template) }}">
+                                            <form method="POST" action="{{ route('admin.band-templates.destroy', $template) }}">
                                                 @csrf
                                                 @method('DELETE')
                                                 <x-danger-button type="submit">Delete Template</x-danger-button>
