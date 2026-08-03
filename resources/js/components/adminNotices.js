@@ -836,6 +836,10 @@ export function adminNotices(config = {}) {
 			return (routeNames || []).map((name) => this.routeLabel(name)).join(', ');
 		},
 
+		noticeTextAlignmentClass(location) {
+			return location === 'below_header' ? 'text-left' : 'text-center';
+		},
+
 		groupedNotices() {
 			return this.locationOptions
 				.map((option) => ({

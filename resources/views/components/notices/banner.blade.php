@@ -2,6 +2,7 @@
     'notice',
     'dismissUrlTemplate' => null,
     'fullBleed' => false,
+    'textAlign' => 'center',
 ])
 
 @php
@@ -41,6 +42,7 @@
     $innerClasses = $fullBleed
         ? 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8'
         : '';
+    $textAlignmentClass = $textAlign === 'left' ? 'text-left' : 'text-center';
 @endphp
 
 <article
@@ -89,7 +91,7 @@
                 @endif
             </div>
 
-            <div class="min-w-0 flex-1 text-center">
+            <div class="min-w-0 flex-1 {{ $textAlignmentClass }}">
                 <div class="notice-markdown text-sm {{ $style['body'] }}">
                     {!! $notice['content_html'] !!}
                 </div>

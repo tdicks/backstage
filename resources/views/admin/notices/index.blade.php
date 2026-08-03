@@ -156,7 +156,7 @@
                                                     <x-heroicon-m-information-circle x-show="notice.level !== 'critical' && notice.level !== 'warning'" class="h-5 w-5" />
                                                 </div>
 
-                                                <div class="min-w-0 flex-1 text-center">
+                                                <div class="min-w-0 flex-1" :class="noticeTextAlignmentClass(notice.location)">
                                                     <div
                                                         class="notice-markdown text-sm"
                                                         :class="noticeLevelStyles(notice.level).body"
@@ -261,7 +261,7 @@
                                             <x-heroicon-m-information-circle x-show="createForm.level !== 'critical' && createForm.level !== 'warning'" class="h-5 w-5" />
                                         </div>
 
-                                        <div class="min-w-0 flex-1 text-center">
+                                        <div class="min-w-0 flex-1" :class="noticeTextAlignmentClass(createForm.location)">
                                             <template x-if="createPreviewHtml">
                                                 <div class="notice-markdown text-sm" :class="noticeLevelStyles(createForm.level).body" x-html="createPreviewHtml"></div>
                                             </template>
@@ -404,7 +404,7 @@
                                             <x-heroicon-m-information-circle x-show="editForm.level !== 'critical' && editForm.level !== 'warning'" class="h-5 w-5" />
                                         </div>
 
-                                        <div class="min-w-0 flex-1 text-center">
+                                        <div class="min-w-0 flex-1" :class="noticeTextAlignmentClass(editForm.location)">
                                             <template x-if="editPreviewHtml">
                                                 <div class="notice-markdown text-sm" :class="noticeLevelStyles(editForm.level).body" x-html="editPreviewHtml"></div>
                                             </template>

@@ -56,7 +56,7 @@
             @if (! empty($appNoticesByLocation['below_header']))
                 <div class="mx-auto max-w-7xl space-y-2 px-4 pt-4 sm:px-6 lg:px-8">
                     @foreach ($appNoticesByLocation['below_header'] as $notice)
-                        <x-notices.banner :notice="$notice" :dismiss-url-template="$noticeDismissUrlTemplate" />
+                        <x-notices.banner :notice="$notice" :dismiss-url-template="$noticeDismissUrlTemplate" text-align="left" />
                     @endforeach
                 </div>
             @endif
