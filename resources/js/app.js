@@ -7,6 +7,7 @@ import { getStartedQuest } from './components/getStartedQuest';
 import { liveQuickSet } from './components/liveQuickSet';
 import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
 import { recycleBinPage } from './components/recycleBin';
+import { adminNotices } from './components/adminNotices';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
 import { registerRecycleBinStore } from './stores/recycleBin';
@@ -80,6 +81,7 @@ Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 Alpine.data('adminManualSlotTransfer', adminManualSlotTransfer);
 Alpine.data('recycleBinPage', recycleBinPage);
+Alpine.data('adminNotices', adminNotices);
 
 window.addEventListener('notifications-updated', () => {
 	syncPendingTitleFromStores();

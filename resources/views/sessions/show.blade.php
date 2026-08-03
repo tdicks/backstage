@@ -268,7 +268,10 @@
                                         <x-text-input id="session_date" type="date" name="date" :value="$session->date->toDateString()" class="mt-2 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200" required />
                                     </div>
                                     <div>
-                                        <x-input-label for="session_description" value="Description (Markdown)" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
+                                        <div class="flex items-center gap-2">
+                                            <x-input-label for="session_description" value="Description (Markdown)" class="text-xs font-semibold uppercase tracking-wide text-slate-600" />
+                                            <x-markdown-help modal-name="session-edit-markdown-help" title="Session Description Markdown Help" />
+                                        </div>
                                         <x-textarea-input id="session_description" name="description" rows="6" class="mt-2 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">{{ $session->description }}</x-textarea-input>
                                     </div>
                                     <div>

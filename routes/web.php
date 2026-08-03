@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AttachmentAdministrationController;
+use App\Http\Controllers\Admin\NoticeAdministrationController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SlotTypeConflictController;
 use App\Http\Controllers\Admin\SlotTypeController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\JamStandardQuickSetController;
 use App\Http\Controllers\JamStandardSongRequestController;
 use App\Http\Controllers\LiveJamController;
 use App\Http\Controllers\MySetsController;
+use App\Http\Controllers\NoticeDismissalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPushSubscriptionController;
 use App\Http\Controllers\ProfileController;
@@ -109,6 +111,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/users/manual-slot-transfers', [UserAdministrationController::class, 'applyManualSlotTransfers'])->name('users.manual-slot-transfers.apply');
         Route::get('/attachments', [AttachmentAdministrationController::class, 'index'])->name('attachments.index');
         Route::delete('/attachments/{attachment}', [AttachmentAdministrationController::class, 'destroy'])->name('attachments.destroy');
+
+        Route::get('/notices', [NoticeAdministrationController::class, 'index'])->name('notices.index');
+        Route::get('/notices/items', [NoticeAdministrationController::class, 'items'])->name('notices.items');
+        Route::post('/notices/preview', [NoticeAdministrationController::class, 'preview'])->name('notices.preview');
+        Route::post('/notices', [NoticeAdministrationController::class, 'store'])->name('notices.store');
+        Route::patch('/notices/reorder', [NoticeAdministrationController::class, 'reorder'])->name('notices.reorder');
+        Route::delete('/notices/{notice}/dismissals', [NoticeAdministrationController::class, 'clearDismissals'])->name('notices.dismissals.clear');
+        Route::patch('/notices/{notice}', [NoticeAdministrationController::class, 'update'])->name('notices.update');
+        Route::delete('/notices/{notice}', [NoticeAdministrationController::class, 'destroy'])->name('notices.destroy');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -123,6 +134,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/notifications/{notification}/dismiss', [NotificationController::class, 'dismiss'])->name('notifications.dismiss');
     Route::post('/notifications/push-subscriptions', [NotificationPushSubscriptionController::class, 'store'])->name('notifications.push-subscriptions.store');
     Route::delete('/notifications/push-subscriptions', [NotificationPushSubscriptionController::class, 'destroy'])->name('notifications.push-subscriptions.destroy');
+
+    Route::post('/notices/{notice}/dismiss', [NoticeDismissalController::class, 'store'])->name('notices.dismiss');
 
     Route::get('/sessions/archive', [JamSessionController::class, 'archive'])->name('sessions.archive');
     Route::resource('sessions', JamSessionController::class)

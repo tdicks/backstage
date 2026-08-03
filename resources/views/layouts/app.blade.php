@@ -22,7 +22,23 @@
     </head>
     <body class="font-sans antialiased text-slate-100">
         <div class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+            @if (! empty($appNoticesByLocation['above_nav']))
+                <div class="w-full">
+                    @foreach ($appNoticesByLocation['above_nav'] as $notice)
+                        <x-notices.banner :notice="$notice" :dismiss-url-template="$noticeDismissUrlTemplate" full-bleed />
+                    @endforeach
+                </div>
+            @endif
+
             @include('layouts.navigation')
+
+            @if (! empty($appNoticesByLocation['below_nav']))
+                <div class="w-full">
+                    @foreach ($appNoticesByLocation['below_nav'] as $notice)
+                        <x-notices.banner :notice="$notice" :dismiss-url-template="$noticeDismissUrlTemplate" full-bleed />
+                    @endforeach
+                </div>
+            @endif
 
             <!-- Page Heading -->
             @isset($header)
@@ -32,6 +48,14 @@
                     </div>
                 </header>
             @endisset
+
+            @if (! empty($appNoticesByLocation['below_header']))
+                <div class="mx-auto max-w-7xl space-y-2 px-4 pt-4 sm:px-6 lg:px-8">
+                    @foreach ($appNoticesByLocation['below_header'] as $notice)
+                        <x-notices.banner :notice="$notice" :dismiss-url-template="$noticeDismissUrlTemplate" />
+                    @endforeach
+                </div>
+            @endif
 
             @if (session('status') && ! request()->routeIs('jam-standards.*'))
                 <div
