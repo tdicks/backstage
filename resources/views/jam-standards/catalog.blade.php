@@ -46,12 +46,6 @@
             slotConflicts: @js($slotConflicts),
         })"
     >
-        <section class="mb-6 rounded-xl border border-sky-200 bg-sky-50/80 p-5 shadow-sm">
-            <p class="flex items-center gap-2 text-sm leading-6 text-sky-900">
-                <x-heroicon-m-information-circle class="h-5 w-5 text-sky-500" aria-hidden="true" />
-                The jam standards are a list of songs that many of our regulars know. Learning some of these is a great way to get started with our jam sessions. If you know a song that isn't on this list, you can request it be added. You can also quickly create a set from the standards list, just check the songs you want and hit the "Create Set" button!
-            </p>
-        </section>
         <div x-show="statusMessage" x-cloak x-transition.opacity class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800" role="status">
             <p x-text="statusMessage"></p>
         </div>

@@ -13,6 +13,10 @@
 
         <title>{{ $documentTitle ?? config('app.name', 'Backstage') }}</title>
 
+        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
