@@ -47,6 +47,122 @@ test('collaborator updates notify added and removed users but not the actor', fu
     expect($removed->notifications()->latest()->first()?->data['type_key'])->toBe(NotificationTypeCatalog::SET_COLLABORATOR_REMOVED);
 });
 
+test('deleting a set notifies stakeholders and only admins get a restore action', function () {
+    $actorAdmin = User::factory()->create(['name' => 'Actor Admin', 'is_admin' => true]);
+    $owner = User::factory()->create(['name' => 'Owner']);
+    $collaborator = User::factory()->create(['name' => 'Collaborator']);
+    $slotUser = User::factory()->create(['name' => 'Performer', 'is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Set Delete Session',
+        'date' => now()->addWeek(),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Delete Me',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+        'collaborator_ids' => [$collaborator->id],
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Band',
+        'title' => 'Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+        'user_id' => $slotUser->id,
+    ]);
+
+    $this->actingAs($actorAdmin)
+        ->delete(route('sets.destroy', $set))
+        ->assertRedirect();
+
+    $ownerNotification = $owner->notifications()->latest()->first();
+    $collaboratorNotification = $collaborator->notifications()->latest()->first();
+    $slotUserNotification = $slotUser->notifications()->latest()->first();
+
+    expect($ownerNotification?->data['type_key'])->toBe(NotificationTypeCatalog::SET_DELETED);
+    expect($collaboratorNotification?->data['type_key'])->toBe(NotificationTypeCatalog::SET_DELETED);
+    expect($slotUserNotification?->data['type_key'])->toBe(NotificationTypeCatalog::SET_DELETED);
+    expect($slotUserNotification?->data['action_url'])->toContain('/recycle-bin');
+    expect($ownerNotification?->data['action_url'])->toBeNull();
+    expect($collaboratorNotification?->data['action_url'])->toBeNull();
+    expect($collaboratorNotification?->data['body'])->toContain('You were a collaborator on this set.');
+    expect($slotUserNotification?->data['body'])->toContain('Your slots:');
+});
+
+test('deleting a jam session notifies all users but only admins get a restore action', function () {
+    $actorAdmin = User::factory()->create(['name' => 'Actor Admin', 'is_admin' => true]);
+    $adminRecipient = User::factory()->create(['name' => 'Admin Recipient', 'is_admin' => true]);
+    $viewer = User::factory()->create(['name' => 'Viewer']);
+    $owner = User::factory()->create(['name' => 'Owner']);
+    $slotUser = User::factory()->create(['name' => 'Performer', 'is_admin' => true]);
+
+    $session = JamSession::create([
+        'name' => 'Delete Session',
+        'date' => now()->addWeek(),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Session Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Band',
+        'title' => 'Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+        'user_id' => $slotUser->id,
+    ]);
+
+    $this->actingAs($actorAdmin)
+        ->delete(route('sessions.destroy', $session))
+        ->assertRedirect(route('sessions.index'));
+
+    $viewerNotification = $viewer->notifications()->latest()->first();
+    $adminNotification = $adminRecipient->notifications()->latest()->first();
+    $ownerNotification = $owner->notifications()->latest()->first();
+    $slotUserNotification = $slotUser->notifications()->latest()->first();
+
+    expect($viewerNotification?->data['type_key'])->toBe(NotificationTypeCatalog::JAM_SESSION_DELETED);
+    expect($ownerNotification?->data['type_key'])->toBe(NotificationTypeCatalog::JAM_SESSION_DELETED);
+    expect($slotUserNotification?->data['type_key'])->toBe(NotificationTypeCatalog::JAM_SESSION_DELETED);
+    expect($viewerNotification?->data['action_url'])->toBeNull();
+    expect($ownerNotification?->data['action_url'])->toBeNull();
+    expect($slotUserNotification?->data['action_url'])->toContain('/recycle-bin');
+    expect($adminNotification?->data['type_key'])->toBe(NotificationTypeCatalog::JAM_SESSION_DELETED);
+    expect($adminNotification?->data['action_url'])->toContain('/recycle-bin');
+    expect($slotUserNotification?->data['body'])->toContain('Impacted sets:');
+});
+
 test('slot requests notify set managers and accepted requests notify the requester', function () {
     $owner = User::factory()->create(['name' => 'Owner']);
     $collaborator = User::factory()->create(['name' => 'Collaborator']);

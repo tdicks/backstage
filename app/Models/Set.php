@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Set extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'description',
@@ -24,6 +27,7 @@ class Set extends Model
         'feature_set',
         'free_for_all',
         'collaborator_ids',
+        'deleted_by_user_id',
     ];
 
     protected function casts(): array
@@ -37,6 +41,7 @@ class Set extends Model
             'feature_set' => 'boolean',
             'free_for_all' => 'boolean',
             'collaborator_ids' => 'array',
+            'deleted_by_user_id' => 'integer',
         ];
     }
 

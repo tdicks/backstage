@@ -73,8 +73,8 @@
             }
         },
     }"
-    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) }); $store.notifications.init({ items: @js($navNotificationFeed['notifications']), unreadCount: @js($navNotificationFeed['unread_count']), indexUrl: @js(route('notifications.index')), seenUrlTemplate: @js(route('notifications.seen', '__NOTIFICATION_ID__')), dismissUrlTemplate: @js(route('notifications.dismiss', '__NOTIFICATION_ID__')), pushPublicKey: @js(config('services.webpush.vapid.public_key')), pushServiceWorkerUrl: @js('/push-sw.js'), pushSubscribeUrl: @js(route('notifications.push-subscriptions.store')), pushUnsubscribeUrl: @js(route('notifications.push-subscriptions.destroy')) })"
-    @visibilitychange.window="$store.approvals.refresh(); $store.notifications.refresh({ showPopups: false })"
+    x-init="$store.approvals.init({ count: @js($mySetsApprovalCount), url: @js(route('my-sets.count')) }); $store.notifications.init({ items: @js($navNotificationFeed['notifications']), unreadCount: @js($navNotificationFeed['unread_count']), indexUrl: @js(route('notifications.index')), seenUrlTemplate: @js(route('notifications.seen', '__NOTIFICATION_ID__')), dismissUrlTemplate: @js(route('notifications.dismiss', '__NOTIFICATION_ID__')), pushPublicKey: @js(config('services.webpush.vapid.public_key')), pushServiceWorkerUrl: @js('/push-sw.js'), pushSubscribeUrl: @js(route('notifications.push-subscriptions.store')), pushUnsubscribeUrl: @js(route('notifications.push-subscriptions.destroy')) }); $store.recycleBin.init({ count: @js($recycleBinCount), url: @js(route('recycle-bin.count')) })"
+    @visibilitychange.window="$store.approvals.refresh(); $store.notifications.refresh({ showPopups: false }); $store.recycleBin.refresh()"
     @notifications-updated.window="if (notificationsOpen) { syncNotificationObserver() }"
     @target-consent-processed.window="$store.approvals.decrement()"
     @pending-approval-processed.window="$store.approvals.decrement()"
@@ -220,6 +220,18 @@
                     <x-slot name="content">
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
+                        </x-dropdown-link>
+
+                        <x-dropdown-link :href="route('recycle-bin.index')">
+                            <span class="flex items-center justify-between gap-2">
+                                <span>{{ __('Recycle Bin') }}</span>
+                                <span
+                                    class="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-rose-700"
+                                    x-show="$store.recycleBin.count > 0"
+                                    x-text="$store.recycleBin.count"
+                                    x-cloak
+                                >{{ $recycleBinCount }}</span>
+                            </span>
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -379,6 +391,18 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('recycle-bin.index')" :active="request()->routeIs('recycle-bin.*')">
+                    <span class="flex items-center justify-between gap-2">
+                        <span>{{ __('Recycle Bin') }}</span>
+                        <span
+                            class="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-rose-700"
+                            x-show="$store.recycleBin.count > 0"
+                            x-text="$store.recycleBin.count"
+                            x-cloak
+                        >{{ $recycleBinCount }}</span>
+                    </span>
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->

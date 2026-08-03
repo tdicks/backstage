@@ -442,7 +442,24 @@ class JamSessionController extends Controller
     {
         $this->authorize('delete', $jamSession);
 
+        $jamSession->loadMissing('sets.songs.slots.user', 'sets.owner');
+
+        $deleterId = request()->user()->id;
+
+        $jamSession->sets()->update(['deleted_by_user_id' => $deleterId]);
+        $jamSession->sets()->delete();
+
+        $jamSession->deleted_by_user_id = $deleterId;
+        $jamSession->save();
         $jamSession->delete();
+
+        $notificationService = app(NotificationService::class);
+        $notificationService->notifyUsersWithContentResolver(
+            NotificationTypeCatalog::JAM_SESSION_DELETED,
+            $notificationService->visibleUsersForPublishedSession(),
+            request()->user(),
+            fn ($recipient) => $notificationService->jamSessionDeletedContent($jamSession, $recipient, request()->user())
+        );
 
         return to_route('sessions.index')->with('status', 'Jam session deleted.');
     }

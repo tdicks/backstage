@@ -6,10 +6,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class JamSession extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'jam_sessions';
 
     protected $fillable = [
@@ -24,6 +27,7 @@ class JamSession extends Model
         'live_code',
         'jam_register_code',
         'jam_manager_id',
+        'deleted_by_user_id',
     ];
 
     protected function casts(): array
@@ -36,6 +40,7 @@ class JamSession extends Model
             'allow_checkins' => 'boolean',
             'is_live' => 'boolean',
             'jam_manager_id' => 'integer',
+            'deleted_by_user_id' => 'integer',
         ];
     }
 

@@ -354,10 +354,10 @@
                                 </form>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
-                                    <form method="POST" action="{{ route('sessions.destroy', $session) }}" onsubmit="return confirm('Delete this jam session? This cannot be undone.');">
+                                    <form method="POST" action="{{ route('sessions.destroy', $session) }}" onsubmit="return confirm('Move this jam session to the Recycle Bin?');">
                                         @csrf
                                         @method('DELETE')
-                                        <x-danger-button type="submit">Delete Session</x-danger-button>
+                                        <x-danger-button type="submit">Move Session to Recycle Bin</x-danger-button>
                                     </form>
                                     <div class="flex justify-end gap-2">
                                         <x-modal-secondary-button type="button" @click="openEditSession = false">Cancel</x-modal-secondary-button>

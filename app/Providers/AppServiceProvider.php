@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Controllers\MySetsController;
+use App\Http\Controllers\RecycleBinController;
 use App\Models\JamSession;
 use App\Models\User;
 use App\Services\ManualSlotTransferService;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
                 ? app(NotificationService::class)->feedForUser($user, 15)
                 : ['notifications' => [], 'unread_count' => 0];
             $pendingApprovalCount = $this->resolvePendingApprovalCount($user);
+            $recycleBinCount = RecycleBinController::countForUser($user);
 
             $view->with('navJamSessions', JamSession::query()
                 ->visibleTo(request()->user())
@@ -64,6 +66,7 @@ class AppServiceProvider extends ServiceProvider
                 ->exists());
             $view->with('mySetsApprovalCount', $pendingApprovalCount);
             $view->with('navNotificationFeed', $notificationFeed);
+            $view->with('recycleBinCount', $recycleBinCount);
         });
 
         View::composer(['layouts.app', 'layouts.guest'], function ($view): void {

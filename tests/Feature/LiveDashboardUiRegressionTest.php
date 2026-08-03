@@ -403,9 +403,9 @@ test('set and song action menus use viewport-aware positioning', function () {
     expect($songCard)->toContain('x-ref="actionMenuButton"');
     expect($songCard)->toContain('x-teleport="body"');
     expect($songCard)->toContain('x-bind:style="actionMenuStyle"');
-    expect($songCard)->toContain('@resize.window="repositionActionMenu()"');
-    expect($cardScripts)->toContain('function viewportActionMenuStyle(button)');
-    expect($cardScripts)->toContain('this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton);');
+    expect($songCard)->toContain('@resize.window="repositionActionMenu(); syncDesktopReorderEnabled()"');
+    expect($cardScripts)->toContain('function viewportActionMenuStyle(button, menu = null)');
+    expect($cardScripts)->toContain('this.actionMenuStyle = viewportActionMenuStyle(this.$refs.actionMenuButton, this.$refs.actionMenu);');
 });
 
 test('edit set modal keeps its header and original actions outside the scrollable form body', function () {
@@ -415,8 +415,8 @@ test('edit set modal keeps its header and original actions outside the scrollabl
     expect($setCard)->toContain('<div class="px-6 pt-6">');
     expect($setCard)->toContain('<div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">');
     expect($setCard)->toContain('class="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4"');
-    expect($setCard)->toContain("onsubmit=\"return confirm('Delete this set? This cannot be undone.');\"");
-    expect($setCard)->toContain('Delete Set');
+    expect($setCard)->toContain("onsubmit=\"return confirm('Move this set to the Recycle Bin?');\"");
+    expect($setCard)->toContain('Move Set to Recycle Bin');
     expect($setCard)->toContain('form="edit_set_form_{{ $set->id }}"');
 });
 
