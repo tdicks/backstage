@@ -94,7 +94,7 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex" data-tour="jam-sessions-navigation">
                     <div class="relative inline-flex h-full items-center" data-tour="jam-sessions-desktop" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
                         <button
                             @click="openJamSessions = !openJamSessions"
@@ -360,8 +360,8 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')" data-tour="jam-sessions-mobile">
+        <div class="pt-2 pb-3 space-y-1" data-tour="jam-sessions-mobile">
+            <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')">
                 {{ __('All Jam Sessions') }}
             </x-responsive-nav-link>
             <div class="mx-4 my-1 border-t border-slate-800"></div>

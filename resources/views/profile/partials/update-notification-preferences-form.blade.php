@@ -1,5 +1,5 @@
-<section data-tour="profile-notification-section">
-    <header>
+<section>
+    <header data-tour="profile-notification-section">
         <h2 class="text-lg font-medium text-gray-900">
             {{ __('Notification Preferences') }}
         </h2>

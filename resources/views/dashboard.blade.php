@@ -1,8 +1,20 @@
+@php
+
+    if (Cache::has('user_just_registered_'.auth()->id())) {
+        $showWelcomeBack = false;
+        Cache::forget('user_just_registered_'.auth()->id());
+    } else {
+        $showWelcomeBack = true;
+    }
+
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Backstage</p>
-            <h1 class="mt-1 text-2xl font-semibold text-slate-100">Welcome back, {{ auth()->user()->name }}</h1>
+            <h1 class="mt-1 text-2xl font-semibold text-slate-100">
+                {{ $showWelcomeBack ? 'Welcome back' : 'Welcome' }}, {{ auth()->user()->name }}
+            </h1>
         </div>
     </x-slot>
 
@@ -12,6 +24,7 @@
                 <div class="space-y-6">
                     @if ($showGetStartedQuest)
                         <section
+                            data-tour="dashboard-get-started-quest"
                             id="get-started-quest"
                             x-data="getStartedQuest()"
                             x-show="visible"

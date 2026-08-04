@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -52,6 +53,10 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        // Add a cache entry to indicate that the user has just registered.
+        // This is used to influence the "Welcome" or "Welcome back" text on the dash.
+        Cache::put('user_just_registered_'.$user->id, true, now()->addMinutes(5));
 
         $returnTo = $request->input('return_to');
 

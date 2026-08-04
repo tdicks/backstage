@@ -214,39 +214,68 @@ class FeatureTourManager {
 			.sort((first, second) => Number(first.tour?.priority ?? 100) - Number(second.tour?.priority ?? 100));
 	}
 
+	getEligibleConfiguredInfoIconTours({ modalId = null } = {}) {
+		const tours = this.config.tours || {};
+
+		return Object.keys(tours)
+			.map((tourId) => ({
+				tourId,
+				tour: tours[tourId],
+			}))
+			.filter(({ tourId, tour }) => {
+				if (!shouldShowInfoIconForTour(tour)) {
+					return false;
+				}
+
+				if (!this.isTourEligible(tour, { modalId }) || !this.isTourDomReady(tour, { modalId })) {
+					return false;
+				}
+
+				return !this.hasCompleted(tourId, tour) && !this.isOptedOut(tourId, tour);
+			})
+			.sort((first, second) => Number(first.tour?.priority ?? 100) - Number(second.tour?.priority ?? 100));
+	}
+
+	getEligibleResumeIconTours({ modalId = null } = {}) {
+		const eligibleInfoIconTours = this.getEligibleInfoIconTours({ modalId });
+		const eligibleConfiguredInfoIconTours = this.getEligibleConfiguredInfoIconTours({ modalId });
+		const mergedByTourId = new Map();
+
+		for (const entry of [...eligibleInfoIconTours, ...eligibleConfiguredInfoIconTours]) {
+			if (!mergedByTourId.has(entry.tourId)) {
+				mergedByTourId.set(entry.tourId, entry);
+			}
+		}
+
+		return Array.from(mergedByTourId.values())
+			.sort((first, second) => Number(first.tour?.priority ?? 100) - Number(second.tour?.priority ?? 100));
+	}
+
 	shouldShowModalTrigger(modalId) {
 		if (typeof modalId !== 'string' || modalId.trim() === '') {
 			return false;
 		}
 
 		const trimmedModalId = modalId.trim();
-		const eligibleInfoIconTours = this.getEligibleInfoIconTours({ modalId: trimmedModalId })
+		const eligibleResumeIconTours = this.getEligibleResumeIconTours({ modalId: trimmedModalId })
 			.filter(({ tour }) => this.getTourModalId(tour) === trimmedModalId);
 		const eligiblePromptTours = this.getEligiblePromptTours({ modalId: trimmedModalId })
 			.filter(({ tour }) => this.getTourModalId(tour) === trimmedModalId);
 		const shouldShowForDismissedPromptTour = eligiblePromptTours.some(({ tourId, tour }) => {
 			return this.isPromptDismissed(tourId, tour) && !this.hasCompleted(tourId, tour) && !this.isOptedOut(tourId, tour);
 		});
-		const shouldShowForConfiguredPromptTour = eligiblePromptTours.some(({ tourId, tour }) => {
-			return shouldShowInfoIconForTour(tour) && !this.hasCompleted(tourId, tour) && !this.isOptedOut(tourId, tour);
-		});
 
-		return eligibleInfoIconTours.length > 0
-			|| shouldShowForDismissedPromptTour
-			|| shouldShowForConfiguredPromptTour;
+		return eligibleResumeIconTours.length > 0 || shouldShowForDismissedPromptTour;
 	}
 
 	updateResumeTriggerVisibility() {
-		const eligibleGlobalInfoIconTours = this.getEligibleInfoIconTours().filter(({ tour }) => this.getTourModalId(tour) === null);
+		const eligibleGlobalResumeIconTours = this.getEligibleResumeIconTours().filter(({ tour }) => this.getTourModalId(tour) === null);
 		const eligibleGlobalPromptTours = this.getEligiblePromptTours().filter(({ tour }) => this.getTourModalId(tour) === null);
-		const shouldShowForInfoIconTours = eligibleGlobalInfoIconTours.length > 0;
+		const shouldShowForInfoIconTours = eligibleGlobalResumeIconTours.length > 0;
 		const shouldShowForDismissedPromptTour = eligibleGlobalPromptTours.some(({ tourId, tour }) => {
 			return this.isPromptDismissed(tourId, tour) && !this.hasCompleted(tourId, tour) && !this.isOptedOut(tourId, tour);
 		});
-		const shouldShowForConfiguredPromptTour = eligibleGlobalPromptTours.some(({ tourId, tour }) => {
-			return shouldShowInfoIconForTour(tour) && !this.hasCompleted(tourId, tour) && !this.isOptedOut(tourId, tour);
-		});
-		const shouldShow = shouldShowForInfoIconTours || shouldShowForDismissedPromptTour || shouldShowForConfiguredPromptTour;
+		const shouldShow = shouldShowForInfoIconTours || shouldShowForDismissedPromptTour;
 
 		document.querySelectorAll('[data-feature-tour-resume-trigger]').forEach((element) => {
 			element.style.display = shouldShow ? 'inline-flex' : 'none';
@@ -524,6 +553,10 @@ class FeatureTourManager {
 			return false;
 		}
 
+		if (tour.admin_only && !this.config.is_admin) {
+			return false;
+		}
+
 		if (!routeMatches(this.config.current_route || null, tour.routes || [])) {
 			return false;
 		}
@@ -573,6 +606,7 @@ class FeatureTourManager {
 		this.runner = new FeatureTourRunner({
 			tourId,
 			tour,
+			isAdmin: Boolean(this.config.is_admin),
 			anchors: this.config.anchors || {},
 			actions: this.config.actions || {},
 			targetScopeSelector: this.resolveModalScopeSelector(effectiveModalId),
@@ -733,7 +767,7 @@ class FeatureTourManager {
 	}
 
 	startFirstInfoIconEligible({ force = false, modalId = null } = {}) {
-		const infoIconTour = this.getEligibleInfoIconTours({ modalId })[0];
+		const infoIconTour = this.getEligibleResumeIconTours({ modalId })[0];
 
 		if (!infoIconTour) {
 			return false;

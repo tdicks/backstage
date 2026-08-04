@@ -19,9 +19,10 @@ import {
 } from './shared';
 
 export class FeatureTourRunner {
-	constructor({ tourId, tour, anchors, actions, state, targetScopeSelector = null, queuePosition = null, queueTotal = null }) {
+	constructor({ tourId, tour, isAdmin = false, anchors, actions, state, targetScopeSelector = null, queuePosition = null, queueTotal = null }) {
 		this.tourId = tourId;
 		this.tour = tour;
+		this.isAdmin = Boolean(isAdmin);
 		this.anchors = anchors || {};
 		this.actions = actions || {};
 		this.state = state;
@@ -45,11 +46,13 @@ export class FeatureTourRunner {
 		this.connectorFollowUntil = 0;
 		this.connectorRevealTimeoutId = null;
 		this.pendingAfterActionsTimeoutId = null;
+		this.pendingContentSwapTimeoutId = null;
 		this.panelPlacementCacheTimeoutId = null;
 		this.lastConnectorAnimationStepIndex = -1;
 		this.renderSequence = 0;
 		this.panelPlacementByStep = {};
 		this.lastPanelPlacement = null;
+		this.deferStepContentSwap = false;
 		this._finished = false;
 		this.root = null;
 		this.active = false;
@@ -125,7 +128,13 @@ export class FeatureTourRunner {
 				continue;
 			}
 
-			const steps = Array.isArray(variant.steps) ? variant.steps : [];
+			const steps = (Array.isArray(variant.steps) ? variant.steps : []).filter((step) => {
+				if (!step || typeof step !== 'object') {
+					return false;
+				}
+
+				return !step.admin_only || this.isAdmin;
+			});
 
 			if (steps.length > 0) {
 				return steps;
@@ -476,6 +485,24 @@ export class FeatureTourRunner {
 		}
 	}
 
+	stopPendingContentSwap() {
+		if (this.pendingContentSwapTimeoutId !== null) {
+			window.clearTimeout(this.pendingContentSwapTimeoutId);
+			this.pendingContentSwapTimeoutId = null;
+		}
+	}
+
+	applyStepText(step) {
+		const stepLabel = `Step ${this.currentStepIndex + 1} of ${this.steps.length}`;
+		this.stepLabel.textContent = this.queueTotal && this.queueTotal > 1 && this.queuePosition
+			? `Tour ${this.queuePosition} of ${this.queueTotal} · ${stepLabel}`
+			: stepLabel;
+		setRichTextWithIcons(this.title, step.title);
+		setRichTextWithIcons(this.body, step.body);
+		this.backButton.disabled = this.currentStepIndex === 0;
+		this.nextButton.textContent = this.currentStepIndex === this.steps.length - 1 ? 'Done' : 'Next';
+	}
+
 	stopPendingPanelPlacementCache() {
 		if (this.panelPlacementCacheTimeoutId !== null) {
 			window.clearTimeout(this.panelPlacementCacheTimeoutId);
@@ -621,6 +648,7 @@ export class FeatureTourRunner {
 
 	hideCalloutElements() {
 		this.stopPendingAfterActions();
+		this.stopPendingContentSwap();
 		this.stopPendingPanelPlacementCache();
 		this.stopConnectorFollow();
 		this.activeTargetRect = null;
@@ -690,14 +718,15 @@ export class FeatureTourRunner {
 			}
 		}
 
-		const stepLabel = `Step ${this.currentStepIndex + 1} of ${this.steps.length}`;
-		this.stepLabel.textContent = this.queueTotal && this.queueTotal > 1 && this.queuePosition
-			? `Tour ${this.queuePosition} of ${this.queueTotal} · ${stepLabel}`
-			: stepLabel;
-		setRichTextWithIcons(this.title, step.title);
-		setRichTextWithIcons(this.body, step.body);
-		this.backButton.disabled = this.currentStepIndex === 0;
-		this.nextButton.textContent = this.currentStepIndex === this.steps.length - 1 ? 'Done' : 'Next';
+		this.stopPendingContentSwap();
+		const shouldDeferStepText = this.deferStepContentSwap
+			&& this.panel?.style.visibility !== 'hidden'
+			&& this.panel?.style.opacity !== '0';
+		this.deferStepContentSwap = false;
+
+		if (!shouldDeferStepText) {
+			this.applyStepText(step);
+		}
 
 		const hasTarget = typeof step?.target === 'string' && step.target.trim() !== '';
 
@@ -705,6 +734,23 @@ export class FeatureTourRunner {
 			this.pendingTargetAttempts = 0;
 			this.pendingTargetStepIndex = null;
 			this.renderUntargetedStep();
+
+			if (shouldDeferStepText) {
+				const scheduledStepIndex = this.currentStepIndex;
+				const panelTransitionMs = 230;
+
+				this.pendingContentSwapTimeoutId = window.setTimeout(() => {
+					this.pendingContentSwapTimeoutId = null;
+
+					if (!this.active || renderToken !== this.renderSequence || this.currentStepIndex !== scheduledStepIndex) {
+						return;
+					}
+
+					this.applyStepText(step);
+					this.positionPanelCentered();
+				}, panelTransitionMs);
+			}
+
 			this.scheduleAfterActionsForCurrentStep(renderToken);
 			return;
 		}
@@ -755,6 +801,26 @@ export class FeatureTourRunner {
 		}
 
 		this.renderStepTargets(visibleTargets, viewMode);
+
+		if (shouldDeferStepText) {
+			const scheduledStepIndex = this.currentStepIndex;
+			const panelTransitionMs = 230;
+
+			this.pendingContentSwapTimeoutId = window.setTimeout(() => {
+				this.pendingContentSwapTimeoutId = null;
+
+				if (!this.active || renderToken !== this.renderSequence || this.currentStepIndex !== scheduledStepIndex) {
+					return;
+				}
+
+				this.applyStepText(step);
+
+				if (this.activeTargetRect) {
+					this.positionPanelAndArrow(this.activeTargetRect, this.activeTargetRect);
+				}
+			}, panelTransitionMs);
+		}
+
 		this.scheduleAfterActionsForCurrentStep(renderToken);
 	}
 
@@ -1259,7 +1325,9 @@ export class FeatureTourRunner {
 
 		this.renderSequence += 1;
 		this.stopPendingAfterActions();
+		this.stopPendingContentSwap();
 		this.hideArrowsImmediately();
+		this.deferStepContentSwap = true;
 		this.currentStepIndex += 1;
 		this.beforeActionsExecutedForStep = null;
 		this.afterActionsExecutedForStep = null;
@@ -1280,6 +1348,7 @@ export class FeatureTourRunner {
 
 		this.renderSequence += 1;
 		this.stopPendingAfterActions();
+		this.stopPendingContentSwap();
 		this.hideArrowsImmediately();
 		const targetStepIndex = currentStepIndex - 1;
 		const beforeActionsCompleted = await this.runBeforeActionsForStep(currentStepIndex);
@@ -1291,6 +1360,7 @@ export class FeatureTourRunner {
 		this.currentStepIndex = targetStepIndex;
 		this.beforeActionsExecutedForStep = this.currentStepIndex;
 		this.afterActionsExecutedForStep = null;
+		this.deferStepContentSwap = true;
 		void this.renderCurrentStep();
 	}
 
@@ -1312,6 +1382,7 @@ export class FeatureTourRunner {
 		this.active = false;
 		this.removeFromModalStack();
 		this.stopPendingAfterActions();
+		this.stopPendingContentSwap();
 		this.stopPendingPanelPlacementCache();
 		this.stopConnectorFollow();
 

@@ -15,6 +15,10 @@ anchors:
     selector: '[data-tour="profile-notification-snooze"]'
   profile-notification-matrix:
     selector: '[data-tour="profile-notification-matrix"]'
+  profile-deletion-section:
+    selector: '[data-tour="profile-deletion-section"]'
+  profile-information-section:
+    selector: '[data-tour="profile-information-section"]'
 
 tours:
   profile-settings-tour:
@@ -27,17 +31,20 @@ tours:
     variants:
       all:
         steps:
+          - title: 'Profile settings'
+            body: 'Here''s your basic profile information. Your Bio is shown on Who''s Who and is perfect for highlighting your musical background and interests.'
+            target: profile-information-section
           - title: 'Slot coverage basics'
-            body: 'Slot coverage controls which parts you want to see in Slot Finder. Mark parts you can cover to prioritize them in results.'
+            body: 'Slot coverage controls which parts you want to see in Find a Slot and also influences the Quick Set system.'
             target: profile-slot-coverage-section
           - title: 'Slot coverage states'
-            body: 'Each chip cycles through can cover, unsure, and will not cover. Set these to keep slot suggestions relevant.'
+            body: 'Each chip cycles through "can cover", "unsure", and "will not cover". Set these to keep slot suggestions relevant.'
             target: profile-slot-coverage-chips
           - title: 'Privacy controls'
-            body: 'Privacy settings decide where your profile appears to other users across the app.'
+            body: 'Privacy settings decide where your profile information appears to other users across the app.'
             target: profile-privacy-section
           - title: 'Privacy toggles'
-            body: 'Use these switches to hide yourself from the who''s who directory or slot proposal lists when needed.'
+            body: 'Use these switches to hide yourself from the Who''s Who directory or slot proposal lists when needed.'
             target: profile-privacy-toggles
           - title: 'Notification settings'
             body: 'Notification preferences let you choose which events notify you and which channels are used.'
@@ -45,3 +52,6 @@ tours:
           - title: 'Quiet hours and channels'
             body: 'Use snooze for temporary quiet hours, then fine-tune channel checkboxes to control popup, email, and push delivery.'
             target: profile-notification-snooze
+          - title: 'Account deletion'
+            body: 'Anonymisation means all your personal info is wiped, but your contributions will remain.'
+            target: profile-deletion-section

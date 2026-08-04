@@ -65,6 +65,57 @@ YAML);
     }
 });
 
+test('feature tour config validator warns about unreferenced anchors and actions', function () {
+    $path = resource_path('tours/10-welcome.yaml');
+    $original = File::get($path);
+
+    File::put($path, <<<'YAML'
+version: 1
+
+anchors:
+    used-anchor: '#used-anchor'
+    unused-anchor: '#unused-anchor'
+
+actions:
+    use-anchor:
+        type: click
+        target: used-anchor
+    unused-action:
+        type: click
+        target: used-anchor
+
+tours:
+    warning-tour:
+        once_key: warning-tour
+        trigger:
+            mode: button
+            button:
+                target: used-anchor
+        routes:
+            - dashboard
+        variants:
+            desktop:
+                media_query: '(min-width: 640px)'
+                steps:
+                    - title: 'Warning'
+                      body: 'This tour is valid but leaves one anchor and one action unused.'
+                      target: used-anchor
+                      before:
+                        - use-anchor
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(0)
+            ->and($output)->toContain('WARNING: Anchor [unused-anchor] is defined but never referenced by any tour target or action.')
+            ->and($output)->toContain('WARNING: Action [unused-action] is defined but never referenced by any tour step or trigger.');
+    } finally {
+        File::put($path, $original);
+    }
+});
+
 test('feature tour config validator accepts info-icon trigger mode without a button target', function () {
     $path = resource_path('tours/001-info-icon-trigger-test.yaml');
 
@@ -193,6 +244,211 @@ YAML);
 
         expect($payload['tours']['prompt-info-icon-payload-tour']['trigger']['show_info_icon'] ?? null)
             ->toBeTrue();
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator accepts admin_only as a boolean flag', function () {
+    $path = resource_path('tours/001-admin-only-tour-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    admin-only-tour:
+        once_key: admin-only-tour-v1
+        authenticated: true
+        admin_only: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Admin only'
+                      body: 'This tour is only for admin users.'
+                      target: '#admin-only-tour-target'
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+
+        expect($exitCode)->toBe(0);
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator rejects non-boolean admin_only values', function () {
+    $path = resource_path('tours/001-admin-only-invalid-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    invalid-admin-only-tour:
+        once_key: invalid-admin-only-tour-v1
+        authenticated: true
+        admin_only: 'yes'
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Invalid admin only'
+                      body: 'This value should be rejected.'
+                      target: '#invalid-admin-only-tour-target'
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(1)
+            ->and($output)->toContain('admin_only must be true or false.');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour payload preserves admin_only and user role flag', function () {
+    $path = resource_path('tours/001-admin-only-payload-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    admin-only-payload-tour:
+        once_key: admin-only-payload-tour-v1
+        authenticated: true
+        admin_only: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Admin payload'
+                      body: 'Payload should preserve admin-only config.'
+                      target: '#admin-only-payload-tour-target'
+YAML);
+
+    try {
+        $payload = app(FeatureTourConfig::class)->payloadForRequest(User::factory()->make(['is_admin' => true]));
+
+        expect($payload['is_admin'] ?? null)->toBeTrue()
+            ->and($payload['tours']['admin-only-payload-tour']['admin_only'] ?? null)->toBeTrue();
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator accepts step-level admin_only as a boolean flag', function () {
+    $path = resource_path('tours/001-step-admin-only-tour-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    step-admin-only-tour:
+        once_key: step-admin-only-tour-v1
+        authenticated: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'General step'
+                      body: 'Visible to everyone.'
+                      target: '#step-admin-only-general-target'
+                    - title: 'Admin step'
+                      body: 'Only visible to admins.'
+                      admin_only: true
+                      target: '#step-admin-only-admin-target'
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+
+        expect($exitCode)->toBe(0);
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator rejects non-boolean step-level admin_only values', function () {
+    $path = resource_path('tours/001-step-admin-only-invalid-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    step-admin-only-invalid-tour:
+        once_key: step-admin-only-invalid-tour-v1
+        authenticated: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Invalid admin step'
+                      body: 'This should fail validation.'
+                      admin_only: maybe
+                      target: '#step-admin-only-invalid-target'
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(1)
+            ->and($output)->toContain('step [0] admin_only must be true or false.');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour payload preserves step-level admin_only flag', function () {
+    $path = resource_path('tours/001-step-admin-only-payload-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    step-admin-only-payload-tour:
+        once_key: step-admin-only-payload-tour-v1
+        authenticated: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'General step'
+                      body: 'Visible to everyone.'
+                      target: '#step-admin-only-payload-general-target'
+                    - title: 'Admin step'
+                      body: 'Only visible to admins.'
+                      admin_only: true
+                      target: '#step-admin-only-payload-admin-target'
+YAML);
+
+    try {
+        $payload = app(FeatureTourConfig::class)->payloadForRequest(User::factory()->make(['is_admin' => false]));
+        $steps = $payload['tours']['step-admin-only-payload-tour']['variants']['default']['steps'] ?? [];
+
+        expect($steps[0]['admin_only'] ?? null)->toBeFalse()
+            ->and($steps[1]['admin_only'] ?? null)->toBeTrue();
     } finally {
         File::delete($path);
     }

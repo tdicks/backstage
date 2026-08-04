@@ -1,20 +1,25 @@
 version: 1
 
 anchors:
-  jam-sessions-desktop: '[data-tour="jam-sessions-desktop"]'
-  find-slot-desktop: '[data-tour="find-slot-desktop"]'
+  jam-sessions-navigation: '[data-tour="jam-sessions-navigation"]'
+  jam-sessions-mobile: '[data-tour="jam-sessions-mobile"]'
   profile-menu-trigger: '[data-tour="profile-menu-trigger"]'
   profile-link-desktop: '[data-tour="profile-link-desktop"]'
   mobile-menu-toggle: '[data-tour="mobile-menu-toggle"]'
-  jam-sessions-mobile: '[data-tour="jam-sessions-mobile"]'
-  find-slot-mobile: '[data-tour="find-slot-mobile"]'
   profile-link-mobile: '[data-tour="profile-link-mobile"]'
+  dashboard-get-started-quest: '[data-tour="dashboard-get-started-quest"]'
 
 actions:
   open-mobile-menu:
     type: ensure-visible
     target: mobile-menu-toggle
     until_visible: jam-sessions-mobile
+    wait_ms: 300
+    max_attempts: 1
+  close-mobile-menu:
+    type: click
+    target: mobile-menu-toggle
+    until_hidden: jam-sessions-mobile
     wait_ms: 300
     max_attempts: 1
   open-desktop-profile-menu:
@@ -44,35 +49,44 @@ tours:
         media_query: '(min-width: 640px)'
         steps:
           - title: 'Welcome to Backstage!'
-            body: 'Go here for a list of upcoming jams. Click a jam session to see which sets are planned.'
-            target: jam-sessions-desktop
-          - title: 'Find a Slot'
-            body: 'The "Find a Slot" tool shows a list of open slots according to your slot preferences.'
-            target: find-slot-desktop
+            body: 'Thanks for registering! Here is a quick intro tour to get you started.'
+          - title: 'Navigation'
+            body: 'Everything you need is in the top navigation bar. You can find upcoming jams, open sets, and our song catalogue here.'
+            target: jam-sessions-navigation
           - title: 'Build Your Profile'
             body: "Head over to your profile to add a bio which will appear on Who's Who. You can set which slots you like to play, add a bio, and decide which notifications you want to get."
             before:
               - open-desktop-profile-menu
             target: profile-link-desktop
-          - title: 'Feature Guides'
-            body: 'Some pages and dialogs will show this info icon. Click it to begin a tour of some features you may have missed.'
+          - title: 'Feature Tours'
+            body: 'Some pages and dialogs will show this info icon. Click it to begin a tour of features.'
             target: info-button
+          - title: 'Get Started'
+            body: 'We''ll leave you just here, happy jamming!'
+            target: dashboard-get-started-quest
       mobile:
         media_query: '(max-width: 639px)'
         steps:
           - title: 'Welcome to Backstage!'
-            body: 'Start here for a list of upcoming jams.'
-            before:
+            body: 'Thanks for registering! Here is a quick intro tour to get you started.'
+          - title: 'Navigation'
+            body: 'Tap this button to open the menu.'
+            target: mobile-menu-toggle
+            next:
               - open-mobile-menu
+          - title: 'Navigation'
             target: jam-sessions-mobile
-          - title: 'Find Open Sets'
-            body: 'Here you can find any upcoming sets looking for performers.'
-            before:
-              - open-mobile-menu
-            target: find-slot-mobile
-          - title: 'Complete Your Profile'
-            body: "Also, don't forget to fill out your profile!"
-            before:
-              - open-mobile-profile-menu
+            body: 'These are your main navigation links.'
+          - title: 'Build Your Profile'
+            body: "Head over to your profile to add a bio and review other settings."
             target: profile-link-mobile
+          - title: 'Feature Tours'
+            body: 'Some pages and dialogs will show this info icon. Click it to begin a tour of features.'
+            target: info-button
+            next:
+              - close-mobile-menu
+          - title: 'Get Started'
+            body: 'We''ll leave you just here, happy jamming!'
+            target: dashboard-get-started-quest
+
 

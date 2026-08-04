@@ -50,6 +50,7 @@ class FeatureTourConfig
      *     version:int,
      *     current_route:string|null,
      *     authenticated:bool,
+     *     is_admin:bool,
      *     state_update_url:string|null,
      *     state:array{completed: array<string, bool>, prompt_dismissed: array<string, bool>, opted_out: array<string, bool>},
      *     anchors:array<string, array{selector: string, view: string}>,
@@ -65,6 +66,7 @@ class FeatureTourConfig
             'version' => (int) ($config['version'] ?? 1),
             'current_route' => request()->route()?->getName(),
             'authenticated' => $user !== null,
+            'is_admin' => (bool) ($user?->is_admin ?? false),
             'state_update_url' => $user !== null ? route('feature-tours.state.update') : null,
             'state' => $this->normalizeState($user?->feature_tour_state),
             'anchors' => $this->normalizeAnchors($config['anchors'] ?? []),
@@ -117,6 +119,8 @@ class FeatureTourConfig
         $actions = $this->normalizeActions($config['actions'] ?? []);
         $tours = $this->normalizeTours($config['tours'] ?? []);
         $availableDataTourMarkers = $this->collectDataTourMarkersFromViews();
+        $referencedAnchors = [];
+        $referencedActions = [];
 
         if (! is_numeric($config['version'] ?? null)) {
             $warnings[] = 'Top-level version should be an integer.';
@@ -196,6 +200,8 @@ class FeatureTourConfig
                     continue;
                 }
 
+                $referencedAnchors[$value] = true;
+
                 $resolvedSelector = $this->resolveSelectorReference((string) $value, $anchors);
 
                 if (! is_string($resolvedSelector)) {
@@ -228,6 +234,10 @@ class FeatureTourConfig
 
             if (! in_array($triggerMode, ['auto', 'prompt', 'button', 'info-icon', 'info-icon-always'], true)) {
                 $errors[] = "Tour [{$tourId}] has unsupported trigger mode [{$triggerMode}].";
+            }
+
+            if (array_key_exists('admin_only', $tour) && ! is_bool($tour['admin_only'])) {
+                $errors[] = "Tour [{$tourId}] admin_only must be true or false.";
             }
 
             if (array_key_exists('show_info_icon', $trigger) && ! is_bool($trigger['show_info_icon'])) {
@@ -264,6 +274,10 @@ class FeatureTourConfig
                 } elseif (! $this->isSelectorReference($target) && ! array_key_exists($target, $anchors)) {
                     $errors[] = "Tour [{$tourId}] button.target references unknown anchor [{$target}].";
                 } else {
+                    if (! $this->isSelectorReference($target)) {
+                        $referencedAnchors[$target] = true;
+                    }
+
                     $resolvedSelector = $this->resolveSelectorReference($target, $anchors);
                     $missingDataTourMarker = is_string($resolvedSelector)
                         ? $this->missingDataTourMarker($resolvedSelector, $availableDataTourMarkers)
@@ -285,6 +299,10 @@ class FeatureTourConfig
                         continue;
                     }
 
+                    if (array_key_exists('admin_only', $step) && ! is_bool($step['admin_only'])) {
+                        $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] admin_only must be true or false.";
+                    }
+
                     $rawTarget = $step['target'] ?? null;
                     $target = is_string($rawTarget) ? trim($rawTarget) : '';
 
@@ -295,6 +313,10 @@ class FeatureTourConfig
                     if (! $this->isSelectorReference($target) && ! array_key_exists($target, $anchors)) {
                         $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] references unknown anchor [{$target}].";
                     } else {
+                        if (! $this->isSelectorReference($target)) {
+                            $referencedAnchors[$target] = true;
+                        }
+
                         $resolvedSelector = $this->resolveSelectorReference($target, $anchors);
                         $missingDataTourMarker = is_string($resolvedSelector)
                             ? $this->missingDataTourMarker($resolvedSelector, $availableDataTourMarkers)
@@ -313,10 +335,24 @@ class FeatureTourConfig
 
                             if (! array_key_exists($actionName, $actions)) {
                                 $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] references unknown action [{$actionName}] in [{$hookName}].";
+                            } else {
+                                $referencedActions[$actionName] = true;
                             }
                         }
                     }
                 }
+            }
+        }
+
+        foreach (array_keys($anchors) as $anchorName) {
+            if (! array_key_exists($anchorName, $referencedAnchors)) {
+                $warnings[] = "Anchor [{$anchorName}] is defined but never referenced by any tour target or action.";
+            }
+        }
+
+        foreach (array_keys($actions) as $actionName) {
+            if (! array_key_exists($actionName, $referencedActions)) {
+                $warnings[] = "Action [{$actionName}] is defined but never referenced by any tour step or trigger.";
             }
         }
 
@@ -606,6 +642,7 @@ class FeatureTourConfig
                         $normalizedStep = [
                             'title' => $title,
                             'body' => $body,
+                            'admin_only' => (bool) ($step['admin_only'] ?? false),
                             'before' => $before,
                             'after' => $after,
                             'next' => $next,
@@ -649,6 +686,7 @@ class FeatureTourConfig
                     ? (string) $tour['once_key']
                     : $tourId,
                 'authenticated' => (bool) ($tour['authenticated'] ?? true),
+                'admin_only' => (bool) ($tour['admin_only'] ?? false),
                 'priority' => (int) ($tour['priority'] ?? 100),
                 'routes' => $routes,
                 'trigger' => $this->normalizeTrigger($tour['trigger'] ?? []),
