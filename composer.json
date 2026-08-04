@@ -15,7 +15,8 @@
         "laravel/socialite": "*",
         "laravel/tinker": "^3.0",
         "minishlink/web-push": "^11.0",
-        "staudenmeir/eloquent-has-many-deep": "*"
+        "staudenmeir/eloquent-has-many-deep": "*",
+        "symfony/yaml": "^8.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

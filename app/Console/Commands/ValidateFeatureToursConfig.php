@@ -42,7 +42,13 @@ class ValidateFeatureToursConfig extends Command
         if ((bool) $this->option('dump-config')) {
             $this->newLine();
             $this->line('Merged config:');
-            $this->line(Yaml::dump($this->featureTourConfig->mergedConfig(), 99, 2));
+
+            if (class_exists(Yaml::class)) {
+                $this->line(Yaml::dump($this->featureTourConfig->mergedConfig(), 99, 2));
+            } else {
+                $this->warn('Symfony YAML component is unavailable; dumping JSON instead.');
+                $this->line(json_encode($this->featureTourConfig->mergedConfig(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+            }
         }
 
         foreach ($errors as $error) {
