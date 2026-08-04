@@ -78,6 +78,7 @@
                                         : 'border-slate-200 bg-white/95 shadow-sm';
                                 @endphp
                                 <article
+                                    data-tour="find-a-slot-card"
                                     x-data="{
                                         collapsed: false,
                                         setKey: @js($setKey),
@@ -170,7 +171,7 @@
                                                     <h5 class="text-sm font-semibold text-slate-900">{{ $song->artist }} - {{ $song->title }}</h5>
                                                 </div>
 
-                                                <div class="mt-3 flex flex-wrap gap-2">
+                                                <div class="mt-3 flex flex-wrap gap-2" data-tour="find-a-slot-slots">
                                                     @foreach ($songGroup['slots'] as $slot)
                                                         @php
                                                             $slotLabel = $slotOptions[$slot->name] ?? str($slot->name)->replace('_', ' ')->title()->toString();

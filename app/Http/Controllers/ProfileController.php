@@ -163,6 +163,7 @@ class ProfileController extends Controller
             'hide_from_slot_proposals' => true,
             'slot_coverage' => [],
             'notification_preferences' => null,
+            'feature_tour_state' => null,
         ])->save();
 
         $request->session()->invalidate();

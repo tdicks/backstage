@@ -1,4 +1,4 @@
-<section>
+<section data-tour="profile-notification-section">
     <header>
         <h2 class="text-lg font-medium text-gray-900">
             {{ __('Notification Preferences') }}
@@ -48,6 +48,7 @@
         </div>
 
         <div
+            data-tour="profile-notification-snooze"
             class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
             x-data="{
                 snoozed: @js($user->notificationsAreSnoozed()),
@@ -106,7 +107,7 @@
             <p x-show="statusMessage" x-cloak x-text="statusMessage" class="mt-3 text-xs text-slate-600" aria-live="polite"></p>
         </div>
 
-        <div class="space-y-6">
+        <div data-tour="profile-notification-matrix" class="space-y-6">
             @forelse ($notificationOptions as $group)
                 @php($isAdminNotificationGroup = $group['category'] === 'admin')
                 <div

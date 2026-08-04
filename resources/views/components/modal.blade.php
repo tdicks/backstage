@@ -82,6 +82,7 @@ $maxWidth = [
         $watch('show', value => {
             if (value) {
                 {{ $attributes->has('focusable') ? 'setTimeout(() => firstFocusable().focus(), 100)' : '' }}
+                $dispatch('modal-opened', { name: modalName })
             } else {
                 removeFromStack()
                 $dispatch('modal-closed', { name: modalName })
@@ -96,6 +97,8 @@ $maxWidth = [
     x-on:keydown.shift.tab.prevent="if (show && isTopModal()) { prevFocusable().focus() }"
     x-show="show"
     data-modal-overlay
+    data-feature-tour-modal="{{ $name }}"
+    x-bind:data-feature-tour-modal-open="show ? 'true' : 'false'"
     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6 sm:px-0"
     style="display: {{ $show ? 'block' : 'none' }};"
 >
@@ -123,6 +126,20 @@ $maxWidth = [
         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
         x-transition:leave-end="opacity-0 translate-y-1 scale-[0.98]"
     >
+        <button
+            type="button"
+            data-feature-tour-launch
+            data-feature-tour-start-first-prompt
+            data-feature-tour-modal-launch="{{ $name }}"
+            data-feature-tour-modal-trigger="{{ $name }}"
+            class="absolute right-14 top-4 z-[70] inline-flex h-5 w-5 items-center justify-center text-amber-500 transition hover:text-amber-700"
+            title="Feature tour"
+            aria-label="Start feature tour"
+            aria-hidden="true"
+            style="display: none;"
+        >
+            <x-heroicon-m-information-circle class="h-5 w-5" aria-hidden="true" />
+        </button>
         {{ $slot }}
     </div>
 </div>

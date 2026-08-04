@@ -87,7 +87,7 @@
             </div>
         @endif
 
-        <div class="mb-4">
+        <div class="mb-4" data-tour="jam-standards-search">
             <div class="flex flex-wrap items-center justify-between gap-3">
             <form x-ref="catalogSearch" method="GET" action="{{ route('jam-standards.index') }}" @submit.prevent="searchCatalog()" class="grid flex-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
             <x-text-input name="q" value="{{ request('q') }}" class="block w-full" placeholder="Search artist or title" />
@@ -102,7 +102,7 @@
             <x-modal-secondary-button type="submit" x-bind:disabled="searchLoading" x-text="searchLoading ? 'Searching' : 'Search'"></x-modal-secondary-button>
             <x-modal-secondary-button type="button" x-bind:disabled="searchLoading" @click="resetCatalogSearch()">Reset</x-modal-secondary-button>
             </form>
-            <x-modal-primary-button type="button" x-show="selectedSongIds.length" x-cloak @click="openQuickSetModal()">Create Set <span class="ml-1" x-text="`(${selectedSongIds.length})`"></span></x-modal-primary-button>
+            <x-modal-primary-button data-tour="jam-standards-create-set" type="button" x-show="selectedSongIds.length" x-cloak @click="openQuickSetModal()">Create Set <span class="ml-1" x-text="`(${selectedSongIds.length})`"></span></x-modal-primary-button>
             </div>
             <div x-ref="performerCapabilityLegend" class="mt-3 flex items-center gap-2">
                 @if ($selectedPerformers->isNotEmpty())
@@ -113,7 +113,7 @@
         </div>
 
         <div class="overflow-x-auto border border-slate-200 bg-white shadow-sm">
-            <table class="min-w-full divide-y divide-slate-200 text-left">
+            <table data-tour="jam-standards-songs-list" class="min-w-full divide-y divide-slate-200 text-left">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
                         <th scope="col" class="w-12 px-4 py-3"><span class="sr-only">Select song</span></th>
@@ -126,12 +126,12 @@
                 <tbody x-ref="catalogRows" class="divide-y divide-slate-200">
                     @forelse ($catalogSongs as $song)
                         <tr data-catalog-song-id="{{ $song->id }}" x-bind:class="catalogRowClass(selectedSongIds.includes({{ $song->id }}))">
-                            <td class="cursor-pointer px-4 py-3" @click="if ($event.target !== $el.querySelector('input')) { $el.querySelector('input').click() }">
+                            <td data-tour="jam-standards-select-songs" class="cursor-pointer px-4 py-3" @click="if ($event.target !== $el.querySelector('input')) { $el.querySelector('input').click() }">
                                 <input type="checkbox" value="{{ $song->id }}" @change="toggleSong({{ $song->id }}, $event.target.checked)" class="cursor-pointer rounded border-slate-300 text-amber-600 focus:ring-amber-500" aria-label="Select {{ $song->artist }} - {{ $song->title }}">
                             </td>
                             <td data-catalog-artist class="px-4 py-3 text-sm font-medium text-slate-900">{{ $song->artist }}</td>
                             <td data-catalog-title class="px-4 py-3 text-sm text-slate-700"><span>{{ $song->title }}</span>@if ($song->notes)<p class="mt-1 text-xs text-slate-500">{{ $song->notes }}</p>@endif</td>
-                            <td data-catalog-slots class="px-4 py-3 text-sm text-slate-700">
+                            <td data-tour="jam-standards-select-parts" data-catalog-slots class="px-4 py-3 text-sm text-slate-700">
                                 @if ($song->slots->isNotEmpty())
                                     <form class="flex flex-wrap gap-2">
                                         @foreach ($song->slots as $slot)
@@ -254,9 +254,9 @@
 
         <template x-teleport="body">
             <x-modal name="catalog-quick-set" maxWidth="2xl" focusable>
-                <div class="flex max-h-[calc(100vh-3rem)] flex-col text-slate-900">
+                <div data-tour="jam-standards-quick-set-modal" class="flex max-h-[calc(100vh-3rem)] flex-col text-slate-900">
                     <div class="border-b border-slate-200 px-6 py-4"><h3 class="text-lg font-semibold">Quick Set</h3></div>
-                    <form method="POST" action="{{ route('jam-standards.quick-set.store') }}" @submit="if (! confirmQuickSetSubmission()) { $event.preventDefault() }" class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+                    <form data-tour="jam-standards-quick-set-form" method="POST" action="{{ route('jam-standards.quick-set.store') }}" @submit="if (! confirmQuickSetSubmission()) { $event.preventDefault() }" class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
                             @csrf
                             <p class="text-sm font-semibold text-slate-700">Select the parts you want to take on for each song.</p>
                             <template x-for="song in selectedQuickSetSongs()" :key="song.id">
@@ -270,7 +270,7 @@
                             <div class="grid gap-4 sm:grid-cols-2"><div><label for="catalog-quick-set-session" class="block text-sm font-medium text-slate-700">Jam Session <span class="text-rose-600" aria-hidden="true">*</span><span class="sr-only">required</span></label><select id="catalog-quick-set-session" name="jam_session_id" x-model="quickSetJamSessionId" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" required><option value="">Choose a session</option>@foreach ($sessions as $session)<option value="{{ $session->id }}" @disabled($session->is_closed && ! auth()->user()->is_admin)>{{ $session->name }} ({{ $session->date->format('M j, Y') }})</option>@endforeach</select></div><div><label for="catalog-quick-set-name" class="block text-sm font-medium text-slate-700">Set Name <span class="text-rose-600" aria-hidden="true">*</span><span class="sr-only">required</span></label><x-text-input id="catalog-quick-set-name" name="set_name" x-model="quickSetName" class="mt-1 block w-full" required /></div></div>
                             <div class="flex flex-wrap gap-4"><label class="flex cursor-pointer items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="is_hidden" value="1" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500"><x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" /> Hidden set</label><label class="flex cursor-pointer items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="free_for_all" value="1" class="rounded border-slate-300 text-amber-600 shadow-sm focus:ring-amber-500"><x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" /> Free for all mode</label></div>
                         </div>
-                        <div class="flex justify-end gap-2 border-t border-slate-200 pt-4"><x-modal-secondary-button type="button" @click="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'catalog-quick-set' }))">Cancel</x-modal-secondary-button><x-modal-primary-button x-bind:disabled="!quickSetJamSessionId || !quickSetName.trim()" class="disabled:cursor-not-allowed disabled:opacity-40">Create Set</x-modal-primary-button></div>
+                        <div class="flex justify-end gap-2 border-t border-slate-200 pt-4"><x-modal-secondary-button type="button" @click="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'catalog-quick-set' }))">Cancel</x-modal-secondary-button><x-modal-primary-button data-tour="jam-standards-quick-set-submit" x-bind:disabled="!quickSetJamSessionId || !quickSetName.trim()" class="disabled:cursor-not-allowed disabled:opacity-40">Create Set</x-modal-primary-button></div>
                     </form>
                 </div>
             </x-modal>

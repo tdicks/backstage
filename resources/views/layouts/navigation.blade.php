@@ -95,7 +95,7 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <div class="relative inline-flex h-full items-center" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
+                    <div class="relative inline-flex h-full items-center" data-tour="jam-sessions-desktop" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
                         <button
                             @click="openJamSessions = !openJamSessions"
                             class="inline-flex h-full items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('sessions.*') ? 'border-amber-400 text-slate-100 focus:border-amber-300' : 'border-transparent text-slate-300 hover:text-slate-100 hover:border-slate-500 focus:text-slate-100 focus:border-slate-500' }} focus:outline-none"
@@ -159,7 +159,7 @@
                             x-cloak
                         >{{ $mySetsApprovalCount }}</span>
                     </x-nav-link>
-                    <x-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')">
+                    <x-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')" data-tour="find-slot-desktop">
                         {{ __('Find a Slot') }}
                     </x-nav-link>
                     <x-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
@@ -174,6 +174,20 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6 sm:gap-2">
+                <button
+                    type="button"
+                    data-tour="info-button"
+                    data-feature-tour-launch
+                    data-feature-tour-start-first-prompt
+                    data-feature-tour-resume-trigger
+                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-amber-300 transition hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 border-transparent hover:border-slate-500"
+                    title="Feature tour"
+                    aria-label="Start feature tour"
+                    aria-hidden="true"
+                    style="display: none;"
+                >
+                    <x-heroicon-m-information-circle class="h-5 w-5" aria-hidden="true" />
+                </button>
                 <button
                     type="button"
                     @click="toggleNotifications()"
@@ -200,7 +214,7 @@
 
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
-                        <button class="inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium leading-4 text-slate-100 transition ease-in-out duration-150 hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none">
+                        <button data-tour="profile-menu-trigger" class="inline-flex items-center rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-medium leading-4 text-slate-100 transition ease-in-out duration-150 hover:border-slate-700 hover:bg-slate-800 hover:text-white focus:outline-none">
                             <div>
                                 {{ Auth::user()->name }}
                                 @if (Auth::user()->is_admin)
@@ -218,7 +232,7 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
+                        <x-dropdown-link :href="route('profile.edit')" data-tour="profile-link-desktop">
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
@@ -299,6 +313,20 @@
                     x-cloak
                     aria-label="View pending My Sets approvals"
                 >{{ $mySetsApprovalCount }}</a>
+                <button
+                    type="button"
+                    data-tour="info-button"
+                    data-feature-tour-launch
+                    data-feature-tour-start-first-prompt
+                    data-feature-tour-resume-trigger
+                    class="inline-flex h-10 w-10 items-center justify-center border-b-2 text-amber-300 transition hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 border-transparent hover:border-slate-500"
+                    title="Feature tour"
+                    aria-label="Start feature tour"
+                    aria-hidden="true"
+                    style="display: none;"
+                >
+                    <x-heroicon-m-information-circle class="h-5 w-5" aria-hidden="true" />
+                </button>
                 <a
                     href="#"
                     @click.prevent="toggleNotifications()"
@@ -322,7 +350,7 @@
                 >
                     <x-heroicon-m-question-mark-circle class="h-5 w-5" aria-hidden="true" />
                 </a>
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button data-tour="mobile-menu-toggle" @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <x-heroicon-m-bars-3 :class="{'hidden': open, 'inline-flex': ! open }" class="h-6 w-6 inline-flex" aria-hidden="true" />
                     <x-heroicon-m-x-mark :class="{'hidden': ! open, 'inline-flex': open }" class="h-6 w-6 hidden" aria-hidden="true" />
                 </button>
@@ -333,7 +361,7 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')">
+            <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')" data-tour="jam-sessions-mobile">
                 {{ __('All Jam Sessions') }}
             </x-responsive-nav-link>
             <div class="mx-4 my-1 border-t border-slate-800"></div>
@@ -365,7 +393,7 @@
                     x-cloak
                 >{{ $mySetsApprovalCount }}</span>
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')">
+            <x-responsive-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')" data-tour="find-slot-mobile">
                 {{ __('Find a Slot') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
@@ -392,7 +420,7 @@
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
+                <x-responsive-nav-link :href="route('profile.edit')" data-tour="profile-link-mobile">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 

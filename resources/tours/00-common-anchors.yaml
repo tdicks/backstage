@@ -1,0 +1,4 @@
+version: 1
+
+anchors:
+  info-button: '[data-tour="info-button"]'

@@ -62,12 +62,12 @@
         </div>
 
         @if ($slotOptions)
-            <div>
+            <div data-tour="profile-slot-coverage-section">
                 <x-input-label :value="__('Slot Coverage')" />
                 <input type="hidden" name="slot_coverage_present" value="1">
                 <p class="mt-1 text-xs text-gray-500">Choose which slots you want to see in the Slot Finder. Green ticked slots will be given priority, while red crossed slots won't be shown at all.</p>
                 @php $coverageStates = \App\Models\User::slotCoverageStates(); @endphp
-                <div class="mt-2 flex flex-wrap gap-2">
+                <div data-tour="profile-slot-coverage-chips" class="mt-2 flex flex-wrap gap-2">
                     @foreach ($slotOptions as $key => $name)
                         @php $coverageState = old('slot_coverage.'.$key, $user->slotCoverageState($key)); @endphp
                         <div
@@ -127,7 +127,7 @@
         @endif
 
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+            <x-primary-button data-tour="profile-slot-coverage-save">{{ __('Save') }}</x-primary-button>
 
             @if (session('status') === 'Profile updated.')
                 <p

@@ -1,0 +1,78 @@
+version: 1
+
+anchors:
+  jam-sessions-desktop: '[data-tour="jam-sessions-desktop"]'
+  find-slot-desktop: '[data-tour="find-slot-desktop"]'
+  profile-menu-trigger: '[data-tour="profile-menu-trigger"]'
+  profile-link-desktop: '[data-tour="profile-link-desktop"]'
+  mobile-menu-toggle: '[data-tour="mobile-menu-toggle"]'
+  jam-sessions-mobile: '[data-tour="jam-sessions-mobile"]'
+  find-slot-mobile: '[data-tour="find-slot-mobile"]'
+  profile-link-mobile: '[data-tour="profile-link-mobile"]'
+
+actions:
+  open-mobile-menu:
+    type: ensure-visible
+    target: mobile-menu-toggle
+    until_visible: jam-sessions-mobile
+    wait_ms: 300
+    max_attempts: 1
+  open-desktop-profile-menu:
+    type: ensure-visible
+    target: profile-menu-trigger
+    until_visible: profile-link-desktop
+    wait_ms: 300
+    max_attempts: 1
+  open-mobile-profile-menu:
+    type: ensure-visible
+    target: mobile-menu-toggle
+    until_visible: profile-link-mobile
+    wait_ms: 300
+    max_attempts: 1
+
+tours:
+  welcome:
+    once_key: welcome-v1
+    authenticated: true
+    trigger:
+      mode: auto
+      show_info_icon: true  
+    routes:
+      - dashboard
+    variants:
+      desktop:
+        media_query: '(min-width: 640px)'
+        steps:
+          - title: 'Welcome to Backstage!'
+            body: 'Go here for a list of upcoming jams. Click a jam session to see which sets are planned.'
+            target: jam-sessions-desktop
+          - title: 'Find a Slot'
+            body: 'The "Find a Slot" tool shows a list of open slots according to your slot preferences.'
+            target: find-slot-desktop
+          - title: 'Build Your Profile'
+            body: "Head over to your profile to add a bio which will appear on Who's Who. You can set which slots you like to play, add a bio, and decide which notifications you want to get."
+            before:
+              - open-desktop-profile-menu
+            target: profile-link-desktop
+          - title: 'Feature Guides'
+            body: 'Some pages and dialogs will show this info icon. Click it to begin a tour of some features you may have missed.'
+            target: info-button
+      mobile:
+        media_query: '(max-width: 639px)'
+        steps:
+          - title: 'Welcome to Backstage!'
+            body: 'Start here for a list of upcoming jams.'
+            before:
+              - open-mobile-menu
+            target: jam-sessions-mobile
+          - title: 'Find Open Sets'
+            body: 'Here you can find any upcoming sets looking for performers.'
+            before:
+              - open-mobile-menu
+            target: find-slot-mobile
+          - title: 'Complete Your Profile'
+            body: "Also, don't forget to fill out your profile!"
+            before:
+              - open-mobile-profile-menu
+            target: profile-link-mobile
+

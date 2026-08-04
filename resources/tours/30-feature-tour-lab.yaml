@@ -1,0 +1,49 @@
+version: 1
+
+anchors:
+  tour-lab-control-1:
+    selector: '[data-tour="tour-lab-control-1"]'
+  tour-lab-control-2:
+    selector: '[data-tour="tour-lab-control-2"]'
+  tour-lab-control-3:
+    selector: '[data-tour="tour-lab-control-3"]'
+  tour-lab-large-single:
+    selector: '[data-tour="tour-lab-large-single"]'
+  tour-lab-small-multiple:
+    selector: '[data-tour="tour-lab-small-multiple"]'
+    view: multiple
+  tour-lab-large-multiple:
+    selector: '[data-tour="tour-lab-large-multiple"]'
+    view: multiple
+
+tours:
+  feature-tour-fallback-lab:
+    once_key: feature-tour-fallback-lab-v1
+    authenticated: true
+    trigger:
+      mode: button
+      button:
+        target: '[data-feature-tour-start="feature-tour-fallback-lab"]'
+    routes:
+      - feature-tours.lab
+    variants:
+      all:
+        steps:
+          - title: 'Control target A'
+            body: 'This small anchor should produce a normal callout placement.'
+            target: tour-lab-control-1
+          - title: 'Control target B'
+            body: 'Second compact target for baseline behavior.'
+            target: tour-lab-control-2
+          - title: 'Control target C'
+            body: 'Third compact target to confirm stable positioning before fallback scenarios.'
+            target: tour-lab-control-3
+          - title: 'Single oversized target'
+            body: 'When no side placement is possible, the panel should stay visible and center inside this highlighted region.'
+            target: tour-lab-large-single
+          - title: 'Multiple small targets'
+            body: 'These three compact markers share one selector and should render clean multiple-anchor highlighting.'
+            target: tour-lab-small-multiple
+          - title: 'Multiple oversized targets'
+            body: 'For multiple targets, fallback should center using the middle of the combined highlighted area.'
+            target: tour-lab-large-multiple

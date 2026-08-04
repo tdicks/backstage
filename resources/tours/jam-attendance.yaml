@@ -1,0 +1,25 @@
+version: 1
+
+anchors:
+  attendance-group: '[data-tour="attendance-group"]'
+
+tours:
+  jam-attendance:
+    once_key: jam-attendance-v1
+    authenticated: true
+    trigger:
+      mode: auto
+    routes:
+      - sessions.show
+    variants:
+      all:
+        steps:
+          - title: 'Jam attendance'
+            body: 'Manage your attendance for an upcoming jam here.'
+            target: attendance-group
+          - title: 'Jam attendance'
+            body: 'If you sign up for a slot and then cannot attend, marking yourself as Not Going will let you choose between freeing up your slots automatically, or making them claimable.'
+            target: attendance-group
+          - title: 'Jam attendance'
+            body: 'A claimable slot is one that you have signed up for, but others can request it or take it.'
+            target: attendance-group

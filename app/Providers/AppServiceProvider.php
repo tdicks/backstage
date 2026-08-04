@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AppNoticeService;
 use App\Services\ManualSlotTransferService;
 use App\Services\NotificationService;
+use App\Support\FeatureTourConfig;
 use App\Support\NotificationTypeCatalog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
@@ -77,12 +78,14 @@ class AppServiceProvider extends ServiceProvider
             $pendingApprovalCount = $this->resolvePendingApprovalCount($user);
             $pendingTotal = $unreadCount + $pendingApprovalCount;
             $titlePrefix = $pendingTotal > 0 ? "({$pendingTotal}) " : '';
+            $featureTourConfig = app(FeatureTourConfig::class)->payloadForRequest($user);
 
             $view->with('pageName', $pageName);
             $view->with('unreadNotificationCount', $unreadCount);
             $view->with('pendingApprovalCount', $pendingApprovalCount);
             $view->with('pendingTitleCount', $pendingTotal);
             $view->with('documentTitle', $titlePrefix.$pageName.' | Backstage');
+            $view->with('featureTourConfig', $featureTourConfig);
         });
 
         View::composer('layouts.app', function ($view): void {

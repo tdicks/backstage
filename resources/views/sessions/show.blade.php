@@ -58,7 +58,7 @@
                     })"
                     @keydown.escape.window="attendanceModalOpen = false; openDropoutChoices = false; openAdminDropoutChoices = false"
                 >
-                    <div class="inline-flex items-center gap-2">
+                    <div data-tour="attendance-group" class="inline-flex items-center gap-2">
                         <button
                             type="button"
                             @click="openAttendanceModal()"

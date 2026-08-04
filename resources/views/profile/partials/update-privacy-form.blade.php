@@ -1,4 +1,4 @@
-<section>
+<section data-tour="profile-privacy-section">
     <header>
         <h2 class="text-lg font-medium text-gray-900">
             {{ __('Privacy') }}
@@ -13,7 +13,7 @@
         @csrf
         @method('patch')
 
-        <ul class="space-y-3">
+        <ul data-tour="profile-privacy-toggles" class="space-y-3">
             <li>
                 <label for="hide_from_directory" class="inline-flex items-center gap-2 text-sm text-gray-700">
                     <input type="hidden" name="hide_from_directory" value="0">

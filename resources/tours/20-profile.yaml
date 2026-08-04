@@ -1,0 +1,47 @@
+version: 1
+
+anchors:
+  profile-slot-coverage-section:
+    selector: '[data-tour="profile-slot-coverage-section"]'
+  profile-slot-coverage-chips:
+    selector: '[data-tour="profile-slot-coverage-chips"]'
+  profile-privacy-section:
+    selector: '[data-tour="profile-privacy-section"]'
+  profile-privacy-toggles:
+    selector: '[data-tour="profile-privacy-toggles"]'
+  profile-notification-section:
+    selector: '[data-tour="profile-notification-section"]'
+  profile-notification-snooze:
+    selector: '[data-tour="profile-notification-snooze"]'
+  profile-notification-matrix:
+    selector: '[data-tour="profile-notification-matrix"]'
+
+tours:
+  profile-settings-tour:
+    once_key: profile-settings-v1
+    authenticated: true
+    trigger:
+      mode: info-icon-always
+    routes:
+      - profile.edit
+    variants:
+      all:
+        steps:
+          - title: 'Slot coverage basics'
+            body: 'Slot coverage controls which parts you want to see in Slot Finder. Mark parts you can cover to prioritize them in results.'
+            target: profile-slot-coverage-section
+          - title: 'Slot coverage states'
+            body: 'Each chip cycles through can cover, unsure, and will not cover. Set these to keep slot suggestions relevant.'
+            target: profile-slot-coverage-chips
+          - title: 'Privacy controls'
+            body: 'Privacy settings decide where your profile appears to other users across the app.'
+            target: profile-privacy-section
+          - title: 'Privacy toggles'
+            body: 'Use these switches to hide yourself from the who''s who directory or slot proposal lists when needed.'
+            target: profile-privacy-toggles
+          - title: 'Notification settings'
+            body: 'Notification preferences let you choose which events notify you and which channels are used.'
+            target: profile-notification-section
+          - title: 'Quiet hours and channels'
+            body: 'Use snooze for temporary quiet hours, then fine-tune channel checkboxes to control popup, email, and push delivery.'
+            target: profile-notification-snooze

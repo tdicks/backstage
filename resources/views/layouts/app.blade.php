@@ -10,12 +10,14 @@
         <meta name="backstage-approval-count" content="{{ $pendingApprovalCount ?? 0 }}">
         <meta name="backstage-pending-total" content="{{ $pendingTitleCount ?? 0 }}">
         <meta name="backstage-authenticated" content="{{ auth()->check() ? '1' : '0' }}">
+        <meta name="backstage-route-name" content="{{ request()->route()?->getName() }}">
 
         <title>{{ $documentTitle ?? config('app.name', 'Backstage') }}</title>
 
         <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+        <script id="feature-tour-config" type="application/json">@json($featureTourConfig ?? [])</script>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

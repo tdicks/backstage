@@ -10,6 +10,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BandTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeezerLookupController;
+use App\Http\Controllers\FeatureTourStateController;
 use App\Http\Controllers\JamRegisterController;
 use App\Http\Controllers\JamSessionAttendanceController;
 use App\Http\Controllers\JamSessionController;
@@ -67,6 +68,12 @@ Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/dashboard/get-started/dismiss', [DashboardController::class, 'dismissGetStartedQuest'])->name('dashboard.get-started.dismiss');
+    Route::post('/feature-tours/state', [FeatureTourStateController::class, 'update'])->name('feature-tours.state.update');
+    Route::get('/feature-tours/lab', function (Request $request): View {
+        abort_unless((bool) $request->user()?->is_admin, 403);
+
+        return view('feature-tours.lab');
+    })->name('feature-tours.lab');
     Route::get('/find-a-slot', SlotFinderController::class)->name('slot-finder.index');
     Route::redirect('/sit-in', '/find-a-slot')->name('sit-in.index');
 

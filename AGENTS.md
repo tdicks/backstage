@@ -37,6 +37,12 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Avoid embedding multi-line objects/functions directly in Blade `x-data` attributes.
 - Small inline expressions are allowed only when they are simple UI toggles and do not perform async/network work.
 
+## Design Guidelines
+
+- When building new pages, primary action buttons must be in the header, aligned to the right, with an appropriate hero icon for the purpose. Primary buttons should use the primary-button blade component.
+- Panels should be a light slate (specifically, bg-slate-50/95 with border-slate-200)
+- Favour using the prompt modal component instead of the native browser prompt function
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.

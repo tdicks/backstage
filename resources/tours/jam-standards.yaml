@@ -1,0 +1,100 @@
+version: 1
+
+anchors:
+  jam-standards-search: 
+    selector: '[data-tour="jam-standards-search"]'
+  jam-standards-select-parts: 
+    selector: '[data-tour="jam-standards-select-parts"]'
+  jam-standards-select-songs: 
+    selector: '[data-tour="jam-standards-select-songs"]'
+    view: surround
+  jam-standards-create-set: 
+    selector: '[data-tour="jam-standards-create-set"]'
+  jam-standards-quick-set-modal:
+    selector: '[data-tour="jam-standards-quick-set-modal"]'
+  jam-standards-quick-set-form:
+    selector: '[data-tour="jam-standards-quick-set-form"]'
+  jam-standards-quick-set-session:
+    selector: '#catalog-quick-set-session'
+  jam-standards-quick-set-submit:
+    selector: '[data-tour="jam-standards-quick-set-submit"]'
+
+actions:
+  first-song-checked:
+    type: set-checked
+    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:first-child > td > input[type="checkbox"]'
+    checked: true
+    wait_ms: 100
+    max_attempts: 1
+  second-song-checked:
+    type: set-checked
+    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:nth-child(2) > td > input[type="checkbox"]'
+    checked: true
+    wait_ms: 100
+    max_attempts: 1
+  first-song-unchecked:
+    type: set-checked
+    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:first-child > td > input[type="checkbox"]'
+    checked: false
+    wait_ms: 100
+    max_attempts: 1
+  second-song-unchecked:
+    type: set-checked
+    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:nth-child(2) > td > input[type="checkbox"]'
+    checked: false
+    wait_ms: 100
+    max_attempts: 1
+
+tours:
+  jam-standards:
+    once_key: jam-standards-v1
+    authenticated: true
+    trigger:
+      mode: info-icon-always
+    routes:
+      - jam-standards.*
+    variants:
+      all:
+        steps:
+          - title: 'Search bar'
+            body: 'You can use the search bar to find songs by artist or title, and filter results by performers.'
+            target: jam-standards-search
+          - title: 'Which parts do you know?'
+            body: 'Select the parts you know how to play. You can select multiple parts.'
+            target: jam-standards-select-parts
+          - title: 'Create a set'
+            body: 'If you want to make a quick set using songs from the catalogue, select the songs you want on the set.'
+            target: jam-standards-select-songs
+            after:
+              - first-song-checked
+              - second-song-checked
+          - title: 'Create a set'
+            body: 'And then choose Create Set.'
+            target: jam-standards-create-set
+          - title: 'All done!'
+            body: 'The set will be posted into the jam session you selected, along with any slots you picked.'
+            next:
+              - first-song-unchecked
+              - second-song-unchecked
+
+  jam-standards-quick-set-modal-tour:
+    once_key: jam-standards-quick-set-modal-v1
+    authenticated: true
+    trigger:
+      mode: info-icon-always
+      modal:
+        id: catalog-quick-set
+    routes:
+      - jam-standards.*
+    variants:
+      all:
+        steps:
+          - title: 'Quick Set modal'
+            body: 'Pick your songs and assign the parts you plan to cover. You can select as many songs and parts as you like.'
+            target: jam-standards-quick-set-form
+          - title: 'Choose a jam session'
+            body: 'Pick where this set should be created. Closed sessions are disabled unless you are an admin.'
+            target: jam-standards-quick-set-session
+          - title: 'Create the set'
+            body: 'When the session and set name are filled in, use Create Set to post it.'
+            target: jam-standards-quick-set-submit

@@ -8,6 +8,7 @@ import { liveQuickSet } from './components/liveQuickSet';
 import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
 import { recycleBinPage } from './components/recycleBin';
 import { adminNotices } from './components/adminNotices';
+import { initFeatureTours } from './components/featureTour';
 import { registerApprovalsStore } from './stores/approvals';
 import { registerNotificationsStore } from './stores/notifications';
 import { registerRecycleBinStore } from './stores/recycleBin';
@@ -108,3 +109,4 @@ window.addEventListener('hashchange', () => window.focusSessionFragmentTarget())
 Alpine.start();
 
 syncPendingTitleFromStores();
+void initFeatureTours();

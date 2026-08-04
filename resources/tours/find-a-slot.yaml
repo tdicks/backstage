@@ -1,0 +1,44 @@
+version: 1
+
+anchors:
+  find-a-slot-card: '[data-tour="find-a-slot-card"]'
+  find-a-slot-slots: '[data-tour="find-a-slot-slots"]'
+  slot-finder-session-toggle: '[aria-label="Toggle session details"]'
+  slot-finder-set-toggle: '[aria-label="Toggle set details"]'
+
+actions:
+  open-first-slot-finder-session:
+    type: ensure-visible
+    target: slot-finder-session-toggle
+    until_visible: find-a-slot-card
+    wait_ms: 220
+    max_attempts: 4
+  open-first-slot-finder-set:
+    type: ensure-visible
+    target: slot-finder-set-toggle
+    until_visible: find-a-slot-slots
+    wait_ms: 220
+    max_attempts: 4
+
+tours:
+  find-a-slot:
+    once_key: find-a-slot-v1
+    authenticated: true
+    trigger:
+      mode: info-icon-always
+    routes:
+      - slot-finder.*
+    variants:
+      all:
+        steps:
+          - title: 'Find a set'
+            body: 'This set has songs with slots available. You will not see slot types which you have opted out of in your user profile.'
+            before:
+              - open-first-slot-finder-session
+            target: find-a-slot-card
+          - title: 'Request or take a slot'
+            body: 'Select a slot to request or take it. If the set is using Free For All mode [icon:free-for-all], the slot is yours! If not, the set owner will see your request and you will get a notification if they accept it.'
+            before:
+              - open-first-slot-finder-session
+              - open-first-slot-finder-set
+            target: find-a-slot-slots
