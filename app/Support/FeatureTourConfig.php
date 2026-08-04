@@ -430,10 +430,16 @@ class FeatureTourConfig
 
         try {
             $parsed = Yaml::parseFile($path);
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            $message = trim($exception->getMessage());
+
+            if ($message === '') {
+                $message = 'unknown parser error';
+            }
+
             return [
                 'config' => [],
-                'error' => "Feature tour config file [{$path}] could not be parsed.",
+                'error' => "Feature tour config file [{$path}] could not be parsed: {$message}",
             ];
         }
 

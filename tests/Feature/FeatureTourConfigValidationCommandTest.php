@@ -13,6 +13,34 @@ test('feature tour config validator passes with current config', function () {
         ->and($output)->toContain('Feature tour config is valid.');
 });
 
+test('feature tour config validator reports YAML parse details', function () {
+    $path = resource_path('tours/001-invalid-yaml-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+tours:
+    broken-tour:
+        trigger:
+            mode: auto
+        variants:
+            default:
+                steps:
+                    - title: "Broken
+                        body: "This is intentionally invalid YAML"
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(1)
+            ->and($output)->toContain('could not be parsed:')
+            ->and($output)->toContain('001-invalid-yaml-test.yaml');
+    } finally {
+        File::delete($path);
+    }
+});
+
 test('feature tour config validator reports unknown anchor references', function () {
     $path = resource_path('tours/10-welcome.yaml');
     $original = File::get($path);
