@@ -47,12 +47,15 @@ export class FeatureTourRunner {
 		this.connectorRevealTimeoutId = null;
 		this.pendingAfterActionsTimeoutId = null;
 		this.pendingContentSwapTimeoutId = null;
+		this.pendingPostLayoutSyncTimeoutId = null;
 		this.panelPlacementCacheTimeoutId = null;
 		this.lastConnectorAnimationStepIndex = -1;
+		this.lastPostLayoutSyncStepIndex = -1;
 		this.renderSequence = 0;
 		this.panelPlacementByStep = {};
 		this.lastPanelPlacement = null;
 		this.deferStepContentSwap = false;
+		this.pendingRenderWhenVisible = false;
 		this._finished = false;
 		this.root = null;
 		this.active = false;
@@ -80,6 +83,36 @@ export class FeatureTourRunner {
 				return;
 			}
 
+			void this.renderCurrentStep();
+		};
+		this.visibilityChangeHandler = () => {
+			if (!this.active) {
+				return;
+			}
+
+			if (document.hidden) {
+				this.stopConnectorFollow();
+				this.pendingRenderWhenVisible = true;
+				return;
+			}
+
+			if (!this.pendingRenderWhenVisible) {
+				return;
+			}
+
+			this.pendingRenderWhenVisible = false;
+			this.lastConnectorAnimationStepIndex = -1;
+			this.renderSequence += 1;
+			void this.renderCurrentStep();
+		};
+		this.windowFocusHandler = () => {
+			if (!this.active || document.hidden) {
+				return;
+			}
+
+			this.pendingRenderWhenVisible = false;
+			this.lastConnectorAnimationStepIndex = -1;
+			this.renderSequence += 1;
 			void this.renderCurrentStep();
 		};
 	}
@@ -485,6 +518,30 @@ export class FeatureTourRunner {
 		}
 	}
 
+	stopPendingPostLayoutSync() {
+		if (this.pendingPostLayoutSyncTimeoutId !== null) {
+			window.clearTimeout(this.pendingPostLayoutSyncTimeoutId);
+			this.pendingPostLayoutSyncTimeoutId = null;
+		}
+	}
+
+	schedulePostLayoutSync(renderToken, stepIndex) {
+		this.stopPendingPostLayoutSync();
+		const postLayoutDelayMs = 160;
+
+		this.pendingPostLayoutSyncTimeoutId = window.setTimeout(() => {
+			this.pendingPostLayoutSyncTimeoutId = null;
+
+			if (!this.active || document.hidden || renderToken !== this.renderSequence || this.currentStepIndex !== stepIndex) {
+				return;
+			}
+
+			this.lastConnectorAnimationStepIndex = -1;
+			this.renderSequence += 1;
+			void this.renderCurrentStep();
+		}, postLayoutDelayMs);
+	}
+
 	stopPendingContentSwap() {
 		if (this.pendingContentSwapTimeoutId !== null) {
 			window.clearTimeout(this.pendingContentSwapTimeoutId);
@@ -649,6 +706,7 @@ export class FeatureTourRunner {
 	hideCalloutElements() {
 		this.stopPendingAfterActions();
 		this.stopPendingContentSwap();
+		this.stopPendingPostLayoutSync();
 		this.stopPendingPanelPlacementCache();
 		this.stopConnectorFollow();
 		this.activeTargetRect = null;
@@ -690,16 +748,28 @@ export class FeatureTourRunner {
 
 		this.buildUi();
 		document.body.appendChild(this.root);
-		document.documentElement.classList.add('feature-tour-active');
 		this.pushToModalStack();
 		window.addEventListener('resize', this.resizeHandler);
 		window.addEventListener('scroll', this.scrollHandler, true);
 		window.addEventListener('keydown', this.escapeKeyHandler, true);
+		document.addEventListener('visibilitychange', this.visibilityChangeHandler, true);
+		window.addEventListener('focus', this.windowFocusHandler, true);
 		this.active = true;
+
+		if (document.hidden) {
+			this.pendingRenderWhenVisible = true;
+			return;
+		}
+
 		await this.renderCurrentStep();
 	}
 
 	async renderCurrentStep() {
+		if (document.hidden) {
+			this.pendingRenderWhenVisible = true;
+			return;
+		}
+
 		const renderToken = ++this.renderSequence;
 		const step = this.steps[this.currentStepIndex];
 
@@ -733,6 +803,7 @@ export class FeatureTourRunner {
 		if (!hasTarget) {
 			this.pendingTargetAttempts = 0;
 			this.pendingTargetStepIndex = null;
+			this.lastPostLayoutSyncStepIndex = -1;
 			this.renderUntargetedStep();
 
 			if (shouldDeferStepText) {
@@ -801,6 +872,11 @@ export class FeatureTourRunner {
 		}
 
 		this.renderStepTargets(visibleTargets, viewMode);
+
+		if (this.lastPostLayoutSyncStepIndex !== this.currentStepIndex) {
+			this.lastPostLayoutSyncStepIndex = this.currentStepIndex;
+			this.schedulePostLayoutSync(renderToken, this.currentStepIndex);
+		}
 
 		if (shouldDeferStepText) {
 			const scheduledStepIndex = this.currentStepIndex;
@@ -1326,8 +1402,10 @@ export class FeatureTourRunner {
 		this.renderSequence += 1;
 		this.stopPendingAfterActions();
 		this.stopPendingContentSwap();
+		this.stopPendingPostLayoutSync();
 		this.hideArrowsImmediately();
 		this.deferStepContentSwap = true;
+		this.lastPostLayoutSyncStepIndex = -1;
 		this.currentStepIndex += 1;
 		this.beforeActionsExecutedForStep = null;
 		this.afterActionsExecutedForStep = null;
@@ -1349,6 +1427,7 @@ export class FeatureTourRunner {
 		this.renderSequence += 1;
 		this.stopPendingAfterActions();
 		this.stopPendingContentSwap();
+		this.stopPendingPostLayoutSync();
 		this.hideArrowsImmediately();
 		const targetStepIndex = currentStepIndex - 1;
 		const beforeActionsCompleted = await this.runBeforeActionsForStep(currentStepIndex);
@@ -1361,6 +1440,7 @@ export class FeatureTourRunner {
 		this.beforeActionsExecutedForStep = this.currentStepIndex;
 		this.afterActionsExecutedForStep = null;
 		this.deferStepContentSwap = true;
+		this.lastPostLayoutSyncStepIndex = -1;
 		void this.renderCurrentStep();
 	}
 
@@ -1378,13 +1458,16 @@ export class FeatureTourRunner {
 		window.removeEventListener('resize', this.resizeHandler);
 		window.removeEventListener('scroll', this.scrollHandler, true);
 		window.removeEventListener('keydown', this.escapeKeyHandler, true);
-		document.documentElement.classList.remove('feature-tour-active');
+		document.removeEventListener('visibilitychange', this.visibilityChangeHandler, true);
+		window.removeEventListener('focus', this.windowFocusHandler, true);
 		this.active = false;
 		this.removeFromModalStack();
 		this.stopPendingAfterActions();
 		this.stopPendingContentSwap();
+		this.stopPendingPostLayoutSync();
 		this.stopPendingPanelPlacementCache();
 		this.stopConnectorFollow();
+		this.pendingRenderWhenVisible = false;
 
 		if (this.root?.parentNode) {
 			this.root.parentNode.removeChild(this.root);
