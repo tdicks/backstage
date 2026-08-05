@@ -793,9 +793,6 @@ export class FeatureTourRunner {
 		this.pendingTargetAttempts = 0;
 		this.pendingTargetStepIndex = null;
 
-		primaryTarget.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-		await wait(120);
-
 		if (renderToken !== this.renderSequence || !this.active) {
 			return;
 		}

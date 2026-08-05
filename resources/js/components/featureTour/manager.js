@@ -422,8 +422,6 @@ class FeatureTourManager {
 			return;
 		}
 
-		visibleTrigger.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-
 		this.closeResumeHint();
 
 		const root = document.createElement('div');
