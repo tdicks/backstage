@@ -23,6 +23,7 @@ use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\NoticeDismissalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPushSubscriptionController;
+use App\Http\Controllers\PlannedSetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\SetCollaboratorController;
@@ -86,6 +87,20 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/my-sets', MySetsController::class)->name('my-sets.index');
     Route::get('/my-sets/count', [MySetsController::class, 'count'])->name('my-sets.count');
+    Route::get('/sets/planned', [PlannedSetController::class, 'index'])->name('planned-sets.index');
+    Route::post('/sets/planned', [PlannedSetController::class, 'store'])->name('planned-sets.store');
+    Route::patch('/sets/planned/{set}', [PlannedSetController::class, 'update'])->name('planned-sets.update');
+    Route::post('/sets/planned/{set}/songs', [PlannedSetController::class, 'addSong'])->name('planned-sets.songs.store');
+    Route::patch('/sets/planned/{set}/songs/{song}', [PlannedSetController::class, 'updateSong'])->name('planned-sets.songs.update');
+    Route::post('/sets/planned/{set}/songs/{song}/slots', [PlannedSetController::class, 'addSlot'])->name('planned-sets.slots.store');
+    Route::post('/sets/planned/{set}/slots/{slot}/take', [PlannedSetController::class, 'takeSlot'])->name('planned-sets.slots.take');
+    Route::post('/sets/planned/{set}/slots/{slot}/request', [PlannedSetController::class, 'requestSlot'])->name('planned-sets.slots.request');
+    Route::post('/sets/planned/{set}/slots/{slot}/propose', [PlannedSetController::class, 'proposeSlot'])->name('planned-sets.slots.propose');
+    Route::post('/sets/planned/{set}/slots/{slot}/release', [PlannedSetController::class, 'releaseSlot'])->name('planned-sets.slots.release');
+    Route::patch('/sets/planned/{set}/slots/{slot}/claimable', [PlannedSetController::class, 'updateSlotClaimable'])->name('planned-sets.slots.claimable');
+    Route::patch('/sets/planned/{set}/song-requests/{songRequest}', [PlannedSetController::class, 'respondSongRequest'])->name('planned-sets.song-requests.respond');
+    Route::patch('/sets/planned/{set}/slot-assignments/{slotAssignment}', [PlannedSetController::class, 'respondSlotAssignment'])->name('planned-sets.slot-assignments.respond');
+    Route::post('/sets/planned/{set}/schedule', [PlannedSetController::class, 'schedule'])->name('planned-sets.schedule');
     Route::get('/jam-standards', [JamStandardController::class, 'index'])->name('jam-standards.index');
     Route::post('/jam-standards', [JamStandardController::class, 'store'])->name('jam-standards.store');
     Route::put('/jam-standards/{jamStandardSong}', [JamStandardController::class, 'update'])->name('jam-standards.update');
@@ -171,6 +186,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{jamSession}/sets', [SetController::class, 'store'])->name('sets.store');
     Route::get('/sets/{set}/summary', [SetController::class, 'summary'])->name('sets.summary');
     Route::patch('/sets/{set}', [SetController::class, 'update'])->name('sets.update');
+    Route::patch('/sets/{set}/unschedule', [SetController::class, 'unschedule'])->name('sets.unschedule');
     Route::delete('/sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
     Route::get('/sets/{set}/collaborators/users', [SetCollaboratorController::class, 'users'])->name('sets.collaborators.users');
     Route::put('/sets/{set}/collaborators', [SetCollaboratorController::class, 'update'])->name('sets.collaborators.update');

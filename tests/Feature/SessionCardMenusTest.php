@@ -51,6 +51,7 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertOk()
         ->assertSee('aria-label="Set actions"', false)
         ->assertSee('Live Summary')
+        ->assertSee('Unschedule Set')
         ->assertSee('Edit Set')
         ->assertSee('Add Song')
         ->assertSee('Set Snapshot')
@@ -83,6 +84,9 @@ test('set action menu offers a table image export', function () {
 
     expect($shell)
         ->toContain('aria-label="Open set attachments"')
+        ->toContain('openUnscheduleSetModal()')
+        ->toContain("route('sets.unschedule', \$set)")
+        ->toContain('Unschedule set')
         ->toContain('Set Snapshot')
         ->toContain('x-heroicon-m-photo')
         ->toContain('openSnapshotModal()')

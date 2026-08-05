@@ -22,6 +22,7 @@
     $canEditSet = $isAdmin || $isSetOwner;
     $canManageCollaborators = $isAdmin || $isSetOwner;
     $setLocked = $set->performed;
+    $canUnscheduleSet = $canManageSet && ! $setLocked;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
     $canRequestSong = ! $sessionLocked && ! $setLocked && $set->song_requests && ! $isSetOwner && ! $isCollaborator;
     $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
@@ -338,6 +339,22 @@
                             </span>
                         </button>
                     @endif
+                    @if ($canUnscheduleSet)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openUnscheduleSetModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                        >
+                            <x-heroicon-m-arrow-uturn-left class="h-4 w-4" aria-hidden="true" />
+                            <span>
+                                @if ($isAdminManagingOtherSet)
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                                Unschedule Set
+                            </span>
+                        </button>
+                    @endif
                     @if (! $setLocked)
                         <button
                             type="button"
@@ -432,6 +449,32 @@
         </div>
     </div>
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>
+
+    @if ($canUnscheduleSet)
+        <x-prompt-modal
+            open="openUnscheduleSet"
+            title="Unschedule set"
+            description="This will remove the set from this jam session and return it to Planned Sets."
+            close-action="openUnscheduleSet = false"
+        >
+            <p class="text-sm text-slate-700">Are you sure you want to unschedule this set from {{ $set->session->name }}?</p>
+
+            <x-slot name="actions">
+                <x-modal-secondary-button type="button" @click="openUnscheduleSet = false">Cancel</x-modal-secondary-button>
+                <form method="POST" action="{{ route('sets.unschedule', $set) }}">
+                    @csrf
+                    @method('PATCH')
+                    <x-danger-button type="submit">
+                        @if ($isAdminManagingOtherSet)
+                            <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                            <span class="sr-only">Admin action: </span>
+                        @endif
+                        Unschedule Set
+                    </x-danger-button>
+                </form>
+            </x-slot>
+        </x-prompt-modal>
+    @endif
 
     <x-sessions.set-snapshot-modal />
     <x-sessions.attachments-modal />

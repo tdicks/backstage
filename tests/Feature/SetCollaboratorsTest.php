@@ -556,7 +556,7 @@ test('collaborator sees set management menu items but not Edit Set', function ()
         ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertSee('Add Song')
-        ->assertSee('Add Slot')
+        ->assertSee('Unschedule Set')
         ->assertDontSee('Edit Set')
         ->assertDontSee('Manage Collaborators');
 });
@@ -578,6 +578,7 @@ test('set owner sees Edit Set and Manage Collaborators in menu', function () {
         ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertSee('Edit Set')
+        ->assertSee('Unschedule Set')
         ->assertSee('Manage Collaborators');
 });
 
@@ -599,7 +600,39 @@ test('admin sees Edit Set and Manage Collaborators on another user\'s set', func
         ->get(route('sessions.sets', $session))
         ->assertOk()
         ->assertSee('Edit Set')
+        ->assertSee('Unschedule Set')
         ->assertSee('Manage Collaborators');
+});
+
+test('collaborator can unschedule a set into planned sets', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $session = makeSession();
+
+    $set = makeSet($owner, $session, [$collaborator->id]);
+
+    $this->actingAs($collaborator)
+        ->from(route('sessions.show', $session))
+        ->patch(route('sets.unschedule', $set))
+        ->assertRedirect(route('planned-sets.index'));
+
+    expect($set->fresh()->jam_session_id)->toBeNull()
+        ->and($set->fresh()->lifecycle_state)->toBe(Set::LIFECYCLE_DRAFT)
+        ->and($set->fresh()->performed)->toBeFalse();
+});
+
+test('unrelated user cannot unschedule a set', function () {
+    $owner = User::factory()->create();
+    $stranger = User::factory()->create();
+    $session = makeSession();
+
+    $set = makeSet($owner, $session);
+
+    $this->actingAs($stranger)
+        ->patch(route('sets.unschedule', $set))
+        ->assertForbidden();
+
+    expect($set->fresh()->jam_session_id)->toBe($session->id);
 });
 
 test('collaborator names appear as initial data in the set card', function () {

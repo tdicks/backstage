@@ -402,6 +402,7 @@ export function sessionSetCard(config) {
         titleLookupUrl: config.titleLookupUrl,
         songRequestStoreUrl: config.songRequestStoreUrl,
         openSetEdit: false,
+        openUnscheduleSet: false,
         openCollaborators: false,
         collaboratorsList: config.initialCollaborators ?? [],
         collaboratorNames: (config.initialCollaborators ?? []).map((c) => c.name),
@@ -597,6 +598,7 @@ export function sessionSetCard(config) {
             this.closeSnapshotModal();
             this.closeAttachmentsModal();
             this.openSetEdit = false;
+            this.openUnscheduleSet = false;
             this.openSong = false;
             this.openSongRequest = false;
             this.openCollaborators = false;
@@ -1128,6 +1130,10 @@ export function sessionSetCard(config) {
             this.songRequestsDraft = this.initialSongRequestsEnabled;
             this.freeForAllDraft = this.initialFreeForAll;
             this.openSetEdit = true;
+        },
+        openUnscheduleSetModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openUnscheduleSet = true;
         },
         openCollaboratorsModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));

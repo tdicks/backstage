@@ -75,12 +75,31 @@
                     <p>
                         When you create a set, you become the person looking after it. Open the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu to add songs or edit the set details. You can also invite other players to help manage the set with you.
                     </p>
+                    <p>
+                        If plans change, owners, collaborators, and admins can use <span class="font-semibold text-slate-900">Unschedule Set</span> from set actions. This removes the set from the jam session and returns it to Planned Sets.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Planned Sets</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Sets</span> then <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Planned Sets</span> to prepare a draft before picking a session.
+                    </p>
+                    <p>
+                        Drafts can include songs and slots, so you can build the full set list before scheduling. Use <span class="font-semibold text-slate-900">Add Song</span> from set actions, then <span class="font-semibold text-slate-900">Add Slot</span> from each song menu as needed.
+                    </p>
+                    <p>
+                        In the planned set editor, you can choose whether to accept song requests and whether sign ups are open. Click any slot chip to open slot actions, where you can take it, request it, or recommend another player (when sign ups are open). You can also add collaborators by typing a name in the editor. Attendance on planned sets uses the same yes or no choices as jam attendance, so both stay in sync.
+                    </p>
+                    <p>
+                        If your draft has pending song or slot requests, use the request cards in that planned set to approve or reject them. Approved requests update the planned set immediately.
+                    </p>
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Adding Songs</h3>
                     <p>
-                        From the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu, choose <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>. Enter the song title and artist, then choose a band template before saving. The band template gives the song a sensible starting lineup, such as vocals, lead guitar, rhythm guitar, bass, drums, keys, or whatever setup your group uses.
+                        From the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu, choose <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>. Start typing an artist or title to use song suggestions, then choose a band template before saving. The band template gives the song a sensible starting lineup, such as vocals, lead guitar, rhythm guitar, bass, drums, keys, or whatever setup your group uses.
                     </p>
                     <p>
                         Choose the template that feels closest to the version you want to play. You can add more slots later, including another band template via <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-pencil-square class="h-3.5 w-3.5" aria-hidden="true" /> Edit slot</span>. Any duplicate slots won't get overwritten.

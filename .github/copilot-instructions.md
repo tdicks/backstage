@@ -35,6 +35,24 @@ Follow these guidelines:
 - Panels should use a light slate treatment: `bg-slate-50/95` with `border-slate-200`.
 - Prefer the prompt modal component over native browser `prompt()`.
 
+### Style Guide
+
+There is a fairly standard icon and colour guide for certain elements throughout the application.
+
+For slots:
+
+- Open slots should be amber.
+- Slots assigned to the current user should be sky blue.
+- Slots assigned to other users should be emerald green.
+- Slots that are claimable should have a purple "CLAIMABLE" badge.
+
+Sets:
+
+Sets have the following standard icons, which should be included anywhere there is a set card:
+
+- Free for all mode: heroicon-m-fire
+
+
 ## Dynamic Content
 
 Where possible, page refreshes to show new or updated content should be avoided. Use Alpine.JS to update the page dynamically without a full refresh. This includes updating lists, tables, and other content areas when new data is available.

@@ -285,6 +285,26 @@ test('my sets approvals include pending work for collaborator sets', function ()
         ->assertJson(['count' => 2]);
 });
 
+test('my sets ignores draft sets without a jam session', function () {
+    $user = User::factory()->create();
+
+    Set::query()->create([
+        'name' => 'Unscheduled Draft',
+        'description' => null,
+        'owner_id' => $user->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('my-sets.index'))
+        ->assertOk()
+        ->assertDontSee('Unscheduled Draft');
+});
+
 test('my sets approvals are grouped and ordered by session set and song', function () {
     $owner = User::factory()->create();
     $requester = User::factory()->create();

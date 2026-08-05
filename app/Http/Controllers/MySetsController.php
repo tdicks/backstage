@@ -69,7 +69,7 @@ class MySetsController extends Controller
         $sets = $ownedSets
             ->merge($signedSets)
             ->unique('id')
-            ->filter(fn (Set $set) => ! $set->performed && ! $set->session->is_hidden && ! $set->session->is_closed)
+            ->filter(fn (Set $set) => $set->session !== null && ! $set->performed && ! $set->session->is_hidden && ! $set->session->is_closed)
             ->sortBy(fn (Set $set) => sprintf(
                 '%d-%010d-%s',
                 $set->performed ? 1 : 0,

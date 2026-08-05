@@ -5,6 +5,7 @@ import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder'
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
 import { liveQuickSet } from './components/liveQuickSet';
+import { plannedSetsPage } from './components/plannedSets';
 import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
 import { recycleBinPage } from './components/recycleBin';
 import { adminNotices } from './components/adminNotices';
@@ -78,6 +79,7 @@ Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
 Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
 Alpine.data('liveQuickSet', liveQuickSet);
+Alpine.data('plannedSetsPage', plannedSetsPage);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 Alpine.data('adminManualSlotTransfer', adminManualSlotTransfer);

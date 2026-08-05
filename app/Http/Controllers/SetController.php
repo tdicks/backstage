@@ -269,6 +269,24 @@ class SetController extends Controller
         return back()->with('status', 'Set updated.');
     }
 
+    public function unschedule(Request $request, Set $set): RedirectResponse
+    {
+        $this->authorize('unschedule', $set);
+
+        if ($set->jam_session_id === null || $set->isDraft()) {
+            return back()->with('status', 'This set is already in Planned Sets.');
+        }
+
+        $set->update([
+            'jam_session_id' => null,
+            'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+            'performed' => false,
+        ]);
+
+        return redirect()->route('planned-sets.index')
+            ->with('status', 'Set unscheduled. It has been moved to Planned Sets.');
+    }
+
     /**
      * Remove the specified resource from storage.
      */
