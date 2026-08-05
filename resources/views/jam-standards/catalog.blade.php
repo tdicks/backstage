@@ -41,6 +41,22 @@
                 'title' => $song->title,
                 'slots' => $song->slots->map(fn ($slot) => ['name' => $slot->name])->values(),
             ]])->all()),
+            initialCatalogSongs: @js($catalogSongs->map(fn ($song) => [
+                'id' => $song->id,
+                'artist' => $song->artist,
+                'title' => $song->title,
+                'notes' => $song->notes,
+                'duration' => $song->duration,
+                'source' => $song->source,
+                'band_template_id' => $song->band_template_id,
+                'slots' => $song->slots->map(fn ($slot) => [
+                    'name' => $slot->name,
+                    'recent_capability_count' => max(0, (int) ($song->recent_capability_counts[$slot->name] ?? 0)),
+                ])->values(),
+                'user_slot_names' => $song->userSlots->pluck('slot_name')->values(),
+                'performer_slots' => $searchedUserSlots[$song->id] ?? [],
+            ])->values()),
+            initialPerformers: @js($selectedPerformers->values()),
             selectedPerformerIds: @js($selectedPerformers->pluck('id')->map(fn ($userId) => (string) $userId)->all()),
             performerNames: @js($users->mapWithKeys(fn ($user) => [$user->id => $user->name])->all()),
             slotConflicts: @js($slotConflicts),
@@ -102,7 +118,28 @@
             <x-modal-secondary-button type="submit" x-bind:disabled="searchLoading" x-text="searchLoading ? 'Searching' : 'Search'"></x-modal-secondary-button>
             <x-modal-secondary-button type="button" x-bind:disabled="searchLoading" @click="resetCatalogSearch()">Reset</x-modal-secondary-button>
             </form>
-            <x-modal-primary-button data-tour="jam-standards-create-set" type="button" x-show="selectedSongIds.length" x-cloak @click="openQuickSetModal()">Create Set <span class="ml-1" x-text="`(${selectedSongIds.length})`"></span></x-modal-primary-button>
+            <div class="hidden md:block" x-show="selectedSongIds.length" x-cloak>
+                <x-modal-primary-button data-tour="jam-standards-create-set" type="button" @click="openQuickSetModal()">Create Set <span class="ml-1" x-text="`(${selectedSongIds.length})`"></span></x-modal-primary-button>
+            </div>
+            </div>
+            <div class="mt-3 md:hidden">
+                <div x-show="!mobileSelectionMode" x-cloak>
+                    <button type="button" @click="openMobileSelectionMode()" class="inline-flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <x-heroicon-m-check-circle class="h-4 w-4" aria-hidden="true" />
+                        <span>Select Songs</span>
+                    </button>
+                </div>
+                <div x-show="mobileSelectionMode" x-cloak class="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-emerald-900 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-semibold"><span x-text="selectedSongIds.length"></span> selected</p>
+                        <button type="button" @click="cancelMobileSelectionMode()" class="text-sm font-medium text-emerald-800 underline decoration-emerald-300 underline-offset-2">Cancel</button>
+                    </div>
+                    <p class="mt-2 text-xs text-emerald-800/90">Tap cards to add or remove songs for this quick set.</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" @click="selectAllVisibleSongs()" class="inline-flex items-center rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400">Select All Visible</button>
+                        <button type="button" @click="clearSelectedSongs()" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-400">Clear</button>
+                    </div>
+                </div>
             </div>
             <div x-ref="performerCapabilityLegend" class="mt-3 flex items-center gap-2">
                 @if ($selectedPerformers->isNotEmpty())
@@ -112,7 +149,66 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto border border-slate-200 bg-white shadow-sm [contain:paint]">
+        <div class="space-y-4 md:hidden" x-ref="catalogCards">
+            @forelse ($catalogSongs as $song)
+                <article data-catalog-song-id="{{ $song->id }}" x-bind:class="catalogCardClass(selectedSongIds.includes({{ $song->id }}))" @click="if (mobileSelectionMode) { toggleSong({{ $song->id }}, !selectedSongIds.includes({{ $song->id }})) }" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <span class="block break-words text-sm font-semibold text-slate-900">{{ $song->artist }}</span>
+                            <span class="mt-0.5 block break-words text-sm text-slate-700">{{ $song->title }}</span>
+                            @if ($song->notes)
+                                <span class="mt-1 block text-xs text-slate-500">{{ $song->notes }}</span>
+                            @endif
+                        </div>
+                        <span x-show="mobileSelectionMode" x-cloak x-bind:class="selectedSongIds.includes({{ $song->id }}) ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-slate-300 bg-slate-50 text-slate-600'" class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"> <span x-text="selectedSongIds.includes({{ $song->id }}) ? 'Selected' : 'Tap to select'"></span></span>
+                        @if (auth()->user()->is_admin)
+                            <button type="button" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click.stop="toggleCatalogActionMenu({ id: {{ $song->id }}, artist: @js($song->artist), title: @js($song->title), notes: @js($song->notes), band_template_id: @js($song->band_template_id), slots: @js($song->slots->pluck('name')->values()) }, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === {{ $song->id }}).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
+                        @endif
+                    </div>
+                    <div x-bind:class="mobileSelectionMode ? 'mt-4 border-t border-slate-100 pt-3 opacity-60 pointer-events-none' : 'mt-4 border-t border-slate-100 pt-3'">
+                        <div class="mb-2 flex items-center justify-between gap-2">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Parts you know</p>
+                            @if ($searchedUserSlots[$song->id] ?? false)
+                                <p class="text-[11px] font-medium text-slate-500">Selected performers marked with <span class="font-semibold text-emerald-700">check</span></p>
+                            @endif
+                        </div>
+                        @if ($song->slots->isNotEmpty())
+                            <form class="flex flex-wrap gap-2">
+                                @foreach ($song->slots as $slot)
+                                    <label x-data="{ selected: @js($song->userSlots->contains('slot_name', $slot->name)), capabilityCount: {{ max(0, (int) ($song->recent_capability_counts[$slot->name] ?? 0)) }} }" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300' }}" :class="selected ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'">
+                                        <input type="checkbox" name="slot_names[]" value="{{ $slot->name }}" @checked($song->userSlots->contains('slot_name', $slot->name)) @change="selected = $event.target.checked; updateCapabilities({{ $song->id }}, $el.form).then(payload => { if (payload) { capabilityCount = Math.max(0, Number(payload.slot_capability_counts['{{ $slot->name }}'] ?? capabilityCount)); } })" class="sr-only">
+                                        <span>{{ $slotOptions[$slot->name] ?? $slot->name }}</span>
+                                        <span :class="selected ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600'" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-semibold {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600' }}" x-text="Math.max(0, capabilityCount)"></span>
+                                        @php($matchingPerformerIds = $searchedUserSlots[$song->id][$slot->name] ?? [])
+                                        @if ($matchingPerformerIds !== [])
+                                            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="{{ $selectedPerformers->whereIn('id', $matchingPerformerIds)->pluck('name')->join(', ') }} can play {{ $slotOptions[$slot->name] ?? $slot->name }}"><x-heroicon-m-check class="h-3 w-3" aria-hidden="true" /></span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </form>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                    No catalog songs yet.
+                </div>
+            @endforelse
+        </div>
+
+        <div x-show="mobileSelectionMode && selectedSongIds.length" x-cloak class="fixed inset-x-0 bottom-4 z-30 px-4 md:hidden">
+            <div class="mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-900">Create quick set</p>
+                    <p class="text-xs text-slate-600"><span x-text="selectedSongIds.length"></span> songs selected</p>
+                </div>
+                <x-modal-primary-button data-tour="jam-standards-create-set-mobile" type="button" @click="openQuickSetModal()" class="shrink-0 bg-emerald-700 hover:bg-emerald-600 focus:ring-emerald-400 focus:ring-offset-white">
+                    Create Set
+                </x-modal-primary-button>
+            </div>
+        </div>
+
+        <div class="hidden overflow-x-auto border border-slate-200 bg-white shadow-sm [contain:paint] md:block">
             <table data-tour="jam-standards-songs-list" class="w-full table-fixed divide-y divide-slate-200 text-left md:table-auto">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
@@ -244,7 +340,7 @@
                                 <fieldset><legend class="text-sm font-medium text-slate-700">Slots</legend><div class="mt-2 flex gap-4 text-sm"><label class="flex items-center gap-2 text-slate-700"><input type="radio" value="template" x-model="entryMode"> Band template</label><label class="flex items-center gap-2 text-slate-700"><input type="radio" value="manual" x-model="entryMode"> Choose manually</label></div></fieldset>
                                 <div x-show="entryMode === 'template'"><x-input-label value="Band Template" /><select name="band_template_id" :disabled="entryMode !== 'template'" class="mt-1 w-full rounded border-slate-300 text-sm text-slate-900"><option value="">Choose a template</option>@foreach ($templates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach</select></div>
                                 <div x-show="entryMode === 'manual'" class="grid grid-cols-2 gap-2 sm:grid-cols-3">@foreach ($slotOptions as $slotValue => $slotLabel)<label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="slot_names[]" value="{{ $slotValue }}" :checked="editingSong?.slots.includes('{{ $slotValue }}')" :disabled="entryMode !== 'manual'" class="rounded border-slate-300 text-amber-600">{{ $slotLabel }}</label>@endforeach</div>
-                                <div><x-input-label value="Notes" /><x-textarea-input name="notes" x-model="editingSong.notes" rows="2" class="mt-1 w-full rounded border-slate-300 text-sm text-slate-900" /></div>
+                                <div><x-input-label value="Notes" /><x-textarea-input name="notes" x-bind:value="editingSong?.notes ?? ''" @input="if (editingSong) { editingSong.notes = $event.target.value }" rows="2" class="mt-1 w-full rounded border-slate-300 text-sm text-slate-900" /></div>
                                 <div class="flex items-center justify-between gap-3"><x-danger-button type="button" @click="deleteCatalogSong()">Delete Song</x-danger-button><div class="flex gap-2"><x-modal-secondary-button type="button" @click="openEditSong = false; resetCatalogAutocomplete(); window.dispatchEvent(new CustomEvent('close-modal', { detail: 'catalog-song-edit' }))">Cancel</x-modal-secondary-button><x-modal-primary-button>Update Song</x-modal-primary-button></div></div>
                             </form>
                         </div>

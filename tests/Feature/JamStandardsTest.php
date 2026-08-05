@@ -241,10 +241,28 @@ test('catalog performer filter shows known song counts when available', function
 
 test('catalog selected songs persist across paginated fetches in the frontend component', function () {
     $component = file_get_contents(resource_path('js/components/jamStandardsCatalog.js'));
+    preg_match('/renderCatalogSongs\(songs, performers, pagination\) \{(?<body>.*?)\n        \},/s', $component, $matches);
 
     expect($component)
-        ->not->toContain('this.selectedSongIds = [];')
         ->toContain('selection.checked = this.selectedSongIds.includes(song.id);');
+
+    expect($matches['body'] ?? '')
+        ->not->toContain('this.selectedSongIds = [];');
+});
+
+test('catalog includes a compact mobile view alongside the desktop table', function () {
+    $viewer = User::factory()->create();
+
+    $response = $this->actingAs($viewer)->get(route('jam-standards.index'));
+
+    $response
+        ->assertOk()
+        ->assertSee('x-ref="catalogCards"', false)
+        ->assertSee('space-y-4 md:hidden', false)
+    ->assertSee('Select Songs', false)
+    ->assertSee('Select All Visible', false)
+    ->assertSee('mobileSelectionMode', false)
+        ->assertSee('hidden overflow-x-auto border border-slate-200 bg-white shadow-sm [contain:paint] md:block', false);
 });
 
 test('pending catalog requests are shown in their own panel above the catalog table', function () {
