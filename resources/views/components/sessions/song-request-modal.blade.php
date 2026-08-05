@@ -26,17 +26,16 @@
             </div>
             <div x-show="requestSongMode === 'catalog'" x-cloak>
                 <x-input-label for="request_catalog_song_{{ $set->id }}" value="Catalog song" />
-                <select
+                <x-select
                     id="request_catalog_song_{{ $set->id }}"
                     x-model="requestCatalogSongId"
                     @change="applyRequestCatalogSong()"
-                    class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
                 >
                     <option value="">Choose a song</option>
                     @foreach ($jamStandardSongs as $song)
                         <option value="{{ $song->id }}">{{ $song->artist }} - {{ $song->title }}</option>
                     @endforeach
-                </select>
+                </x-select>
                 <input type="hidden" name="jam_standard_song_id" :value="requestSongMode === 'catalog' ? requestCatalogSongId : ''">
             </div>
             <div class="grid gap-4 sm:grid-cols-2">

@@ -715,12 +715,12 @@
 
                     <div x-show="songEditor.song_slot_addition_mode === 'template'" x-cloak>
                         <x-input-label for="planned-set-song-template" value="Band Template" />
-                        <select id="planned-set-song-template" x-model="songEditor.band_template_id" class="mt-1 block w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                        <x-select id="planned-set-song-template" x-model="songEditor.band_template_id" class="focus:border-emerald-500 focus:ring-emerald-500">
                             <option value="">Choose a band template</option>
                             <template x-for="template in templateOptions" :key="`planned-template-${template.id}`">
                                 <option :value="String(template.id)" x-text="template.name"></option>
                             </template>
-                        </select>
+                        </x-select>
                     </div>
 
                     <div x-show="songEditor.song_slot_addition_mode === 'manual'" x-cloak>
@@ -769,11 +769,11 @@
 
                     <div x-show="slotEditor.addition_mode === 'individual'" x-cloak>
                         <x-input-label for="planned-set-slot-name" value="Slot Name" />
-                        <select id="planned-set-slot-name" x-model="slotEditor.name" class="mt-1 block w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                        <x-select id="planned-set-slot-name" x-model="slotEditor.name" class="focus:border-amber-500 focus:ring-amber-500">
                             <template x-for="(slotLabel, slotKey) in slotOptions" :key="`planned-slot-${slotKey}`">
                                 <option :value="slotKey" x-text="slotLabel"></option>
                             </template>
-                        </select>
+                        </x-select>
 
                         <div class="mt-3">
                             <x-input-label for="planned-set-slot-notes" value="Notes (optional)" />
@@ -783,12 +783,12 @@
 
                     <div x-show="slotEditor.addition_mode === 'template'" x-cloak>
                         <x-input-label for="planned-set-slot-template" value="Band Template" />
-                        <select id="planned-set-slot-template" x-model="slotEditor.band_template_id" class="mt-1 block w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                        <x-select id="planned-set-slot-template" x-model="slotEditor.band_template_id" class="focus:border-amber-500 focus:ring-amber-500">
                             <option value="">Choose a band template</option>
                             <template x-for="template in templateOptions" :key="`planned-slot-template-${template.id}`">
                                 <option :value="String(template.id)" x-text="template.name"></option>
                             </template>
-                        </select>
+                        </x-select>
                         <p class="mt-2 text-xs text-slate-600">Existing slots stay in place. Duplicate slot types are skipped.</p>
                     </div>
                 </div>
@@ -958,11 +958,11 @@
 
                 <div class="mt-4">
                     <x-input-label for="schedule-jam-session" value="Jam session" />
-                    <select id="schedule-jam-session" x-model="scheduleForm.jam_session_id" class="mt-1 block w-full rounded-md border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                    <x-select id="schedule-jam-session" x-model="scheduleForm.jam_session_id" class="focus:border-emerald-500 focus:ring-emerald-500">
                         <template x-for="option in scheduleCandidateSessionOptions()" :key="`schedule-session-${option.id}`">
                             <option :value="String(option.id)" x-text="`${option.name} (${option.date_label})${option.is_closed ? ' - closed' : ''}`"></option>
                         </template>
-                    </select>
+                    </x-select>
                     <p class="mt-2 text-xs text-rose-700" x-show="scheduleCandidateSessionOptions().length === 0" x-cloak>
                         Add candidate jam sessions in the set editor before publishing.
                     </p>

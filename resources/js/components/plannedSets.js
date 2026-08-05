@@ -1607,8 +1607,10 @@ export function plannedSetsPage(config) {
 			if (count <= 1) {
 				return 'Planned for:';
 			}
-
-			return 'Planned for either of:';
+            if (count == 2) {
+                return 'Planned for either of:';
+            }
+            return 'Planned for one of:';
 		},
 
 		availabilityNamesList(names) {

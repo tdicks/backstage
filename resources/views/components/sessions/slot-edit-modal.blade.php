@@ -22,11 +22,11 @@
                     <form class="mt-4 space-y-4" @submit.prevent="submitLiveSlotEdit()">
                         <div>
                             <x-input-label :value="'Slot Name'" />
-                            <select x-model="assignmentForm.slotKey" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                            <x-select x-model="assignmentForm.slotKey">
                                 @foreach ($slotOptions as $slotValue => $slotLabel)
                                     <option value="{{ $slotValue }}">{{ $slotLabel }}</option>
                                 @endforeach
-                            </select>
+                            </x-select>
                         </div>
                         <div>
                             <x-input-label :value="'Assigned User or Manual Name'" />
@@ -110,11 +110,11 @@
                 @method('PATCH')
                 <div>
                     <x-input-label :value="'Slot Name'" />
-                    <select name="name" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200">
+                    <x-select name="name">
                         @foreach ($slotOptions as $slotValue => $slotLabel)
                             <option value="{{ $slotValue }}" @selected($slotModel->name === $slotValue)>{{ $slotLabel }}</option>
                         @endforeach
-                    </select>
+                    </x-select>
                 </div>
                 <div>
                     <x-input-label :value="'Assigned User or Manual Name'" />

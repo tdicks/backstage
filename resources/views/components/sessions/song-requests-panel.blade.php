@@ -80,12 +80,12 @@
                                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                     @if (blank($songRequest->jam_standard_song_id))
                                         <label class="sr-only" for="band_template_id_{{ $songRequest->id }}">Band template for approval</label>
-                                        <select id="band_template_id_{{ $songRequest->id }}" x-model="bandTemplateId" x-bind:disabled="busy" class="w-52 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200 disabled:opacity-60">
+                                        <x-select id="band_template_id_{{ $songRequest->id }}" x-model="bandTemplateId" x-bind:disabled="busy" class="w-52 py-1.5 text-sm disabled:opacity-60">
                                             <option value="">Template: None</option>
                                             @foreach ($templates as $template)
                                                 <option value="{{ $template->id }}" @selected($songRequest->band_template_id === $template->id)>{{ $template->name }}</option>
                                             @endforeach
-                                        </select>
+                                        </x-select>
                                     @endif
                                     @if (! empty($songRequest->requested_slot_names))
                                         <div class="w-52 rounded-lg border border-slate-300 bg-white p-2">
