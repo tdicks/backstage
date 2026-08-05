@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BandTemplate;
 use App\Models\JamSession;
 use App\Models\JamSessionAttendance;
+use App\Models\JamStandardSong;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
@@ -42,6 +43,7 @@ class PlannedSetController extends Controller
         $sets = Set::query()
             ->draft()
             ->visibleTo($user)
+            ->withCount('attachments')
             ->with([
                 'owner:id,name',
                 'songs.slots.user',
@@ -125,12 +127,24 @@ class PlannedSetController extends Controller
             ])
             ->values();
 
+        $jamStandardSongs = JamStandardSong::query()
+            ->orderBy('artist')
+            ->orderBy('title')
+            ->get(['id', 'artist', 'title'])
+            ->map(fn (JamStandardSong $song): array => [
+                'id' => $song->id,
+                'artist' => $song->artist,
+                'title' => $song->title,
+            ])
+            ->values();
+
         return view('sets.planned.index', [
             'initialPlannedSets' => $initialSets,
             'attendanceSessionOptions' => $attendanceSessionOptions,
             'scheduleSessionOptions' => $scheduleOptions,
             'collaboratorOptions' => $collaboratorOptions,
             'templateOptions' => $templateOptions,
+            'jamStandardSongs' => $jamStandardSongs,
             'slotOptions' => Slot::options(),
             'slotConflicts' => $this->slotConflicts(),
         ]);
@@ -1071,6 +1085,102 @@ class PlannedSetController extends Controller
         ]);
     }
 
+    public function updateSlot(Request $request, Set $set, Slot $slot): JsonResponse
+    {
+        $this->authorize('managePlanned', $set);
+
+        if (! $set->isDraft()) {
+            return response()->json([
+                'message' => 'Only draft sets can be edited here.',
+            ], 422);
+        }
+
+        $slot->loadMissing('song.set');
+        if ((int) $slot->song->set_id !== (int) $set->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'in:'.implode(',', Slot::keys())],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('is_deleted_account', false))],
+            'manual_performer_name' => ['nullable', 'string', 'max:255'],
+            'replace_conflicting_assignment' => ['nullable', 'boolean'],
+        ]);
+
+        $conflictingSlot = null;
+        if (! empty($validated['user_id'])) {
+            $conflictingSlot = SlotCompatibility::conflictingSlotForSlot((int) $validated['user_id'], $slot, $validated['name']);
+
+            if ($conflictingSlot && ! ($validated['replace_conflicting_assignment'] ?? false)) {
+                $slotOptions = Slot::options();
+                $conflictingLabel = $slotOptions[$conflictingSlot->name] ?? $conflictingSlot->name;
+                $targetLabel = $slotOptions[$validated['name']] ?? $validated['name'];
+                $playerName = User::query()->find($validated['user_id'])?->name ?? 'This player';
+                $message = "$playerName is already assigned to $conflictingLabel on this song. Moving them to $targetLabel will clear that assignment.";
+
+                return response()->json([
+                    'message' => $message,
+                    'conflict' => [
+                        'slot_id' => $conflictingSlot->id,
+                        'slot_label' => $conflictingLabel,
+                    ],
+                ], 409);
+            }
+        }
+
+        $manualPerformerName = trim((string) ($validated['manual_performer_name'] ?? ''));
+        if (! empty($validated['user_id'])) {
+            $manualPerformerName = '';
+        }
+
+        $previousUserId = $slot->user_id;
+        $incomingUserId = ! empty($validated['user_id']) ? (int) $validated['user_id'] : null;
+        $resetClaimableOnAssignment = $incomingUserId !== null && (int) $previousUserId !== $incomingUserId;
+
+        DB::transaction(function () use ($slot, $validated, $manualPerformerName, $conflictingSlot, $resetClaimableOnAssignment): void {
+            if ($conflictingSlot) {
+                $conflictingSlot->update([
+                    'user_id' => null,
+                    'manual_performer_name' => null,
+                ]);
+            }
+
+            $slotAttributes = [
+                'name' => $validated['name'],
+                'notes' => $validated['notes'] ?? null,
+                'user_id' => $validated['user_id'] ?? null,
+                'manual_performer_name' => $manualPerformerName !== '' ? $manualPerformerName : null,
+            ];
+
+            if ($resetClaimableOnAssignment) {
+                $slotAttributes['is_claimable_manual'] = false;
+            }
+
+            $slot->update($slotAttributes);
+
+            if (! empty($validated['user_id'])) {
+                SlotAssignment::query()
+                    ->where('slot_id', $slot->id)
+                    ->where('target_user_id', $validated['user_id'])
+                    ->whereIn('status', [
+                        SlotAssignment::STATUS_AWAITING_TARGET_CONSENT,
+                        SlotAssignment::STATUS_PENDING,
+                    ])
+                    ->update([
+                        'status' => SlotAssignment::STATUS_ACCEPTED,
+                        'responded_at' => now(),
+                    ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Slot updated.',
+            'slot' => $this->toSlotPayload($slot->fresh('user', 'assignments'), null, $request->user()),
+            'song' => $this->toSongPayload($slot->song->fresh('slots.user', 'slots.assignments'), $request->user()),
+        ]);
+    }
+
     public function updateSlotClaimable(Request $request, Set $set, Slot $slot): JsonResponse
     {
         $this->authorize('view', $set);
@@ -1237,10 +1347,12 @@ class PlannedSetController extends Controller
             'id' => $set->id,
             'name' => $set->name,
             'description' => $set->description,
+            'performed' => (bool) $set->performed,
             'is_hidden' => (bool) $set->is_hidden,
             'free_for_all' => (bool) $set->free_for_all,
             'song_requests' => (bool) $set->song_requests,
             'signups_open' => (bool) $set->signups_open,
+            'has_attachments' => ((int) ($set->attachments_count ?? 0)) > 0,
             'owner' => [
                 'id' => $set->owner?->id,
                 'name' => $set->owner?->name,
@@ -1358,6 +1470,7 @@ class PlannedSetController extends Controller
             'notes' => $slot->notes,
             'user_id' => $slot->user_id,
             'user_name' => $slot->assignedPerformerName(),
+            'manual_performer_name' => $slot->manual_performer_name,
             'is_open' => $slot->isOpen(),
             'is_claimable_manual' => (bool) $slot->is_claimable_manual,
             'has_pending_own_request' => $hasPendingOwnRequest,

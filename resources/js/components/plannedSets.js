@@ -7,8 +7,24 @@ export function plannedSetsPage(config) {
 		scheduleSessionOptions: config.scheduleSessionOptions || [],
 		collaboratorOptions: config.collaboratorOptions || [],
 		templateOptions: config.templateOptions || [],
+		jamStandardSongs: config.jamStandardSongs || [],
 		slotOptions: config.slotOptions || {},
 		slotConflicts: config.slotConflicts || {},
+		filterQuery: '',
+		filterMenuOpen: false,
+		selectedAttributeFilters: [],
+		filterOptions: [
+			{ key: 'my_sets', label: 'My sets' },
+			{ key: 'collaborating', label: "Sets I'm collaborating on" },
+			{ key: 'performing_on', label: "Set's I'm performing on" },
+			{ key: 'planned', label: 'Planned' },
+			{ key: 'performed', label: 'Performed' },
+			{ key: 'signups_open', label: 'Sign ups open' },
+			{ key: 'signups_closed', label: 'Sign ups closed' },
+			{ key: 'hidden', label: 'Hidden' },
+			{ key: 'free_for_all', label: 'Free for all mode' },
+			{ key: 'has_attachments', label: 'Has attachments' },
+		],
 		statusMessage: '',
 		errorMessage: '',
 		editorBusy: false,
@@ -61,6 +77,28 @@ export function plannedSetsPage(config) {
 			band_template_id: '',
 			slot_names: [],
 		},
+		requestSongSetId: null,
+		requestSongBusy: false,
+		requestSongError: '',
+		requestSongMode: 'manual',
+		requestCatalogSongId: '',
+		requestSongNotes: '',
+		requestSongSlotNames: [],
+		requestArtistQuery: '',
+		requestTitleQuery: '',
+		requestSelectedArtistName: '',
+		requestArtistSuggestions: [],
+		requestTitleSuggestions: [],
+		showRequestArtistSuggestions: false,
+		showRequestTitleSuggestions: false,
+		requestArtistLookupBusy: false,
+		requestTitleLookupBusy: false,
+		requestArtistLookupError: '',
+		requestTitleLookupError: '',
+		requestArtistLookupTimer: null,
+		requestTitleLookupTimer: null,
+		requestArtistLookupToken: 0,
+		requestTitleLookupToken: 0,
 		songArtistQuery: '',
 		songTitleQuery: '',
 		songSelectedArtistName: '',
@@ -113,9 +151,141 @@ export function plannedSetsPage(config) {
 			notes: '',
 			band_template_id: '',
 		},
+		slotEditEditor: {
+			set_id: null,
+			song_id: null,
+			slot_id: null,
+			name: '',
+			notes: '',
+		},
+		slotEditBusy: false,
+		initialEditAssignedUserId: '',
+		initialEditAssignedUserName: '',
+		initialEditManualPerformerName: '',
+		editAssignedUserId: '',
+		editAssignedUserName: '',
+		editAssignedUserQuery: '',
+		showEditUserSuggestions: false,
+		assignmentConflictMessage: '',
+		assignmentConflictPending: false,
+		assignmentConflictCooldown: false,
+		assignmentConflictTimer: null,
 
 		init() {
 			this.sets = (this.sets || []).map((set) => this.decorateSetForUi(set));
+		},
+
+		totalSetCount() {
+			return (this.sets || []).length;
+		},
+
+		visibleSetCount() {
+			return this.filteredSets().length;
+		},
+
+		hasActiveFilters() {
+			return this.filterQuery.trim().length > 0 || this.selectedAttributeFilters.length > 0;
+		},
+
+		selectedFilterLabel() {
+			if (!this.selectedAttributeFilters.length) {
+				return 'Filter';
+			}
+
+			if (this.selectedAttributeFilters.length === 1) {
+				const selectedKey = this.selectedAttributeFilters[0];
+				return this.filterOptions.find((option) => option.key === selectedKey)?.label || 'Filter';
+			}
+
+			return `Filter (${this.selectedAttributeFilters.length})`;
+		},
+
+		clearFilters() {
+			this.filterQuery = '';
+			this.selectedAttributeFilters = [];
+			this.filterMenuOpen = false;
+		},
+
+		isPerformingOnSet(set) {
+			if (!set) {
+				return false;
+			}
+
+			return (set.songs || []).some((song) =>
+				(song.slots || []).some((slot) => Number(slot.user_id || 0) === Number(this.currentUserId))
+			);
+		},
+
+		matchesNonTextFilters(set) {
+			if (this.selectedAttributeFilters.length === 0) {
+				return true;
+			}
+
+			const isPerformed = Boolean(set?.performed);
+			const isSignupsOpen = Boolean(set?.signups_open);
+			const isHidden = Boolean(set?.is_hidden);
+			const isFreeForAll = Boolean(set?.free_for_all);
+			const hasAttachments = Boolean(set?.has_attachments);
+			const isOwnedByCurrentUser = Number(set?.owner?.id || 0) === Number(this.currentUserId);
+			const isCollaborating = (set?.collaborator_ids || []).map((id) => Number(id)).includes(Number(this.currentUserId));
+			const isPerformingOnSet = this.isPerformingOnSet(set);
+
+			return this.selectedAttributeFilters.some((filterKey) => {
+				switch (filterKey) {
+					case 'my_sets':
+						return isOwnedByCurrentUser;
+					case 'collaborating':
+						return isCollaborating;
+					case 'performing_on':
+						return isPerformingOnSet;
+					case 'planned':
+						return !isPerformed;
+					case 'performed':
+						return isPerformed;
+					case 'signups_open':
+						return isSignupsOpen;
+					case 'signups_closed':
+						return !isSignupsOpen;
+					case 'hidden':
+						return isHidden;
+					case 'free_for_all':
+						return isFreeForAll;
+					case 'has_attachments':
+						return hasAttachments;
+					default:
+						return false;
+				}
+			});
+		},
+
+		setTextHaystack(set) {
+			const songText = (set?.songs || [])
+				.map((song) => `${song.artist || ''} ${song.title || ''}`.trim())
+				.join(' ');
+
+			const participantText = [
+				set?.owner?.name || '',
+				...((set?.collaborators || []).map((collaborator) => collaborator.name || '')),
+			].join(' ');
+
+			return `${set?.name || ''} ${participantText} ${songText}`.toLowerCase();
+		},
+
+		matchesFilters(set) {
+			if (!this.matchesNonTextFilters(set)) {
+				return false;
+			}
+
+			const query = this.filterQuery.trim().toLowerCase();
+			if (!query) {
+				return true;
+			}
+
+			return this.setTextHaystack(set).includes(query);
+		},
+
+		filteredSets() {
+			return (this.sets || []).filter((set) => this.matchesFilters(set));
 		},
 
 		decorateSetForUi(set) {
@@ -260,6 +430,35 @@ export function plannedSetsPage(config) {
 			this.resetSongLookupState();
 			this.errorMessage = '';
 			window.dispatchEvent(new CustomEvent('open-modal', { detail: 'planned-set-add-song' }));
+		},
+
+		canRequestSongForSet(set) {
+			if (!set) {
+				return false;
+			}
+
+			return Boolean(set.song_requests) && !this.isSetManager(set);
+		},
+
+		currentSongRequestSet() {
+			return this.sets.find((set) => Number(set.id) === Number(this.requestSongSetId)) || null;
+		},
+
+		openSongRequestModal(set) {
+			if (!this.canRequestSongForSet(set)) {
+				return;
+			}
+
+			this.requestSongSetId = Number(set.id);
+			this.requestSongMode = 'manual';
+			this.resetSongRequestAutocomplete();
+			this.errorMessage = '';
+			window.dispatchEvent(new CustomEvent('open-modal', { detail: 'planned-set-request-song' }));
+		},
+
+		closeSongRequestModal() {
+			window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-request-song' }));
+			this.resetSongRequestAutocomplete();
 		},
 
 		openEditSongModal(set, song) {
@@ -501,6 +700,177 @@ export function plannedSetsPage(config) {
 			return this.isSetManager(context.set);
 		},
 
+		canEditActiveSlot() {
+			const context = this.activeSlotContext();
+			if (!context?.slot || !context?.set) {
+				return false;
+			}
+
+			return Boolean(context.set.can_manage);
+		},
+
+		openEditSlotModal() {
+			const context = this.activeSlotContext();
+			if (!context || !this.canEditActiveSlot()) {
+				return;
+			}
+
+			this.slotEditEditor = {
+				set_id: Number(context.set.id),
+				song_id: Number(context.song.id),
+				slot_id: Number(context.slot.id),
+				name: context.slot.name || '',
+				notes: context.slot.notes || '',
+			};
+
+			this.initialEditAssignedUserId = context.slot.user_id ? String(context.slot.user_id) : '';
+			this.initialEditAssignedUserName = context.slot.user_id ? (context.slot.user_name || '') : '';
+			this.initialEditManualPerformerName = context.slot.manual_performer_name || '';
+			this.editAssignedUserId = this.initialEditAssignedUserId;
+			this.editAssignedUserName = this.initialEditAssignedUserName;
+			this.editAssignedUserQuery = this.initialEditAssignedUserName || this.initialEditManualPerformerName || '';
+			this.showEditUserSuggestions = false;
+			this.resetAssignmentConflict();
+			this.closeSlotActions();
+
+			window.dispatchEvent(new CustomEvent('open-modal', { detail: 'planned-set-edit-slot' }));
+		},
+
+		closeEditSlotModal() {
+			window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-edit-slot' }));
+			this.showEditUserSuggestions = false;
+			this.resetAssignmentConflict();
+		},
+
+		canSelectUser(user) {
+			return user?.selectable !== false;
+		},
+
+		splitUserGroups(users) {
+			return users.reduce((groups, user) => {
+				if (user.attendance_group === 'not_attending') {
+					groups.notAttending.push(user);
+					return groups;
+				}
+
+				groups.available.push(user);
+				return groups;
+			}, { available: [], notAttending: [] });
+		},
+
+		slotEditContext() {
+			const set = this.sets.find((candidate) => Number(candidate.id) === Number(this.slotEditEditor.set_id));
+			if (!set) {
+				return null;
+			}
+
+			const song = (set.songs || []).find((candidate) => Number(candidate.id) === Number(this.slotEditEditor.song_id));
+			if (!song) {
+				return null;
+			}
+
+			const slot = (song.slots || []).find((candidate) => Number(candidate.id) === Number(this.slotEditEditor.slot_id));
+			if (!slot) {
+				return null;
+			}
+
+			return {
+				set,
+				song,
+				slot,
+			};
+		},
+
+		slotEditUserOptions() {
+			const context = this.slotEditContext();
+			if (!context?.set) {
+				return [];
+			}
+
+			const participantIds = new Set((context.set.participant_ids || []).map((id) => Number(id)));
+			return (this.collaboratorOptions || [])
+				.filter((candidate) => participantIds.has(Number(candidate.id)))
+				.map((candidate) => ({
+					id: Number(candidate.id),
+					name: candidate.name,
+					attendance_group: 'available',
+					selectable: true,
+				}));
+		},
+
+		filteredEditUsers() {
+			const query = this.editAssignedUserQuery.trim().toLowerCase();
+			const users = this.slotEditUserOptions();
+			const filtered = query === ''
+				? users
+				: users.filter((user) => user.name.toLowerCase().includes(query));
+
+			return filtered.slice(0, 16);
+		},
+
+		groupedEditUsers() {
+			return this.splitUserGroups(this.filteredEditUsers());
+		},
+
+		updateEditUserQuery() {
+			this.editAssignedUserId = '';
+			this.showEditUserSuggestions = true;
+			this.resetAssignmentConflict();
+		},
+
+		selectEditUser(user) {
+			if (!this.canSelectUser(user)) {
+				return;
+			}
+
+			this.editAssignedUserId = String(user.id);
+			this.editAssignedUserQuery = user.name;
+			this.editAssignedUserName = user.name;
+			this.showEditUserSuggestions = false;
+			this.resetAssignmentConflict();
+		},
+
+		resetAssignmentConflict() {
+			this.assignmentConflictMessage = '';
+			this.assignmentConflictPending = false;
+			this.assignmentConflictCooldown = false;
+			clearTimeout(this.assignmentConflictTimer);
+			this.assignmentConflictTimer = null;
+		},
+
+		showAssignmentConflict(message) {
+			this.assignmentConflictMessage = `${message} Click Save to move the assignment.`;
+			this.assignmentConflictPending = true;
+			this.assignmentConflictCooldown = true;
+			clearTimeout(this.assignmentConflictTimer);
+			this.assignmentConflictTimer = setTimeout(() => {
+				this.assignmentConflictCooldown = false;
+				this.assignmentConflictTimer = null;
+			}, 2500);
+		},
+
+		shouldShowAssigneeWarning() {
+			const query = this.editAssignedUserQuery.trim();
+			return query !== '' && query !== this.initialEditAssignedUserName && query !== this.initialEditManualPerformerName;
+		},
+
+		resolveEditedSlotAssignment() {
+			const query = this.editAssignedUserQuery.trim();
+			const selectedUser = this.slotEditUserOptions().find((user) => String(user.id) === String(this.editAssignedUserId));
+
+			if (selectedUser) {
+				return {
+					user_id: String(selectedUser.id),
+					manual_performer_name: '',
+				};
+			}
+
+			return {
+				user_id: '',
+				manual_performer_name: query,
+			};
+		},
+
 		slotManageMenuItemClass(set) {
 			return this.isAdminManagingOtherSet(set)
 				? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
@@ -708,6 +1078,204 @@ export function plannedSetsPage(config) {
 			}
 
 			this.songEditor.slot_names = [...this.songEditor.slot_names, slotName];
+		},
+
+		toggleRequestSongSlotName(slotName) {
+			if (this.requestSongSlotNames.includes(slotName)) {
+				this.requestSongSlotNames = this.requestSongSlotNames.filter((name) => name !== slotName);
+				return;
+			}
+
+			this.requestSongSlotNames = [...this.requestSongSlotNames, slotName];
+		},
+
+		resetSongRequestAutocomplete() {
+			this.requestSongBusy = false;
+			this.requestSongError = '';
+			this.requestCatalogSongId = '';
+			this.requestSongNotes = '';
+			this.requestSongSlotNames = [];
+			this.requestArtistQuery = '';
+			this.requestTitleQuery = '';
+			this.requestSelectedArtistName = '';
+			this.requestArtistSuggestions = [];
+			this.requestTitleSuggestions = [];
+			this.showRequestArtistSuggestions = false;
+			this.showRequestTitleSuggestions = false;
+			this.requestArtistLookupBusy = false;
+			this.requestTitleLookupBusy = false;
+			this.requestArtistLookupError = '';
+			this.requestTitleLookupError = '';
+
+			if (this.requestArtistLookupTimer) {
+				clearTimeout(this.requestArtistLookupTimer);
+				this.requestArtistLookupTimer = null;
+			}
+
+			if (this.requestTitleLookupTimer) {
+				clearTimeout(this.requestTitleLookupTimer);
+				this.requestTitleLookupTimer = null;
+			}
+		},
+
+		applyRequestCatalogSong() {
+			const selectedSongId = Number(this.requestCatalogSongId);
+			const selectedSong = this.jamStandardSongs.find((song) => Number(song.id) === selectedSongId);
+
+			if (!selectedSong) {
+				this.requestArtistQuery = '';
+				this.requestTitleQuery = '';
+				this.requestSelectedArtistName = '';
+				return;
+			}
+
+			this.requestArtistQuery = selectedSong.artist;
+			this.requestSelectedArtistName = selectedSong.artist;
+			this.requestTitleQuery = selectedSong.title;
+			this.requestArtistSuggestions = [];
+			this.requestTitleSuggestions = [];
+			this.showRequestArtistSuggestions = false;
+			this.showRequestTitleSuggestions = false;
+		},
+
+		queueRequestArtistLookup() {
+			if (this.requestSongMode === 'catalog') {
+				return;
+			}
+
+			this.requestArtistLookupError = '';
+			this.showRequestTitleSuggestions = false;
+			this.requestTitleSuggestions = [];
+
+			if (this.requestArtistLookupTimer) {
+				clearTimeout(this.requestArtistLookupTimer);
+			}
+
+			const query = this.requestArtistQuery.trim();
+			if (query.length < 2) {
+				this.requestArtistSuggestions = [];
+				this.showRequestArtistSuggestions = false;
+				this.requestSelectedArtistName = '';
+				return;
+			}
+
+			this.requestArtistLookupTimer = setTimeout(() => this.fetchRequestArtistSuggestions(query), 250);
+		},
+
+		async fetchRequestArtistSuggestions(query) {
+			const token = ++this.requestArtistLookupToken;
+			this.requestArtistLookupBusy = true;
+
+			try {
+				const response = await fetch(`${config.artistLookupUrl}?q=${encodeURIComponent(query)}`, {
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
+				});
+
+				if (!response.ok) {
+					throw new Error('Artist lookup failed');
+				}
+
+				const payload = await response.json();
+				if (token !== this.requestArtistLookupToken) {
+					return;
+				}
+
+				this.requestArtistSuggestions = payload.artists || [];
+				this.showRequestArtistSuggestions = this.requestArtistSuggestions.length > 0;
+			} catch (e) {
+				if (token !== this.requestArtistLookupToken) {
+					return;
+				}
+
+				this.requestArtistLookupError = 'Could not fetch artist suggestions right now.';
+				this.requestArtistSuggestions = [];
+				this.showRequestArtistSuggestions = false;
+			} finally {
+				if (token === this.requestArtistLookupToken) {
+					this.requestArtistLookupBusy = false;
+				}
+			}
+		},
+
+		selectRequestArtistSuggestion(artistName) {
+			this.requestArtistQuery = artistName;
+			this.requestSelectedArtistName = artistName;
+			this.requestArtistSuggestions = [];
+			this.showRequestArtistSuggestions = false;
+			this.requestTitleQuery = '';
+			this.requestTitleSuggestions = [];
+			this.showRequestTitleSuggestions = false;
+			this.requestTitleLookupError = '';
+		},
+
+		queueRequestTitleLookup() {
+			if (this.requestSongMode === 'catalog') {
+				return;
+			}
+
+			this.requestTitleLookupError = '';
+
+			if (this.requestTitleLookupTimer) {
+				clearTimeout(this.requestTitleLookupTimer);
+			}
+
+			const query = this.requestTitleQuery.trim();
+			const artist = (this.requestSelectedArtistName || this.requestArtistQuery).trim();
+
+			if (query.length < 2 || artist.length < 2) {
+				this.requestTitleSuggestions = [];
+				this.showRequestTitleSuggestions = false;
+				return;
+			}
+
+			this.requestTitleLookupTimer = setTimeout(() => this.fetchRequestTitleSuggestions(artist, query), 250);
+		},
+
+		async fetchRequestTitleSuggestions(artist, query) {
+			const token = ++this.requestTitleLookupToken;
+			this.requestTitleLookupBusy = true;
+
+			try {
+				const response = await fetch(`${config.titleLookupUrl}?artist=${encodeURIComponent(artist)}&q=${encodeURIComponent(query)}`, {
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+					},
+				});
+
+				if (!response.ok) {
+					throw new Error('Title lookup failed');
+				}
+
+				const payload = await response.json();
+				if (token !== this.requestTitleLookupToken) {
+					return;
+				}
+
+				this.requestTitleSuggestions = payload.titles || [];
+				this.showRequestTitleSuggestions = this.requestTitleSuggestions.length > 0;
+			} catch (e) {
+				if (token !== this.requestTitleLookupToken) {
+					return;
+				}
+
+				this.requestTitleLookupError = 'Could not fetch song suggestions right now.';
+				this.requestTitleSuggestions = [];
+				this.showRequestTitleSuggestions = false;
+			} finally {
+				if (token === this.requestTitleLookupToken) {
+					this.requestTitleLookupBusy = false;
+				}
+			}
+		},
+
+		selectRequestTitleSuggestion(title) {
+			this.requestTitleQuery = title;
+			this.requestTitleSuggestions = [];
+			this.showRequestTitleSuggestions = false;
 		},
 
 		resetSongLookupState() {
@@ -1084,6 +1652,45 @@ export function plannedSetsPage(config) {
 			}
 		},
 
+		async submitSongRequest() {
+			if (this.requestSongBusy || !this.requestSongSetId) {
+				return;
+			}
+
+			if (!this.requestArtistQuery.trim() || !this.requestTitleQuery.trim()) {
+				this.requestSongError = 'Artist and title are required.';
+				return;
+			}
+
+			this.requestSongBusy = true;
+			this.requestSongError = '';
+
+			try {
+				const payload = await this.requestJson(
+					config.songRequestStoreUrlTemplate.replace('__SET_ID__', String(this.requestSongSetId)),
+					{
+						method: 'POST',
+						body: {
+							artist: this.requestArtistQuery.trim(),
+							title: this.requestTitleQuery.trim(),
+							notes: this.requestSongNotes.trim() || null,
+							jam_standard_song_id: this.requestSongMode === 'catalog' && this.requestCatalogSongId
+								? Number(this.requestCatalogSongId)
+								: null,
+							slot_names: [...this.requestSongSlotNames],
+						},
+					}
+				);
+
+				this.statusMessage = payload.message || 'Song request submitted to the set owner.';
+				this.closeSongRequestModal();
+			} catch (e) {
+				this.requestSongError = e?.message || 'Could not submit song request. Try again.';
+			} finally {
+				this.requestSongBusy = false;
+			}
+		},
+
 		async saveSong() {
 			if (this.songBusy || !this.songEditor.set_id) {
 				return;
@@ -1399,6 +2006,119 @@ export function plannedSetsPage(config) {
 				this.errorMessage = e?.message || 'Could not update slot claimable status.';
 			} finally {
 				this.slotActionBusy = false;
+			}
+		},
+
+		async clearEditedSlot() {
+			const context = this.slotEditContext();
+			if (this.slotEditBusy || !context) {
+				return;
+			}
+
+			if (!window.confirm('Clear this slot assignment?')) {
+				return;
+			}
+
+			this.slotEditBusy = true;
+			this.errorMessage = '';
+
+			try {
+				const payload = await this.requestJson(
+					config.slotUpdateUrlTemplate
+						.replace('__SET_ID__', String(context.set.id))
+						.replace('__SLOT_ID__', String(context.slot.id)),
+					{
+						method: 'PATCH',
+						body: {
+							name: this.slotEditEditor.name,
+							notes: this.slotEditEditor.notes || null,
+							user_id: null,
+							manual_performer_name: '',
+						},
+					}
+				);
+
+				if (payload?.song) {
+					this.replaceSetSong(context.set.id, payload.song);
+				}
+
+				this.statusMessage = payload.message || 'Slot cleared.';
+				this.closeEditSlotModal();
+				this.resetSlotActionState();
+			} catch (e) {
+				this.errorMessage = e?.message || 'Could not clear slot.';
+			} finally {
+				this.slotEditBusy = false;
+			}
+		},
+
+		async submitEditSlot() {
+			const context = this.slotEditContext();
+			if (this.slotEditBusy || !context) {
+				return;
+			}
+
+			if (!this.slotEditEditor.name) {
+				this.errorMessage = 'Choose a slot name.';
+				return;
+			}
+
+			this.slotEditBusy = true;
+			this.errorMessage = '';
+
+			try {
+				const assignment = this.resolveEditedSlotAssignment();
+				const body = {
+					name: this.slotEditEditor.name,
+					notes: this.slotEditEditor.notes || null,
+					user_id: assignment.user_id ? Number(assignment.user_id) : null,
+					manual_performer_name: assignment.manual_performer_name,
+				};
+
+				if (this.assignmentConflictPending) {
+					body.replace_conflicting_assignment = true;
+				}
+
+				const response = await fetch(
+					config.slotUpdateUrlTemplate
+						.replace('__SET_ID__', String(context.set.id))
+						.replace('__SLOT_ID__', String(context.slot.id)),
+					{
+						method: 'PATCH',
+						headers: {
+							'Accept': 'application/json',
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest',
+							'X-CSRF-TOKEN': config.csrfToken,
+						},
+						body: JSON.stringify(body),
+					}
+				);
+
+				const payload = await response.json().catch(() => ({}));
+
+				if (response.status === 409) {
+					this.showAssignmentConflict(payload?.message || 'This assignment conflicts with another slot on the song.');
+					return;
+				}
+
+				if (!response.ok) {
+					const firstError = Object.values(payload?.errors || {})[0];
+					const firstValidationMessage = Array.isArray(firstError) ? firstError[0] : null;
+					throw new Error(firstValidationMessage || payload?.message || 'Could not save slot.');
+				}
+
+				if (payload?.song) {
+					this.replaceSetSong(context.set.id, payload.song);
+				}
+
+				this.statusMessage = payload.message || 'Slot updated.';
+				this.closeEditSlotModal();
+				this.resetSlotActionState();
+			} catch (e) {
+				this.errorMessage = e?.message || 'Could not save slot.';
+			} finally {
+				this.slotEditBusy = false;
 			}
 		},
 

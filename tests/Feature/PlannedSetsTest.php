@@ -6,6 +6,7 @@ use App\Models\JamSessionAttendance;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SlotAssignment;
+use App\Models\SlotType;
 use App\Models\Song;
 use App\Models\SongRequest;
 use App\Models\User;
@@ -587,6 +588,126 @@ test('a collaborator can take an open planned slot', function () {
         ->assertJsonPath('song.slots.0.user_id', $collaborator->id);
 
     expect($slot->refresh()->user_id)->toBe($collaborator->id);
+});
+
+test('a planned set manager can edit a slot assignment and metadata', function () {
+    $owner = User::factory()->create();
+    $assignee = User::factory()->create();
+
+    $set = Set::query()->create([
+        'name' => 'Editable Slot Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Toto',
+        'title' => 'Rosanna',
+        'position' => 1,
+    ]);
+
+    $slot = $song->slots()->create([
+        'name' => 'guitar',
+        'position' => 1,
+        'notes' => 'Original note',
+    ]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('planned-sets.slots.update', ['set' => $set, 'slot' => $slot]), [
+            'name' => 'keys',
+            'notes' => 'Updated note',
+            'user_id' => $assignee->id,
+            'manual_performer_name' => '',
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot.id', $slot->id)
+        ->assertJsonPath('slot.name', 'keys')
+        ->assertJsonPath('slot.user_id', $assignee->id)
+        ->assertJsonPath('slot.manual_performer_name', null)
+        ->assertJsonPath('song.id', $song->id);
+
+    $slot->refresh();
+
+    expect($slot->name)->toBe('keys')
+        ->and($slot->notes)->toBe('Updated note')
+        ->and($slot->user_id)->toBe($assignee->id)
+        ->and($slot->manual_performer_name)->toBeNull();
+});
+
+test('editing a planned slot reports and resolves conflicting user assignments on the same song', function () {
+    $owner = User::factory()->create();
+    $assignee = User::factory()->create();
+
+    $keys = SlotType::query()->firstOrCreate(
+        ['key' => 'keys'],
+        ['name' => 'Keys', 'sort_order' => 1, 'active' => true]
+    );
+    $keys->update(['active' => true]);
+
+    $leadGuitar = SlotType::query()->firstOrCreate(
+        ['key' => 'lead_guitar'],
+        ['name' => 'Lead Guitar', 'sort_order' => 2, 'active' => true]
+    );
+    $leadGuitar->update(['active' => true]);
+
+    $keys->conflicts()->syncWithoutDetaching([$leadGuitar->id]);
+
+    $set = Set::query()->create([
+        'name' => 'Conflict Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Steely Dan',
+        'title' => 'Peg',
+        'position' => 1,
+    ]);
+
+    $slotA = $song->slots()->create([
+        'name' => 'keys',
+        'position' => 1,
+        'user_id' => $assignee->id,
+    ]);
+
+    $slotB = $song->slots()->create([
+        'name' => 'lead_guitar',
+        'position' => 2,
+    ]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('planned-sets.slots.update', ['set' => $set, 'slot' => $slotB]), [
+            'name' => 'lead_guitar',
+            'notes' => null,
+            'user_id' => $assignee->id,
+            'manual_performer_name' => '',
+        ])
+        ->assertStatus(409)
+        ->assertJsonStructure(['message', 'conflict' => ['slot_id', 'slot_label']]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('planned-sets.slots.update', ['set' => $set, 'slot' => $slotB]), [
+            'name' => 'lead_guitar',
+            'notes' => null,
+            'user_id' => $assignee->id,
+            'manual_performer_name' => '',
+            'replace_conflicting_assignment' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('slot.id', $slotB->id)
+        ->assertJsonPath('slot.user_id', $assignee->id);
+
+    expect($slotA->fresh()->user_id)->toBeNull()
+        ->and($slotA->manual_performer_name)->toBeNull()
+        ->and($slotB->fresh()->user_id)->toBe($assignee->id);
 });
 
 test('a collaborator can request an already assigned planned slot', function () {

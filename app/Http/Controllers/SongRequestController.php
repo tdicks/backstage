@@ -69,6 +69,10 @@ class SongRequestController extends Controller
 
         $set->loadMissing('session');
 
+        $actionUrl = $set->session
+            ? route('sessions.show', $set->session).'#set-'.$set->id
+            : route('planned-sets.index');
+
         app(NotificationService::class)->notifyUsers(
             NotificationTypeCatalog::SONG_REQUEST_RECEIVED,
             app(NotificationService::class)->managersForSet($set),
@@ -76,7 +80,7 @@ class SongRequestController extends Controller
             [
                 'title' => 'New song request',
                 'body' => $request->user()->name.' requested '.$songRequest->artist.' - '.$songRequest->title.' for '.$set->name.'.',
-                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_url' => $actionUrl,
                 'action_label' => 'Review request',
             ]
         );

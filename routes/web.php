@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sets/planned/{set}/slots/{slot}/request', [PlannedSetController::class, 'requestSlot'])->name('planned-sets.slots.request');
     Route::post('/sets/planned/{set}/slots/{slot}/propose', [PlannedSetController::class, 'proposeSlot'])->name('planned-sets.slots.propose');
     Route::post('/sets/planned/{set}/slots/{slot}/release', [PlannedSetController::class, 'releaseSlot'])->name('planned-sets.slots.release');
+    Route::patch('/sets/planned/{set}/slots/{slot}', [PlannedSetController::class, 'updateSlot'])->name('planned-sets.slots.update');
     Route::patch('/sets/planned/{set}/slots/{slot}/claimable', [PlannedSetController::class, 'updateSlotClaimable'])->name('planned-sets.slots.claimable');
     Route::patch('/sets/planned/{set}/song-requests/{songRequest}', [PlannedSetController::class, 'respondSongRequest'])->name('planned-sets.song-requests.respond');
     Route::patch('/sets/planned/{set}/slot-assignments/{slotAssignment}', [PlannedSetController::class, 'respondSlotAssignment'])->name('planned-sets.slot-assignments.respond');
