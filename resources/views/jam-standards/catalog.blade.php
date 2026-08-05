@@ -112,26 +112,26 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto border border-slate-200 bg-white shadow-sm">
-            <table data-tour="jam-standards-songs-list" class="min-w-full divide-y divide-slate-200 text-left">
+        <div class="overflow-x-auto border border-slate-200 bg-white shadow-sm [contain:paint]">
+            <table data-tour="jam-standards-songs-list" class="w-full table-fixed divide-y divide-slate-200 text-left md:table-auto">
                 <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
                     <tr>
-                        <th scope="col" class="w-12 px-4 py-3"><span class="sr-only">Select song</span></th>
-                        <th scope="col" class="px-4 py-3">Artist</th>
-                        <th scope="col" class="px-4 py-3">Title</th>
-                        <th scope="col" class="px-4 py-3">Select the parts you know</th>
-                        @if (auth()->user()->is_admin)<th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>@endif
+                        <th scope="col" class="w-10 px-2 py-2 sm:w-12 sm:px-4 sm:py-3"><span class="sr-only">Select song</span></th>
+                        <th scope="col" class="w-[24%] px-2 py-2 sm:px-4 sm:py-3">Artist</th>
+                        <th scope="col" class="w-[28%] px-2 py-2 sm:px-4 sm:py-3">Title</th>
+                        <th scope="col" class="w-[42%] px-2 py-2 sm:px-4 sm:py-3">Select the parts you know</th>
+                        @if (auth()->user()->is_admin)<th scope="col" class="w-10 px-2 py-2 sm:w-12 sm:px-4 sm:py-3"><span class="sr-only">Actions</span></th>@endif
                     </tr>
                 </thead>
                 <tbody x-ref="catalogRows" class="divide-y divide-slate-200">
                     @forelse ($catalogSongs as $song)
                         <tr data-catalog-song-id="{{ $song->id }}" x-bind:class="catalogRowClass(selectedSongIds.includes({{ $song->id }}))">
-                            <td data-tour="jam-standards-select-songs" class="cursor-pointer px-4 py-3" @click="if ($event.target !== $el.querySelector('input')) { $el.querySelector('input').click() }">
+                            <td data-tour="jam-standards-select-songs" class="cursor-pointer px-2 py-2 align-top sm:px-4 sm:py-3" @click="if ($event.target !== $el.querySelector('input')) { $el.querySelector('input').click() }">
                                 <input type="checkbox" value="{{ $song->id }}" @change="toggleSong({{ $song->id }}, $event.target.checked)" class="cursor-pointer rounded border-slate-300 text-amber-600 focus:ring-amber-500" aria-label="Select {{ $song->artist }} - {{ $song->title }}">
                             </td>
-                            <td data-catalog-artist class="px-4 py-3 text-sm font-medium text-slate-900">{{ $song->artist }}</td>
-                            <td data-catalog-title class="px-4 py-3 text-sm text-slate-700"><span>{{ $song->title }}</span>@if ($song->notes)<p class="mt-1 text-xs text-slate-500">{{ $song->notes }}</p>@endif</td>
-                            <td data-tour="jam-standards-select-parts" data-catalog-slots class="px-4 py-3 text-sm text-slate-700">
+                            <td data-catalog-artist class="break-words px-2 py-2 text-sm font-medium text-slate-900 align-top sm:px-4 sm:py-3">{{ $song->artist }}</td>
+                            <td data-catalog-title class="break-words px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3"><span>{{ $song->title }}</span>@if ($song->notes)<p class="mt-1 text-xs text-slate-500">{{ $song->notes }}</p>@endif</td>
+                            <td data-tour="jam-standards-select-parts" data-catalog-slots class="px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3">
                                 @if ($song->slots->isNotEmpty())
                                     <form class="flex flex-wrap gap-2">
                                         @foreach ($song->slots as $slot)
@@ -149,7 +149,7 @@
                                 @endif
                             </td>
                             @if (auth()->user()->is_admin)
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-2 py-2 text-right align-top sm:px-4 sm:py-3">
                                     <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click="toggleCatalogActionMenu({ id: {{ $song->id }}, artist: @js($song->artist), title: @js($song->title), notes: @js($song->notes), band_template_id: @js($song->band_template_id), slots: @js($song->slots->pluck('name')->values()) }, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === {{ $song->id }}).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
                                 </td>
                             @endif

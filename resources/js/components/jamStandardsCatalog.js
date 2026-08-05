@@ -462,7 +462,7 @@ export function jamStandardsCatalog(config) {
             row.dataset.catalogSongId = song.id;
             row.className = this.catalogRowClass(this.selectedSongIds.includes(song.id));
             const selectionCell = document.createElement('td');
-            selectionCell.className = 'cursor-pointer px-4 py-3';
+            selectionCell.className = 'cursor-pointer px-2 py-2 align-top sm:px-4 sm:py-3';
             const selection = document.createElement('input');
             selection.type = 'checkbox';
             selection.checked = this.selectedSongIds.includes(song.id);
@@ -481,7 +481,7 @@ export function jamStandardsCatalog(config) {
             row.append(selectionCell);
             [song.artist, song.title].forEach((value, index) => {
                 const cell = document.createElement('td');
-                cell.className = 'px-4 py-3 text-sm text-slate-700';
+                cell.className = 'break-words px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3';
                 cell.textContent = value;
                 if (index === 0) {
                     cell.classList.add('font-medium', 'text-slate-900');
@@ -500,7 +500,7 @@ export function jamStandardsCatalog(config) {
             });
             const slotsCell = document.createElement('td');
             slotsCell.dataset.catalogSlots = '';
-            slotsCell.className = 'px-4 py-3 text-sm text-slate-700';
+            slotsCell.className = 'px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3';
             const capabilityForm = document.createElement('form');
             capabilityForm.className = 'flex flex-wrap gap-2';
             song.slots.forEach((slot) => {
@@ -534,7 +534,7 @@ export function jamStandardsCatalog(config) {
             row.append(slotsCell);
             if (this.canEditCatalog) {
                 const actionCell = document.createElement('td');
-                actionCell.className = 'px-4 py-3 text-right';
+                actionCell.className = 'px-2 py-2 text-right align-top sm:px-4 sm:py-3';
                 const actionButton = document.createElement('button');
                 actionButton.type = 'button';
                 actionButton.className = 'inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400';
