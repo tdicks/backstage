@@ -222,6 +222,25 @@ test('find a slot page shows the free for all icon on free for all sets', functi
         ->assertSee('Free for all mode');
 });
 
+test('slot finder partials reuse the shared songs and slots presentation components', function () {
+    $setCard = file_get_contents(resource_path('views/slot-finder/partials/set-card.blade.php'));
+    $songCard = file_get_contents(resource_path('views/slot-finder/partials/song-card.blade.php'));
+    $slotPill = file_get_contents(resource_path('views/slot-finder/partials/slot-pill.blade.php'));
+
+    expect($setCard)
+        ->toContain('<x-sets.presentational.section-panel heading="Songs &amp; Slots">');
+
+    expect($songCard)
+        ->toContain('<x-sets.presentational.song-card')
+        ->toContain(':meta-text="$slotCountLabel"');
+
+    expect($slotPill)
+        ->toContain('<x-sets.presentational.slot-chip')
+        ->toContain('Take')
+        ->toContain('Requested')
+        ->toContain('Request');
+});
+
 test('find a slot page shows hidden icons for hidden sessions and sets', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 

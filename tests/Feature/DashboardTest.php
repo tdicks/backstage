@@ -105,6 +105,47 @@ test('authenticated users without upcoming slots see the empty dashboard state',
         ->assertSee(route('sessions.index'));
 });
 
+test('navigation lists jam sessions in descending date order', function () {
+    $user = User::factory()->create();
+
+    $earliestSession = JamSession::create([
+        'name' => 'Earliest Jam',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_archived' => false,
+    ]);
+
+    $middleSession = JamSession::create([
+        'name' => 'Middle Jam',
+        'date' => now()->addDays(8),
+        'description' => null,
+        'is_archived' => false,
+    ]);
+
+    $latestSession = JamSession::create([
+        'name' => 'Latest Jam',
+        'date' => now()->addDays(14),
+        'description' => null,
+        'is_archived' => false,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    $content = $response->getContent();
+
+    $latestPosition = strpos($content, 'Latest Jam');
+    $middlePosition = strpos($content, 'Middle Jam');
+    $earliestPosition = strpos($content, 'Earliest Jam');
+
+    expect($latestPosition)->not->toBeFalse();
+    expect($middlePosition)->not->toBeFalse();
+    expect($earliestPosition)->not->toBeFalse();
+    expect($latestPosition)->toBeLessThan($middlePosition);
+    expect($middlePosition)->toBeLessThan($earliestPosition);
+});
+
 test('dashboard shows a dismissible get started quest for new users', function () {
     $user = User::factory()->create([
         'bio' => null,
