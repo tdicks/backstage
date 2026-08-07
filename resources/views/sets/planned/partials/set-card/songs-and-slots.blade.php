@@ -1,7 +1,4 @@
-<div class="mt-3 rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-3 shadow-sm transition hover:border-slate-400 hover:shadow-md">
-    <div class="flex items-center justify-between gap-2">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Songs &amp; Slots</p>
-    </div>
+<x-sets.presentational.section-panel heading="Songs &amp; Slots" class="mt-3 transition hover:border-slate-400 hover:shadow-md">
 
     <div class="mt-3 space-y-3" x-show="set.can_manage && (set.pending_song_requests || []).length > 0">
         <div class="rounded-md border border-amber-200 bg-amber-50/80 p-3">
@@ -87,12 +84,8 @@
 
     <div class="mt-2 space-y-2" x-show="(set.songs || []).length > 0">
         <template x-for="song in (set.songs || [])" :key="`set-${set.id}-song-${song.id}`">
-            <div class="rounded-xl border border-slate-300 bg-gradient-to-b from-slate-50 to-white p-3 shadow-sm" x-data="{ openSongActionMenu: false }">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-semibold text-slate-900" x-text="`${song.artist} - ${song.title}`"></p>
-                        <p class="mt-1 text-xs text-slate-600" x-show="song.notes" x-text="song.notes"></p>
-                    </div>
+            <x-sets.presentational.song-card x-data="{ openSongActionMenu: false }" title-expr="`${song.artist} - ${song.title}`" notes-expr="song.notes" notes-show-expr="song.notes">
+                <x-slot:actions>
                     <div class="relative" x-show="set.can_manage">
                         <button
                             type="button"
@@ -135,7 +128,7 @@
 
                         </div>
                     </div>
-                </div>
+                </x-slot:actions>
 
                 <div class="mt-2 flex flex-wrap gap-2" x-show="(song.slots || []).length > 0">
                     <template x-for="slot in (song.slots || [])" :key="`song-${song.id}-slot-${slot.id}`">
@@ -274,7 +267,7 @@
                 </div>
 
                 <p class="mt-2 text-xs text-slate-500" x-show="(song.slots || []).length === 0">No slots yet.</p>
-            </div>
+            </x-sets.presentational.song-card>
         </template>
     </div>
 
@@ -322,4 +315,4 @@
             </div>
         </template>
     </div>
-</div>
+</x-sets.presentational.section-panel>
