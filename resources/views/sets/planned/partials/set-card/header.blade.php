@@ -11,7 +11,7 @@
             </span>
 
             <span class="inline-flex items-center" title="Planned">
-                <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
+                <x-heroicon-m-clock class="h-4 w-4 text-slate-400" aria-hidden="true" />
                 <span class="sr-only">Planned</span>
             </span>
 

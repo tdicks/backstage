@@ -133,20 +133,22 @@
                 <div class="mt-2 flex flex-wrap gap-2" x-show="(song.slots || []).length > 0">
                     <template x-for="slot in (song.slots || [])" :key="`song-${song.id}-slot-${slot.id}`">
                         <div class="relative">
-                            <button
+                            <x-sets.presentational.slot-chip
+                                tag="button"
                                 type="button"
-                                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                 @click="openSlotActions(set, song, slot)"
-                                x-bind:title="slot.user_name ? `${slot.label}: ${slot.user_name}` : slot.label"
-                                x-bind:aria-expanded="isSlotActionPopoverOpen(slot.id).toString()"
+                                label-expr="slot.label"
+                                title-expr="slot.user_name ? `${slot.label}: ${slot.user_name}` : slot.label"
+                                expanded-expr="isSlotActionPopoverOpen(slot.id).toString()"
                             >
-                                <span x-text="slot.label"></span>
-                                <span
-                                    class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                                    x-bind:class="slotAssigneeBadgeClass(slot)"
-                                    x-text="slotAssigneeName(slot)"
-                                ></span>
-                            </button>
+                                <x-slot:badge>
+                                    <span
+                                        class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                                        x-bind:class="slotAssigneeBadgeClass(slot)"
+                                        x-text="slotAssigneeName(slot)"
+                                    ></span>
+                                </x-slot:badge>
+                            </x-sets.presentational.slot-chip>
 
                             <div
                                 x-show="isSlotActionPopoverOpen(slot.id)"

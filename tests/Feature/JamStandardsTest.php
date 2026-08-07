@@ -244,10 +244,19 @@ test('catalog selected songs persist across paginated fetches in the frontend co
     preg_match('/renderCatalogSongs\(songs, performers, pagination\) \{(?<body>.*?)\n        \},/s', $component, $matches);
 
     expect($component)
-        ->toContain('selection.checked = this.selectedSongIds.includes(song.id);');
+        ->toContain('this.currentCatalogSongs = songs;');
 
     expect($matches['body'] ?? '')
         ->not->toContain('this.selectedSongIds = [];');
+});
+
+test('catalog dynamic renders keep jam standards tour markers', function () {
+    $view = file_get_contents(resource_path('views/jam-standards/catalog.blade.php'));
+
+    expect($view)
+        ->toContain('data-tour="jam-standards-select-songs"')
+        ->toContain('data-tour="jam-standards-select-parts"')
+        ->toContain('<template x-for="song in currentCatalogSongs" :key="song.id">');
 });
 
 test('catalog includes a compact mobile view alongside the desktop table', function () {
@@ -259,9 +268,9 @@ test('catalog includes a compact mobile view alongside the desktop table', funct
         ->assertOk()
         ->assertSee('x-ref="catalogCards"', false)
         ->assertSee('space-y-4 md:hidden', false)
-    ->assertSee('Select Songs', false)
-    ->assertSee('Select All Visible', false)
-    ->assertSee('mobileSelectionMode', false)
+        ->assertSee('Select Songs', false)
+        ->assertSee('Select All Visible', false)
+        ->assertSee('mobileSelectionMode', false)
         ->assertSee('hidden overflow-x-auto border border-slate-200 bg-white shadow-sm [contain:paint] md:block', false);
 });
 

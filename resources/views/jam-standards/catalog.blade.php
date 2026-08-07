@@ -56,6 +56,11 @@
                 'user_slot_names' => $song->userSlots->pluck('slot_name')->values(),
                 'performer_slots' => $searchedUserSlots[$song->id] ?? [],
             ])->values()),
+            initialCatalogPagination: @js([
+                'current_page' => $catalogSongs->currentPage(),
+                'last_page' => $catalogSongs->lastPage(),
+                'total' => $catalogSongs->total(),
+            ]),
             initialPerformers: @js($selectedPerformers->values()),
             selectedPerformerIds: @js($selectedPerformers->pluck('id')->map(fn ($userId) => (string) $userId)->all()),
             performerNames: @js($users->mapWithKeys(fn ($user) => [$user->id => $user->name])->all()),
@@ -141,59 +146,52 @@
                     </div>
                 </div>
             </div>
-            <div x-ref="performerCapabilityLegend" class="mt-3 flex items-center gap-2">
-                @if ($selectedPerformers->isNotEmpty())
-                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="Selected performers know these slots"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /></span>
-                    <p class="text-xs font-medium text-slate-600">{{ $selectedPerformers->pluck('name')->join(', ') }} know these parts</p>
-                @endif
+            <div class="mt-3 flex items-center gap-2">
+                <template x-if="currentCatalogPerformers.length > 0">
+                    <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="Selected performers know these slots">
+                        <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                </template>
+                <p class="text-xs font-medium text-slate-600" x-show="currentCatalogPerformers.length > 0" x-text="selectedPerformerLegend()"></p>
             </div>
         </div>
 
         <div class="space-y-4 md:hidden" x-ref="catalogCards">
-            @forelse ($catalogSongs as $song)
-                <article data-catalog-song-id="{{ $song->id }}" x-bind:class="catalogCardClass(selectedSongIds.includes({{ $song->id }}))" @click="if (mobileSelectionMode) { toggleSong({{ $song->id }}, !selectedSongIds.includes({{ $song->id }})) }" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <template x-if="currentCatalogSongs.length === 0">
+                <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                    No catalog songs found.
+                </div>
+            </template>
+
+            <template x-for="song in currentCatalogSongs" :key="song.id">
+                <article x-bind:data-catalog-song-id="song.id" x-bind:class="catalogCardClass(selectedSongIds.includes(song.id))" @click="if (mobileSelectionMode) { toggleSong(song.id, !selectedSongIds.includes(song.id)) }" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <span class="block break-words text-sm font-semibold text-slate-900">{{ $song->artist }}</span>
-                            <span class="mt-0.5 block break-words text-sm text-slate-700">{{ $song->title }}</span>
-                            @if ($song->notes)
-                                <span class="mt-1 block text-xs text-slate-500">{{ $song->notes }}</span>
-                            @endif
+                            <span class="block break-words text-sm font-semibold text-slate-900" x-text="song.artist"></span>
+                            <span class="mt-0.5 block break-words text-sm text-slate-700" x-text="song.title"></span>
+                            <span class="mt-1 block text-xs text-slate-500" x-show="song.notes" x-text="song.notes"></span>
                         </div>
-                        <span x-show="mobileSelectionMode" x-cloak x-bind:class="selectedSongIds.includes({{ $song->id }}) ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-slate-300 bg-slate-50 text-slate-600'" class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"> <span x-text="selectedSongIds.includes({{ $song->id }}) ? 'Selected' : 'Tap to select'"></span></span>
-                        @if (auth()->user()->is_admin)
-                            <button type="button" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click.stop="toggleCatalogActionMenu({ id: {{ $song->id }}, artist: @js($song->artist), title: @js($song->title), notes: @js($song->notes), band_template_id: @js($song->band_template_id), slots: @js($song->slots->pluck('name')->values()) }, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === {{ $song->id }}).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
-                        @endif
+                        <span x-show="mobileSelectionMode" x-cloak x-bind:class="selectedSongIds.includes(song.id) ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-slate-300 bg-slate-50 text-slate-600'" class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide"><span x-text="selectedSongIds.includes(song.id) ? 'Selected' : 'Tap to select'"></span></span>
+                        <button x-show="canEditCatalog" type="button" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click.stop="toggleCatalogActionMenu(song, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === song.id).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
                     </div>
-                    <div x-bind:class="mobileSelectionMode ? 'mt-4 border-t border-slate-100 pt-3 opacity-60 pointer-events-none' : 'mt-4 border-t border-slate-100 pt-3'">
+                    <div data-tour="jam-standards-select-parts" x-bind:class="mobileSelectionMode ? 'mt-4 border-t border-slate-100 pt-3 opacity-60 pointer-events-none' : 'mt-4 border-t border-slate-100 pt-3'">
                         <div class="mb-2 flex items-center justify-between gap-2">
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Parts you know</p>
-                            @if ($searchedUserSlots[$song->id] ?? false)
-                                <p class="text-[11px] font-medium text-slate-500">Selected performers marked with <span class="font-semibold text-emerald-700">check</span></p>
-                            @endif
+                            <p class="text-[11px] font-medium text-slate-500" x-show="hasPerformerMatches(song)">Selected performers marked with <span class="font-semibold text-emerald-700">check</span></p>
                         </div>
-                        @if ($song->slots->isNotEmpty())
-                            <form class="flex flex-wrap gap-2">
-                                @foreach ($song->slots as $slot)
-                                    <label x-data="{ selected: @js($song->userSlots->contains('slot_name', $slot->name)), capabilityCount: {{ max(0, (int) ($song->recent_capability_counts[$slot->name] ?? 0)) }} }" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300' }}" :class="selected ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'">
-                                        <input type="checkbox" name="slot_names[]" value="{{ $slot->name }}" @checked($song->userSlots->contains('slot_name', $slot->name)) @change="selected = $event.target.checked; updateCapabilities({{ $song->id }}, $el.form).then(payload => { if (payload) { capabilityCount = Math.max(0, Number(payload.slot_capability_counts['{{ $slot->name }}'] ?? capabilityCount)); } })" class="sr-only">
-                                        <span>{{ $slotOptions[$slot->name] ?? $slot->name }}</span>
-                                        <span :class="selected ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600'" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-semibold {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600' }}" x-text="Math.max(0, capabilityCount)"></span>
-                                        @php($matchingPerformerIds = $searchedUserSlots[$song->id][$slot->name] ?? [])
-                                        @if ($matchingPerformerIds !== [])
-                                            <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="{{ $selectedPerformers->whereIn('id', $matchingPerformerIds)->pluck('name')->join(', ') }} can play {{ $slotOptions[$slot->name] ?? $slot->name }}"><x-heroicon-m-check class="h-3 w-3" aria-hidden="true" /></span>
-                                        @endif
-                                    </label>
-                                @endforeach
-                            </form>
-                        @endif
+                        <form class="flex flex-wrap gap-2" x-show="(song.slots || []).length > 0">
+                            <template x-for="slot in (song.slots || [])" :key="`mobile-song-${song.id}-slot-${slot.name}`">
+                                <label x-bind:class="catalogSlotChipClass(songSlotSelected(song, slot.name))">
+                                    <input type="checkbox" name="slot_names[]" x-bind:value="slot.name" x-bind:checked="songSlotSelected(song, slot.name)" @change="updateSongSlotSelection(song, slot.name, $event.target.checked, $el.form)" class="sr-only">
+                                    <span x-text="slotLabel(slot.name)"></span>
+                                    <span x-bind:class="catalogCapabilityCountClass(songSlotSelected(song, slot.name))" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-semibold" x-text="Math.max(0, Number(slot.recent_capability_count || 0))"></span>
+                                    <span x-show="performersForSlot(song, slot.name).length > 0" class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" x-bind:title="performerSlotBadgeTitle(song, slot.name)" x-bind:aria-label="performerSlotBadgeTitle(song, slot.name)"><x-heroicon-m-check class="h-3 w-3" aria-hidden="true" /></span>
+                                </label>
+                            </template>
+                        </form>
                     </div>
                 </article>
-            @empty
-                <div class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
-                    No catalog songs yet.
-                </div>
-            @endforelse
+            </template>
         </div>
 
         <div x-show="mobileSelectionMode && selectedSongIds.length" x-cloak class="fixed inset-x-0 bottom-4 z-30 px-4 md:hidden">
@@ -219,64 +217,50 @@
                         @if (auth()->user()->is_admin)<th scope="col" class="w-10 px-2 py-2 sm:w-12 sm:px-4 sm:py-3"><span class="sr-only">Actions</span></th>@endif
                     </tr>
                 </thead>
-                <tbody x-ref="catalogRows" class="divide-y divide-slate-200">
-                    @forelse ($catalogSongs as $song)
-                        <tr data-catalog-song-id="{{ $song->id }}" x-bind:class="catalogRowClass(selectedSongIds.includes({{ $song->id }}))">
-                            <td data-tour="jam-standards-select-songs" class="cursor-pointer px-2 py-2 align-top sm:px-4 sm:py-3" @click="if ($event.target !== $el.querySelector('input')) { $el.querySelector('input').click() }">
-                                <input type="checkbox" value="{{ $song->id }}" @change="toggleSong({{ $song->id }}, $event.target.checked)" class="cursor-pointer rounded border-slate-300 text-amber-600 focus:ring-amber-500" aria-label="Select {{ $song->artist }} - {{ $song->title }}">
-                            </td>
-                            <td data-catalog-artist class="break-words px-2 py-2 text-sm font-medium text-slate-900 align-top sm:px-4 sm:py-3">{{ $song->artist }}</td>
-                            <td data-catalog-title class="break-words px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3"><span>{{ $song->title }}</span>@if ($song->notes)<p class="mt-1 text-xs text-slate-500">{{ $song->notes }}</p>@endif</td>
-                            <td data-tour="jam-standards-select-parts" data-catalog-slots class="px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3">
-                                @if ($song->slots->isNotEmpty())
-                                    <form class="flex flex-wrap gap-2">
-                                        @foreach ($song->slots as $slot)
-                                            <label x-data="{ selected: @js($song->userSlots->contains('slot_name', $slot->name)), capabilityCount: {{ max(0, (int) ($song->recent_capability_counts[$slot->name] ?? 0)) }} }" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300' }}" :class="selected ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'">
-                                                <input type="checkbox" name="slot_names[]" value="{{ $slot->name }}" @checked($song->userSlots->contains('slot_name', $slot->name)) @change="selected = $event.target.checked; updateCapabilities({{ $song->id }}, $el.form).then(payload => { if (payload) { capabilityCount = Math.max(0, Number(payload.slot_capability_counts['{{ $slot->name }}'] ?? capabilityCount)); } })" class="sr-only">
-                                                <span>{{ $slotOptions[$slot->name] ?? $slot->name }}</span>
-                                                <span :class="selected ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600'" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-semibold {{ $song->userSlots->contains('slot_name', $slot->name) ? 'border-sky-300 bg-white text-sky-700' : 'border-slate-200 bg-slate-50 text-slate-600' }}" x-text="Math.max(0, capabilityCount)"></span>
-                                                @php($matchingPerformerIds = $searchedUserSlots[$song->id][$slot->name] ?? [])
-                                                @if ($matchingPerformerIds !== [])
-                                                    <span class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" title="{{ $selectedPerformers->whereIn('id', $matchingPerformerIds)->pluck('name')->join(', ') }} can play {{ $slotOptions[$slot->name] ?? $slot->name }}"><x-heroicon-m-check class="h-3 w-3" aria-hidden="true" /></span>
-                                                @endif
-                                            </label>
-                                        @endforeach
-                                    </form>
-                                @endif
-                            </td>
-                            @if (auth()->user()->is_admin)
-                                <td class="px-2 py-2 text-right align-top sm:px-4 sm:py-3">
-                                    <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click="toggleCatalogActionMenu({ id: {{ $song->id }}, artist: @js($song->artist), title: @js($song->title), notes: @js($song->notes), band_template_id: @js($song->band_template_id), slots: @js($song->slots->pluck('name')->values()) }, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === {{ $song->id }}).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
-                                </td>
-                            @endif
+                <tbody class="divide-y divide-slate-200" x-ref="catalogRows">
+                    <template x-if="currentCatalogSongs.length === 0">
+                        <tr>
+                            <td x-bind:colspan="canEditCatalog ? 5 : 4" class="px-4 py-10 text-center text-sm text-slate-500">No catalog songs found.</td>
                         </tr>
-                    @empty
-                        <tr><td colspan="{{ auth()->user()->is_admin ? 5 : 4 }}" class="px-4 py-10 text-center text-sm text-slate-500">No catalog songs yet.</td></tr>
-                    @endforelse
+                    </template>
+                    <template x-for="song in currentCatalogSongs" :key="`table-song-${song.id}`">
+                        <tr x-bind:data-catalog-song-id="song.id" x-bind:class="catalogRowClass(selectedSongIds.includes(song.id))">
+                            <td data-tour="jam-standards-select-songs" class="cursor-pointer px-2 py-2 align-top sm:px-4 sm:py-3">
+                                <input type="checkbox" x-bind:value="song.id" x-bind:checked="selectedSongIds.includes(song.id)" @change="toggleSong(song.id, $event.target.checked)" class="cursor-pointer rounded border-slate-300 text-amber-600 focus:ring-amber-500" x-bind:aria-label="`Select ${song.artist} - ${song.title}`">
+                            </td>
+                            <td data-catalog-artist class="break-words px-2 py-2 text-sm font-medium text-slate-900 align-top sm:px-4 sm:py-3" x-text="song.artist"></td>
+                            <td data-catalog-title class="break-words px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3"><span x-text="song.title"></span><p class="mt-1 text-xs text-slate-500" x-show="song.notes" x-text="song.notes"></p></td>
+                            <td data-tour="jam-standards-select-parts" data-catalog-slots class="px-2 py-2 text-sm text-slate-700 align-top sm:px-4 sm:py-3">
+                                <form class="flex flex-wrap gap-2" x-show="(song.slots || []).length > 0">
+                                    <template x-for="slot in (song.slots || [])" :key="`table-song-${song.id}-slot-${slot.name}`">
+                                        <label x-bind:class="catalogSlotChipClass(songSlotSelected(song, slot.name))">
+                                            <input type="checkbox" name="slot_names[]" x-bind:value="slot.name" x-bind:checked="songSlotSelected(song, slot.name)" @change="updateSongSlotSelection(song, slot.name, $event.target.checked, $el.form)" class="sr-only">
+                                            <span x-text="slotLabel(slot.name)"></span>
+                                            <span x-bind:class="catalogCapabilityCountClass(songSlotSelected(song, slot.name))" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 text-[11px] font-semibold" x-text="Math.max(0, Number(slot.recent_capability_count || 0))"></span>
+                                            <span x-show="performersForSlot(song, slot.name).length > 0" class="inline-flex h-4 w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700" x-bind:title="performerSlotBadgeTitle(song, slot.name)" x-bind:aria-label="performerSlotBadgeTitle(song, slot.name)"><x-heroicon-m-check class="h-3 w-3" aria-hidden="true" /></span>
+                                        </label>
+                                    </template>
+                                </form>
+                            </td>
+                            <template x-if="canEditCatalog">
+                                <td class="px-2 py-2 text-right align-top sm:px-4 sm:py-3">
+                                    <button type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400" @click="toggleCatalogActionMenu(song, $event.currentTarget)" x-bind:aria-expanded="(catalogActionMenuOpen && catalogActionSong?.id === song.id).toString()" aria-label="Song actions" title="Song actions"><x-heroicon-m-bars-3 class="h-4 w-4" aria-hidden="true" /><span class="sr-only">Song actions</span></button>
+                                </td>
+                            </template>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
 
-        <div x-ref="catalogPagination" class="mt-4">
-            @if ($catalogSongs->isNotEmpty())
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-sm text-slate-600">Page {{ $catalogSongs->currentPage() }} of {{ $catalogSongs->lastPage() }} <span class="text-slate-400">&middot;</span> {{ $catalogSongs->total() }} {{ str('song')->plural($catalogSongs->total()) }}</p>
-                    @if ($catalogSongs->hasPages())
-                    <div class="flex gap-2">
-                        @if ($catalogSongs->onFirstPage())
-                            <button type="button" disabled class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
-                        @else
-                            <button type="button" @click="goToCatalogPage({{ $catalogSongs->currentPage() - 1 }})" class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50">Previous</button>
-                        @endif
-                        @if ($catalogSongs->hasMorePages())
-                            <button type="button" @click="goToCatalogPage({{ $catalogSongs->currentPage() + 1 }})" class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50">Next</button>
-                        @else
-                            <button type="button" disabled class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50">Next</button>
-                        @endif
-                    </div>
-                    @endif
+        <div class="mt-4" x-show="Number(catalogPagination?.total || 0) > 0">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-slate-600" x-text="catalogSummaryText()"></p>
+                <div class="flex gap-2" x-show="Number(catalogPagination?.last_page || 0) > 1">
+                    <button type="button" @click="goToCatalogPage(Number(catalogPagination.current_page) - 1)" x-bind:disabled="Number(catalogPagination.current_page) <= 1" class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
+                    <button type="button" @click="goToCatalogPage(Number(catalogPagination.current_page) + 1)" x-bind:disabled="Number(catalogPagination.current_page) >= Number(catalogPagination.last_page)" class="inline-flex items-center border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Next</button>
                 </div>
-            @endif
+            </div>
         </div>
 
         </section>

@@ -17,6 +17,8 @@
 - Keep Blade Alpine attributes declarative: use `x-data` for config only, plus UI bindings like `x-show`, `x-bind`, and `x-on`.
 - Place non-trivial Alpine logic in JavaScript modules under `resources/js/components` and register components in `resources/js/app.js`.
 - Non-trivial logic includes branching flows, async requests, payload construction, status/label mapping, filtering/grouping, and reusable state transitions.
+- Render interactive UI from Alpine state and template markup (`x-for`, `x-if`, `x-show`) by default; avoid manual DOM construction (`createElement`, `innerHTML`, `replaceChildren`) unless there is a proven technical need.
+- Acceptable exceptions for imperative DOM are low-level platform concerns such as selection/range APIs, SVG/path drawing, clipboard fallbacks, or third-party integration boundaries where Alpine templates are not practical.
 - Avoid embedding multi-line objects/functions directly in Blade `x-data` attributes.
 - Small inline expressions are allowed only when they are simple UI toggles and do not perform async/network work.
 - When working on the codebase, be vigilant of legacy Alpine code that may not follow these rules. If you see a violation, flag it for review and refactoring.

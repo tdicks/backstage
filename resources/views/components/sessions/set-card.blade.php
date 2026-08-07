@@ -146,9 +146,9 @@
                         <span class="sr-only">Performed</span>
                     </span>
                 @else
-                    <span class="inline-flex items-center" title="Planned">
+                    <span class="inline-flex items-center" title="Scheduled">
                         <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
-                        <span class="sr-only">Not performed yet</span>
+                        <span class="sr-only">Scheduled</span>
                     </span>
                 @endif
 
