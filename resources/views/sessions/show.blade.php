@@ -77,7 +77,7 @@
                             x-show="shouldShowStatusButton('not_going')"
                             :disabled="isSaving || sessionClosed || isPastSession"
                             class="inline-flex items-center rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition disabled:cursor-not-allowed disabled:opacity-50"
-                            :class="status === 'not_going' ? 'border border-rose-700 bg-rose-950/70 text-rose-300' : 'border border-transparent text-slate-300 enabled:hover:border-rose-600 enabled:hover:bg-rose-950/60 enabled:hover:text-rose-300'"
+                            :class="status === 'not_going' ? 'border border-slate-500 bg-slate-800 text-slate-100' : 'border border-transparent text-slate-300 enabled:hover:border-slate-500 enabled:hover:bg-slate-800 enabled:hover:text-slate-100'"
                             :title="statusButtonLabel('not_going')"
                             :aria-label="statusButtonLabel('not_going')"
                         >
@@ -146,7 +146,7 @@
                                                 <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide" :class="badgeClasses(user.status)" x-text="modalStatusLabel(user.status)"></span>
                                                 <template x-if="canManageAttendanceForUser(user)">
                                                     <div class="inline-flex items-center gap-1">
-                                                        <button type="button" @click="setUserStatus(user.id, 'not_going')" :disabled="isSaving || sessionClosed || user.status === 'not_going'" class="inline-flex items-center rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm transition enabled:hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Set not going" title="Set not going"><x-heroicon-m-x-circle class="h-4 w-4" aria-hidden="true" /><span class="ml-1 hidden sm:inline">Not Going</span></button>
+                                                        <button type="button" @click="setUserStatus(user.id, 'not_going')" :disabled="isSaving || sessionClosed || user.status === 'not_going'" class="inline-flex items-center rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm transition enabled:hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Set not going" title="Set not going"><x-heroicon-m-x-circle class="h-4 w-4" aria-hidden="true" /><span class="ml-1 hidden sm:inline">Not Going</span></button>
                                                         <button type="button" @click="setUserStatus(user.id, 'maybe')" :disabled="isSaving || sessionClosed || user.status === 'maybe'" class="inline-flex items-center rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm transition enabled:hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Set maybe" title="Set maybe"><x-heroicon-m-question-mark-circle class="h-4 w-4" aria-hidden="true" /><span class="ml-1 hidden sm:inline">Maybe</span></button>
                                                         <button type="button" @click="setUserStatus(user.id, 'going')" :disabled="isSaving || sessionClosed || user.status === 'going'" class="inline-flex items-center rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm transition enabled:hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Set going" title="Set going"><x-heroicon-m-check-circle class="h-4 w-4" aria-hidden="true" /><span class="ml-1 hidden sm:inline">Going</span></button>
                                                     </div>
@@ -189,7 +189,7 @@
 
                         <x-slot name="actions">
                             <button type="button" @click="openDropoutChoices = false" class="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-800">Cancel</button>
-                            <button type="button" @click="confirmDropout()" :disabled="isSaving" class="rounded-md border border-rose-500 bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition enabled:hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
+                            <button type="button" @click="confirmDropout()" :disabled="isSaving" class="rounded-md border border-slate-500 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white transition enabled:hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
                         </x-slot>
                     </x-prompt-modal>
 
@@ -222,7 +222,7 @@
 
                         <x-slot name="actions">
                             <button type="button" @click="openAdminDropoutChoices = false" class="rounded-md border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:bg-slate-800">Cancel</button>
-                            <button type="button" @click="confirmAdminDropout()" :disabled="isSaving" class="rounded-md border border-rose-500 bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white transition enabled:hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
+                            <button type="button" @click="confirmAdminDropout()" :disabled="isSaving" class="rounded-md border border-slate-500 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white transition enabled:hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50">Confirm not going</button>
                         </x-slot>
                     </x-prompt-modal>
                 </div>

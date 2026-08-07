@@ -63,7 +63,7 @@
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
     $setCardClass = match (true) {
-        $ownerIsNotGoing => 'border-rose-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(251_113_133_/_0.6),inset_0_0_20px_rgb(254_205_211_/_0.55)]',
+        $ownerIsNotGoing => 'border-slate-300 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(148_163_184_/_0.35),inset_0_0_20px_rgb(226_232_240_/_0.5)]',
         $set->feature_set && $set->is_hidden => 'border-sky-400 bg-amber-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
         $set->feature_set => 'border-amber-400 bg-amber-50/95 shadow-sm',
         $set->is_hidden => 'border-sky-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
@@ -173,7 +173,7 @@
                     </span>
                 </span>
                 @if ($ownerIsNotGoing)
-                    <span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-rose-700" title="Set owner marked not attending">
+                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-700" title="Set owner marked not attending">
                         Owner cannot attend
                     </span>
                 @endif
@@ -279,7 +279,7 @@
                         data-session-action-menu
                         class="z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                     >
-                    @if ($canManageSet && ! $setLocked && ! $isAdminManagingOtherSet)
+                    @if ($canManageSet && ! $setLocked)
                         <button
                             type="button"
                             @disabled($sessionLocked && !$isAdmin)

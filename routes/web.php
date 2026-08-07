@@ -24,6 +24,7 @@ use App\Http\Controllers\NoticeDismissalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NotificationPushSubscriptionController;
 use App\Http\Controllers\PlannedSetController;
+use App\Http\Controllers\PracticePlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecycleBinController;
 use App\Http\Controllers\SetCollaboratorController;
@@ -68,6 +69,9 @@ Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard/layout-preview', [DashboardController::class, 'layoutPreview'])->name('dashboard.layout-preview');
+    Route::post('/dashboard/layout-preview/widget-order', [DashboardController::class, 'updateLayoutPreviewWidgetOrder'])->name('dashboard.layout-preview.widget-order.update');
+    Route::get('/dashboard/action-queues', [DashboardController::class, 'actionQueues'])->name('dashboard.action-queues');
     Route::post('/dashboard/get-started/dismiss', [DashboardController::class, 'dismissGetStartedQuest'])->name('dashboard.get-started.dismiss');
     Route::post('/feature-tours/state', [FeatureTourStateController::class, 'update'])->name('feature-tours.state.update');
     Route::get('/feature-tours/lab', function (Request $request): View {
@@ -76,6 +80,7 @@ Route::middleware('auth')->group(function () {
         return view('feature-tours.lab');
     })->name('feature-tours.lab');
     Route::get('/find-a-slot', SlotFinderController::class)->name('slot-finder.index');
+    Route::get('/practice-plan', PracticePlanController::class)->name('practice-plan.index');
     Route::redirect('/sit-in', '/find-a-slot')->name('sit-in.index');
 
     Route::view('/help', 'static.help')->name('help');

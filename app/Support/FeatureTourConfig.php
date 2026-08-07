@@ -103,7 +103,33 @@ class FeatureTourConfig
                 continue;
             }
 
-            $config = $this->mergeConfig($config, $file['config']);
+            $fileConfig = $file['config'];
+
+            if (! is_array($fileConfig)) {
+                continue;
+            }
+
+            if (array_key_exists('__file', $fileConfig) && ! is_array($fileConfig['__file'])) {
+                $errors[] = "Feature tour config file [{$path}] __file must be an object when provided.";
+
+                continue;
+            }
+
+            if (
+                is_array($fileConfig['__file'] ?? null)
+                && array_key_exists('enabled', $fileConfig['__file'])
+                && ! is_bool($fileConfig['__file']['enabled'])
+            ) {
+                $errors[] = "Feature tour config file [{$path}] __file.enabled must be true or false.";
+
+                continue;
+            }
+
+            if (! $this->isConfigFileEnabled($fileConfig)) {
+                continue;
+            }
+
+            $config = $this->mergeConfig($config, $this->stripFileMeta($fileConfig));
         }
 
         if ($config === []) {
@@ -220,6 +246,16 @@ class FeatureTourConfig
             if (! is_string($tourId) || ! is_array($tour)) {
                 $errors[] = 'Every tour must be a keyed object under tours.';
 
+                continue;
+            }
+
+            if (array_key_exists('enabled', $tour) && ! is_bool($tour['enabled'])) {
+                $errors[] = "Tour [{$tourId}] enabled must be true or false.";
+
+                continue;
+            }
+
+            if (! $this->isTourEnabled($tour)) {
                 continue;
             }
 
@@ -385,7 +421,17 @@ class FeatureTourConfig
                     continue;
                 }
 
-                $config = $this->mergeConfig($config, $file['config']);
+                $fileConfig = $file['config'];
+
+                if (! is_array($fileConfig)) {
+                    continue;
+                }
+
+                if (! $this->isConfigFileEnabled($fileConfig)) {
+                    continue;
+                }
+
+                $config = $this->mergeConfig($config, $this->stripFileMeta($fileConfig));
             }
 
             return $config;
@@ -590,6 +636,10 @@ class FeatureTourConfig
 
         foreach ($tours as $tourId => $tour) {
             if (! is_string($tourId) || ! is_array($tour)) {
+                continue;
+            }
+
+            if (! $this->isTourEnabled($tour)) {
                 continue;
             }
 
@@ -835,6 +885,45 @@ class FeatureTourConfig
         $trimmed = trim($value);
 
         return $trimmed === '' ? $fallback : $trimmed;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    private function isConfigFileEnabled(array $config): bool
+    {
+        if (! is_array($config['__file'] ?? null)) {
+            return true;
+        }
+
+        if (! array_key_exists('enabled', $config['__file'])) {
+            return true;
+        }
+
+        return $config['__file']['enabled'] !== false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function stripFileMeta(array $config): array
+    {
+        unset($config['__file']);
+
+        return $config;
+    }
+
+    /**
+     * @param  array<string, mixed>  $tour
+     */
+    private function isTourEnabled(array $tour): bool
+    {
+        if (! array_key_exists('enabled', $tour)) {
+            return true;
+        }
+
+        return $tour['enabled'] !== false;
     }
 
     /**

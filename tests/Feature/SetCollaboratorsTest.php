@@ -502,6 +502,86 @@ test('collaborator can approve a slot request', function () {
     expect($slot->fresh()->user_id)->toBe($requester->id);
 });
 
+test('collaborator recommendation becomes final when target accepts', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $target = User::factory()->create();
+
+    $session = makeSession();
+    $set = makeSet($owner, $session, [$collaborator->id]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($collaborator)
+        ->postJson(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $target->id,
+        ])
+        ->assertCreated();
+
+    $assignment = SlotAssignment::query()->firstOrFail();
+
+    $this->actingAs($target)
+        ->patchJson(route('slot-assignments.respond', $assignment), [
+            'status' => SlotAssignment::STATUS_ACCEPTED,
+        ])
+        ->assertOk()
+        ->assertJsonPath('message', 'Recommendation accepted and slot assigned.');
+
+    expect($assignment->fresh()->status)->toBe(SlotAssignment::STATUS_ACCEPTED);
+    expect($slot->fresh()->user_id)->toBe($target->id);
+});
+
+test('admin recommendation becomes final when target accepts', function () {
+    $owner = User::factory()->create();
+    $admin = User::factory()->create(['is_admin' => true]);
+    $target = User::factory()->create();
+
+    $session = makeSession();
+    $set = makeSet($owner, $session);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $target->id,
+        ])
+        ->assertCreated();
+
+    $assignment = SlotAssignment::query()->firstOrFail();
+
+    $this->actingAs($target)
+        ->patchJson(route('slot-assignments.respond', $assignment), [
+            'status' => SlotAssignment::STATUS_ACCEPTED,
+        ])
+        ->assertOk()
+        ->assertJsonPath('message', 'Recommendation accepted and slot assigned.');
+
+    expect($assignment->fresh()->status)->toBe(SlotAssignment::STATUS_ACCEPTED);
+    expect($slot->fresh()->user_id)->toBe($target->id);
+});
+
 test('unrelated user cannot respond to a slot request', function () {
     $owner = User::factory()->create();
     $requester = User::factory()->create();
@@ -561,6 +641,82 @@ test('collaborator sees set management menu items but not Edit Set', function ()
         ->assertDontSee('Manage Collaborators');
 });
 
+test('collaborator sees slot assignment approve controls in set body', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = makeSession();
+    $set = makeSet($owner, $session, [$collaborator->id]);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    SlotAssignment::query()->create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $requester->id,
+        'target_user_id' => $requester->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($collaborator)
+        ->get(route('sessions.sets.body', [$session, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertSee('aria-label="Accept assignment"', false)
+        ->assertSee('aria-label="Reject assignment"', false);
+});
+
+test('unrelated user does not see slot assignment approve controls in set body', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+    $stranger = User::factory()->create();
+
+    $session = makeSession();
+    $set = makeSet($owner, $session);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Artist',
+        'title' => 'Title',
+        'position' => 1,
+    ]);
+
+    $slot = Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 1,
+    ]);
+
+    SlotAssignment::query()->create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $requester->id,
+        'target_user_id' => $requester->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($stranger)
+        ->get(route('sessions.sets.body', [$session, $set]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertDontSee('aria-label="Accept assignment"', false)
+        ->assertDontSee('aria-label="Reject assignment"', false);
+});
+
 test('set owner sees Edit Set and Manage Collaborators in menu', function () {
     $owner = User::factory()->create();
 
@@ -599,6 +755,7 @@ test('admin sees Edit Set and Manage Collaborators on another user\'s set', func
     $this->actingAs($admin)
         ->get(route('sessions.sets', $session))
         ->assertOk()
+        ->assertSee('Add Song')
         ->assertSee('Edit Set')
         ->assertSee('Unschedule Set')
         ->assertSee('Manage Collaborators');

@@ -391,7 +391,9 @@
                         $canRespond = auth()->user()->is_admin || $assignment->target == auth()->user();
                         $canCancel = false;
                     } else {
-                        $canRespond = auth()->user()->is_admin || $set->owner == auth()->user();
+                        $canRespond = auth()->user()->is_admin
+                            || $set->owner == auth()->user()
+                            || $set->isCollaborator(auth()->user());
                         $canCancel = false;
                     }
                 @endphp

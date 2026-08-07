@@ -22,6 +22,7 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
                 <div class="space-y-6">
+
                     @if ($showGetStartedQuest)
                         <section
                             data-tour="dashboard-get-started-quest"
@@ -68,10 +69,28 @@
                             @if ($allGetStartedItemsCompleted)
                                 <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
                                     <p class="font-medium">You're all set.</p>
-                                    <p class="mt-1 text-emerald-700/90">Happy jamming! You're welcome to close this window.</p>
+                                    <p class="mt-1 text-emerald-700/90">Happy jamming! Feel free to close this window.</p>
                                 </div>
                             @endif
                         </section>
+                    @endif
+
+                    @if ($approvalsTotal > 0)
+                        <div
+                            x-data="dashboardActionQueues({ refreshUrl: @js(route('dashboard.action-queues')) })"
+                            x-init="init()"
+                            @target-consent-processed.window="refresh(false)"
+                            @pending-approval-processed.window="refresh(false)"
+                            @approvals-count-refreshed.window="refresh(false)"
+                            class="space-y-3"
+                        >
+                            <div x-show="errorMessage" x-cloak class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" x-text="errorMessage"></div>
+                            <div x-show="busy" x-cloak class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">Refreshing approvals...</div>
+
+                            <div x-ref="actionQueuesContent">
+                                @include('dashboard.partials.action-queues')
+                            </div>
+                        </div>
                     @endif
 
                     <section aria-labelledby="next-jam-heading" class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6">
@@ -85,7 +104,7 @@
                             </a>
                         </div>
 
-                    @if ($nextSession)
+                        @if ($nextSession)
                         <div class="mt-5 rounded-xl border border-sky-300 bg-sky-100 p-5 sm:p-6">
                             <div class="flex flex-wrap items-start justify-between gap-4">
                                 <div>
@@ -120,7 +139,7 @@
                                 @endforeach
                             </div>
                         </div>
-                    @else
+                        @else
                         <div class="mt-5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
                             <x-heroicon-m-musical-note class="mx-auto h-10 w-10 text-slate-400" aria-hidden="true" />
                             <p class="mt-4 text-lg font-semibold text-slate-800">No upcoming slots yet</p>
@@ -130,8 +149,8 @@
                                 <x-heroicon-m-arrow-right class="h-4 w-4" aria-hidden="true" />
                             </a>
                         </div>
-                    @endif
-                </section>
+                        @endif
+                    </section>
                 </div>
 
                 <aside class="self-start rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6">
@@ -145,6 +164,11 @@
 
                         <a href="{{ route('my-sets.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
                             <span>My sets</span>
+                            <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
+                        </a>
+
+                        <a href="{{ route('practice-plan.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                            <span>Practice plan</span>
                             <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
                         </a>
 

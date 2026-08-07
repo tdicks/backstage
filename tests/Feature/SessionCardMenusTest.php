@@ -73,6 +73,249 @@ test('set and song cards render dropdown menu controls', function () {
         ->assertSee('#slot-'.$slot->id, false);
 });
 
+test('non-manager set action menu hides Request Song when song requests are disabled', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'No Song Requests Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'No Song Requests Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => false,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('sessions.sets', $session))
+        ->assertOk()
+        ->assertDontSee('Request Song')
+        ->assertDontSee('Add Song')
+        ->assertDontSee('Edit Set');
+});
+
+test('performed sets hide mutating set actions in the set menu', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Performed Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    Set::create([
+        'name' => 'Performed Menu Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => true,
+        'signups_open' => true,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets', $session))
+        ->assertOk()
+        ->assertDontSee('Add Song')
+        ->assertDontSee('Unschedule Set')
+        ->assertDontSee('Live Summary')
+        ->assertSee('Set Snapshot');
+});
+
+test('free for all sets show Take this slot and hide Request slot for non-managers', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Free For All Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Free For All Menu Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+        'free_for_all' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Free Artist',
+        'title' => 'Free Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertSee('Take this slot')
+        ->assertDontSee('Request slot');
+});
+
+test('non-free-for-all sets show Request slot and hide Take this slot for non-managers', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Request Slot Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Request Slot Menu Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => true,
+        'song_requests' => true,
+        'free_for_all' => false,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Request Artist',
+        'title' => 'Request Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertSee('Request slot')
+        ->assertDontSee('Take this slot');
+});
+
+test('closed signups hide non-manager slot actions menu entries', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Closed Signups Menu Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Signups Menu Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => false,
+        'song_requests' => true,
+        'free_for_all' => false,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Closed Artist',
+        'title' => 'Closed Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertDontSee('Request slot')
+        ->assertDontSee('Take this slot')
+        ->assertDontSee('Recommend someone else');
+});
+
+test('set owner still sees manager slot actions when signups are closed', function () {
+    $owner = User::factory()->create();
+
+    $session = JamSession::query()->create([
+        'name' => 'Owner Closed Signups Session',
+        'date' => now()->addWeek()->toDateString(),
+        'description' => null,
+        'is_closed' => false,
+        'allow_checkins' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Owner Closed Signups Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'position' => 1,
+        'performed' => false,
+        'signups_open' => false,
+        'song_requests' => true,
+        'free_for_all' => false,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Manager Artist',
+        'title' => 'Manager Song',
+        'notes' => null,
+        'position' => 1,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sessions.sets.body', [$session, $set]))
+        ->assertOk()
+        ->assertSee('Take this slot')
+        ->assertSee('Edit slot')
+        ->assertSee('Clear Slot');
+});
+
 test('set action menu offers a table image export', function () {
     $shell = file_get_contents(resource_path('views/components/sessions/set-card-shell.blade.php'));
     $songCard = file_get_contents(resource_path('views/components/sessions/song-card.blade.php'));
@@ -330,7 +573,8 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertOk()
         ->assertSee('text-sky-700 hover:bg-sky-50 focus:bg-sky-50', false)
         ->assertSee('Edit Set')
-        ->assertSee('Request Song')
+        ->assertSee('Add Song')
+        ->assertDontSee('Request Song')
         ->assertDontSee('🛡️');
 
     $this->actingAs($admin)
@@ -342,7 +586,7 @@ test('admin sees shield suffix on managed set and song menu items', function () 
         ->assertDontSee('🛡️');
 });
 
-test('an admin can request a song from another user\'s set', function () {
+test('an admin can add a song to another user\'s set from the menu', function () {
     $admin = User::factory()->create(['is_admin' => true]);
     $owner = User::factory()->create();
 
@@ -370,9 +614,9 @@ test('an admin can request a song from another user\'s set', function () {
             'X-Requested-With' => 'XMLHttpRequest',
         ])
         ->assertOk()
-        ->assertSee('Request Song')
-        ->assertSee('openSongRequestModal()', false)
-        ->assertSee('Request a Song for '.$set->name);
+        ->assertSee('Add Song')
+        ->assertSee('Edit Set')
+        ->assertDontSee('Request Song');
 });
 
 test('non-manager still sees song actions menu with direct link action', function () {

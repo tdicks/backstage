@@ -19,6 +19,7 @@
 - Non-trivial logic includes branching flows, async requests, payload construction, status/label mapping, filtering/grouping, and reusable state transitions.
 - Avoid embedding multi-line objects/functions directly in Blade `x-data` attributes.
 - Small inline expressions are allowed only when they are simple UI toggles and do not perform async/network work.
+- When working on the codebase, be vigilant of legacy Alpine code that may not follow these rules. If you see a violation, flag it for review and refactoring.
 
 ## Design Guidelines
 
@@ -35,6 +36,20 @@ Follow these guidelines:
 - Panels should use a light slate treatment: `bg-slate-50/95` with `border-slate-200`.
 - Prefer the prompt modal component over native browser `prompt()`.
 
+### Iconography and Colour Usage
+
+- Icons should be used in favour of excessive labels, and must be used consistently.
+- Use the heroicon set for all icons, and use the same icon for the same action throughout the application.
+
+Colours have meaning in the application, and should also be used consistently:
+
+- Amber means something that requires the user to take action, or something they could take action on.
+- Emerald means a successful or completed state, typically a confirmation of an action a user has taken.
+- Dark emerald explicitly means something related to a live jam.
+- Sky blue means a state that is specific to the current user, such as a slot assigned to them.
+- Red means an error or a state that requires a user to take action to resolve, or that the user should be aware of.
+- Purple provides a visual cue for something that the user might like to know about a given state.
+
 ### Style Guide
 
 There is a fairly standard icon and colour guide for certain elements throughout the application.
@@ -45,13 +60,27 @@ For slots:
 - Slots assigned to the current user should be sky blue.
 - Slots assigned to other users should be emerald green.
 - Slots that are claimable should have a purple "CLAIMABLE" badge.
+- Slots which are impossible (e.g. a user is assigned to a slot but is not attending the session) should be red.
 
 Sets:
 
 Sets have the following standard icons, which should be included anywhere there is a set card:
 
 - Free for all mode: heroicon-m-fire
+- Hidden mode: heroicon-m-eye-slash in sky blue. The set's border should be sky blue, with a blue inset shadow.
+- Accepting sign ups: heroicon-m-padlock-open in emerald green.
+- Not accepting sign ups: heroicon-m-padlock-closed in amber.
 
+Jam Sessions:
+
+- Hidden sessions should use the heroicon-m-eye-slash icon in sky blue.
+- Live sessions should use the custom animated live-status-icon component.
+- Locked / closed sessions should use the heroicon-m-lock-closed icon, coloured in amber.
+- Archived sessions should use the heroicon-m-archive icon, coloured in brown.
+
+All model types:
+
+- Attachments should use a heroicon-s-paper-clip icon. Visibility is dependent on context. If the given model has attachments, the icon should be filled. If there are no attachments, the icon should have a reduced opacity. If there are no explicit action menu items to allow attachment management, the icon should be present with a reduced opacity, and allow the user to manage attachments directly.
 
 ## Dynamic Content
 

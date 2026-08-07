@@ -50,10 +50,20 @@
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Attendance</h3>
                     <p>
-                        Attendance helps everyone read the room before the jam starts. Use the controls in a session header to mark yourself as <span class="font-semibold text-slate-900">Going</span>, <span class="font-semibold text-slate-900">Maybe</span>, or <span class="font-semibold text-slate-900">Not going</span>.
+                        Attendance helps everyone read the room before the jam starts. Use the controls in a session header to mark yourself as <span class="font-semibold text-slate-900">Going</span>, <span class="font-semibold text-slate-900">Not Going</span>, or <span class="font-semibold text-slate-900">Not Specified</span>.
                     </p>
                     <p>
                         This is separate from sign-in. Sign-in records who is physically there on the day, while attendance is the planning signal people use ahead of time.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Dashboard Queues</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Dashboard</span> as your action queue. Approvals and requests are listed there so you can handle decisions in one place.
+                    </p>
+                    <p>
+                        You can still open <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> for set browsing, but approvals are now dashboard-first.
                     </p>
                 </div>
 
@@ -135,10 +145,10 @@
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Keeping Track in My Sets</h3>
                     <p>
-                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> as your personal set list for the jam. It gathers the parts you have coming up, the requests you have made, and any recommendations waiting for your answer, so you can quickly see what needs your attention before the session starts.
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> as your set library. It splits sets into <span class="font-semibold text-slate-900">Upcoming</span> and <span class="font-semibold text-slate-900">Performed</span> and groups them by session, with a separate <span class="font-semibold text-slate-900">Planned</span> area for unscheduled drafts.
                     </p>
                     <p>
-                        If you own a set, <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> also shows the approvals you need to handle. It is the easiest place to check whether someone is waiting on you, confirm who is playing, and keep your set ready for the room.
+                        Click any set card to open more detail and jump straight to that set.
                     </p>
                 </div>
 
@@ -148,10 +158,20 @@
                         When you use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-hand-raised class="h-3.5 w-3.5" aria-hidden="true" /> Request slot</span>, the set owner gets to decide whether to approve it. Until they say yes, the slot is not yours yet, so everyone can see that it is still being sorted out.
                     </p>
                     <p>
-                        If you own a set, <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> is your main place to keep on top of requests. Use <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /> Approve</span> when the part is theirs, or <span class="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800 shadow-sm"><x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" /> Reject</span> the request if the song needs a different player or arrangement.
+                        If you own a set, use the approvals panel on <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Dashboard</span> to keep on top of requests. Use <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /> Approve</span> when the part is theirs, or <span class="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800 shadow-sm"><x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" /> Reject</span> the request if the song needs a different player or arrangement.
                     </p>
                     <p>
                         If approving a request would give someone two clashing parts in the same set, Backstage will stop the approval and explain what needs fixing first.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Practice Plan</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Tools</span> then <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Practice Plan</span> to see songs where you already have assigned slots.
+                    </p>
+                    <p>
+                        This page is for rehearsal focus. It pulls your active parts into one place and links back to each set.
                     </p>
                 </div>
 

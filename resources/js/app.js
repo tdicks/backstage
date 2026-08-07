@@ -1,11 +1,16 @@
 import Alpine from 'alpinejs';
+import sort from '@alpinejs/sort';
 import { jamStandardsCatalog } from './components/jamStandardsCatalog';
 import { registerSessionCards } from './components/sessionCards';
 import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder';
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
+import { dashboardActionQueues } from './components/dashboardActionQueues';
+import { dashboardLayoutPreviewPage, dashboardPage } from './components/dashboardLayoutPreviewPage';
 import { liveQuickSet } from './components/liveQuickSet';
+import { mySetsLibrary } from './components/mySetsLibrary';
 import { plannedSetsPage } from './components/plannedSets';
+import { practicePlanPage } from './components/practicePlanPage';
 import { adminManualSlotTransfer } from './components/adminManualSlotTransfer';
 import { recycleBinPage } from './components/recycleBin';
 import { adminNotices } from './components/adminNotices';
@@ -23,6 +28,8 @@ window.copyShareLink = copyShareLink;
 window.isInteractiveDragSource = isInteractiveDragSource;
 window.focusSessionFragmentTarget = focusSessionFragmentTarget;
 window.setDuration = setDuration;
+
+Alpine.plugin(sort);
 
 function readMetaCount(metaName) {
 	return Math.max(0, Number(document.querySelector(`meta[name="${metaName}"]`)?.content || 0));
@@ -77,9 +84,14 @@ registerSessionCards(Alpine);
 
 Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
+Alpine.data('dashboardActionQueues', dashboardActionQueues);
+Alpine.data('dashboardLayoutPreviewPage', dashboardLayoutPreviewPage);
+Alpine.data('dashboardPage', dashboardPage);
 Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
 Alpine.data('liveQuickSet', liveQuickSet);
+Alpine.data('mySetsLibrary', mySetsLibrary);
 Alpine.data('plannedSetsPage', plannedSetsPage);
+Alpine.data('practicePlanPage', practicePlanPage);
 Alpine.data('slotFinderSongCard', slotFinderSongCard);
 Alpine.data('slotFinderSlotCard', slotFinderSlotCard);
 Alpine.data('adminManualSlotTransfer', adminManualSlotTransfer);

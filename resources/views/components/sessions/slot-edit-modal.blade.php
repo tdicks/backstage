@@ -83,12 +83,9 @@
                             <x-textarea-input name="notes" rows="3" class="mt-1 w-full rounded-lg border-slate-300 text-sm text-slate-900 transition focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
                         </div>
                         <p x-show="assignmentSaveError" x-text="assignmentSaveError" x-cloak class="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"></p>
-                        <div class="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                            <x-danger-button type="button" @click="clearLiveSlot()" x-bind:disabled="assignmentSaveBusy">Clear Slot</x-danger-button>
-                            <div class="flex justify-end gap-2">
-                                <x-modal-secondary-button type="button" @click="closeEditSlotModal()">Cancel</x-modal-secondary-button>
-                                <x-modal-primary-button type="submit" x-bind:disabled="assignmentSaveBusy || assignmentConflictCooldown" class="disabled:cursor-not-allowed disabled:opacity-40">Save</x-modal-primary-button>
-                            </div>
+                        <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                            <x-modal-secondary-button type="button" @click="closeEditSlotModal()">Cancel</x-modal-secondary-button>
+                            <x-modal-primary-button type="submit" x-bind:disabled="assignmentSaveBusy || assignmentConflictCooldown" class="disabled:cursor-not-allowed disabled:opacity-40">Save</x-modal-primary-button>
                         </div>
                     </form>
                 </div>
@@ -185,7 +182,7 @@
                 </div>
             </form>
             <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                <x-danger-button type="button" @click="clearSlot()" x-bind:disabled="busyAction">Clear Slot</x-danger-button>
+                <x-danger-button type="button" @click="deleteSlot()" x-bind:disabled="busyAction">Delete Slot</x-danger-button>
                 <div class="flex justify-end gap-2">
                     <x-modal-secondary-button type="button" @click="openEditSlot = false">Cancel</x-modal-secondary-button>
                     <x-modal-primary-button type="submit" form="edit_slot_form_{{ $slotModel->id }}" x-bind:disabled="busyAction || assignmentConflictCooldown" class="disabled:cursor-not-allowed disabled:opacity-40">

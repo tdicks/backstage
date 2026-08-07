@@ -48,3 +48,32 @@ function something()
 {
     // ..
 }
+
+function regressionResource(string $relativePath): string
+{
+    return file_get_contents(resource_path($relativePath));
+}
+
+function regressionJs(string $relativePath): string
+{
+    return file_get_contents(resource_path('js/'.$relativePath));
+}
+
+function regressionCss(string $relativePath): string
+{
+    return file_get_contents(resource_path('css/'.$relativePath));
+}
+
+function expectContainsAll(string $subject, array $needles): void
+{
+    foreach ($needles as $needle) {
+        expect($subject)->toContain($needle);
+    }
+}
+
+function expectNotContainsAny(string $subject, array $needles): void
+{
+    foreach ($needles as $needle) {
+        expect($subject)->not->toContain($needle);
+    }
+}

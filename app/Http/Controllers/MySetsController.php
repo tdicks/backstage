@@ -2,13 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BandTemplate;
 use App\Models\Set;
-use App\Models\Slot;
-use App\Models\SlotAssignment;
-use App\Models\SlotType;
-use App\Models\SongRequest;
 use App\Models\User;
+use App\Services\DashboardActionQueueService;
+use App\Services\DeezerArtworkLookupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -18,222 +15,142 @@ class MySetsController extends Controller
 {
     public static function pendingApprovalCount(User $user): int
     {
-        $pendingSlotProposalCount = SlotAssignment::query()
-            ->where('type', SlotAssignment::TYPE_PROPOSAL)
-            ->where('status', SlotAssignment::STATUS_AWAITING_TARGET_CONSENT)
-            ->where('target_user_id', $user->id)
-            ->count();
-
-        $pendingSongRequestCount = SongRequest::query()
-            ->where('status', SongRequest::STATUS_PENDING)
-            ->whereHas('set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id)
-                    ->orWhereJsonContains('collaborator_ids', $user->id);
-            })
-            ->count();
-
-        return $pendingSlotProposalCount + $pendingSongRequestCount + SlotAssignment::query()
-            ->where('status', SlotAssignment::STATUS_PENDING)
-            ->whereHas('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id)
-                    ->orWhereJsonContains('collaborator_ids', $user->id);
-            })
-            ->count();
+        return app(DashboardActionQueueService::class)->pendingApprovalCount($user);
     }
 
-    public function __invoke(Request $request): View
+    public function __invoke(Request $request, DeezerArtworkLookupService $artworkLookupService): View
     {
         $user = $request->user();
 
-        $ownedSets = Set::query()
-            ->where('owner_id', $user->id)
+        $ownedOrCollaboratingSetIds = Set::query()
+            ->forSetLibrary($user)
             ->visibleTo($user)
-            ->with(['session', 'songs.slots.user'])
+            ->pluck('id');
+
+        $performedSets = Set::query()
+            ->where('performed', true)
+            ->visibleTo($user)
+            ->with([
+                'owner:id,name',
+                'session:id,name,date,is_closed',
+                'songs:id,set_id,artist,title,position',
+                'songs.slots:id,song_id,user_id',
+            ])
+            ->withCount('songs')
             ->get();
 
-        $signedSlots = $user->slots()
-            ->with(['song.slots.user', 'song.set.session'])
-            ->get();
+        $slotSetIds = Set::query()
+            ->where('performed', false)
+            ->visibleTo($user)
+            ->whereHas('songs.slots', fn ($query) => $query->where('user_id', $user->id))
+            ->pluck('id');
 
-        $signedSetIds = $signedSlots
-            ->map(fn (Slot $slot) => $slot->song->set->id)
+        $upcomingSetIds = $ownedOrCollaboratingSetIds
+            ->merge($slotSetIds)
             ->unique()
             ->values();
 
-        $signedSets = Set::query()
-            ->whereIn('id', $signedSetIds)
+        $upcomingSets = Set::query()
+            ->where('performed', false)
             ->visibleTo($user)
-            ->with(['session', 'songs.slots.user'])
+            ->whereIn('id', $upcomingSetIds)
+            ->with([
+                'owner:id,name',
+                'session:id,name,date,is_closed',
+                'songs:id,set_id,artist,title,position',
+                'songs.slots:id,song_id,user_id',
+            ])
+            ->withCount('songs')
             ->get();
 
-        $sets = $ownedSets
-            ->merge($signedSets)
-            ->unique('id')
-            ->filter(fn (Set $set) => $set->session !== null && ! $set->performed && ! $set->session->is_hidden && ! $set->session->is_closed)
-            ->sortBy(fn (Set $set) => sprintf(
-                '%d-%010d-%s',
-                $set->performed ? 1 : 0,
-                $set->session->date->timestamp,
-                $set->name
-            ))
+        $sets = $upcomingSets->merge($performedSets)->unique('id')->values();
+
+        $collaboratorIds = $sets
+            ->flatMap(fn (Set $set) => $set->collaboratorUserIds())
+            ->unique()
             ->values();
 
-        $practiceSets = $sets->map(function (Set $set) use ($user): array {
-            $isOwned = $set->owner_id === $user->id;
-            $isCollaborator = $set->isCollaborator($user);
+        $collaboratorNamesById = User::query()
+            ->whereIn('id', $collaboratorIds)
+            ->pluck('name', 'id');
 
-            $songs = $set->songs
-                ->filter(fn ($song) => $song->slots->contains('user_id', $user->id))
-                ->map(function ($song) use ($user): array {
-                    $mySlots = $song->slots->where('user_id', $user->id)->values();
+        $formatSetCard = function (Set $set) use ($user, $collaboratorNamesById, $artworkLookupService): array {
+            $lifecycle = $set->lifecycle_state
+                ?? ($set->performed
+                    ? Set::LIFECYCLE_PERFORMED
+                    : ($set->jam_session_id ? Set::LIFECYCLE_SCHEDULED : Set::LIFECYCLE_DRAFT));
 
-                    return [
-                        'song' => $song,
-                        'mySlots' => $mySlots,
-                        'slots' => $mySlots,
-                    ];
-                })
-                ->values();
+            $hasMySlots = $set->songs
+                ->contains(fn ($song) => $song->slots->contains('user_id', $user->id));
 
             return [
                 'set' => $set,
-                'isOwned' => $isOwned,
-                'isCollaborator' => $isCollaborator,
-                'songs' => $songs,
+                'lifecycle' => $lifecycle,
+                'isOwned' => (int) $set->owner_id === (int) $user->id,
+                'isCollaborator' => $set->isCollaborator($user),
+                'hasMySlots' => $hasMySlots,
+                'artworkTiles' => $artworkLookupService->artworkTilesForSet($set),
+                'collaboratorNames' => collect($set->collaboratorUserIds())
+                    ->map(fn (int $id): string => (string) ($collaboratorNamesById[$id] ?? 'Unknown'))
+                    ->values(),
             ];
-        })->filter(fn (array $group): bool => $group['songs']->isNotEmpty())->values();
+        };
 
-        $pendingForUser = SlotAssignment::query()
-            ->where('status', SlotAssignment::STATUS_PENDING)
-            ->where(function ($query) use ($user): void {
-                $query->where('actor_user_id', $user->id)
-                    ->orWhere('target_user_id', $user->id);
-            })
-            ->whereDoesntHave('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id)
-                    ->orWhereJsonContains('collaborator_ids', $user->id);
-            })
-            ->whereHas('slot.song.set.session', function ($query): void {
-                $query->where('is_hidden', false)
-                    ->where('is_closed', false);
-            })
-            ->with(['actor', 'target', 'slot.song.set.session'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        $targetConsentApprovals = SlotAssignment::query()
-            ->where('type', SlotAssignment::TYPE_PROPOSAL)
-            ->where('status', SlotAssignment::STATUS_AWAITING_TARGET_CONSENT)
-            ->where('target_user_id', $user->id)
-            ->with(['actor', 'target', 'slot.song.set.session'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        $pendingApprovals = SlotAssignment::query()
-            ->where('status', SlotAssignment::STATUS_PENDING)
-            ->whereHas('slot.song.set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id)
-                    ->orWhereJsonContains('collaborator_ids', $user->id);
-            })
-            ->with(['actor', 'target', 'slot.song.set.session'])
-            ->orderByDesc('created_at')
-            ->get()
-            ->groupBy(fn (SlotAssignment $assignment) => $assignment->slot->song->id)
-            ->map(function (Collection $assignments): array {
-                $first = $assignments->first();
-
-                return [
-                    'song' => $first->slot->song,
-                    'set' => $first->slot->song->set,
-                    'session' => $first->slot->song->set->session,
-                    'assignments' => $assignments->values(),
-                ];
-            })
+        $upcomingCards = $upcomingSets
+            ->sortBy(fn (Set $set): string => sprintf(
+                '%s|%s',
+                $set->session?->date?->format('Ymd') ?? '00000000',
+                mb_strtolower($set->name)
+            ))
+            ->values()
+            ->map($formatSetCard)
             ->values();
 
-        $pendingSongRequests = SongRequest::query()
-            ->where('status', SongRequest::STATUS_PENDING)
-            ->whereHas('set', function ($query) use ($user): void {
-                $query->where('owner_id', $user->id)
-                    ->orWhereJsonContains('collaborator_ids', $user->id);
-            })
-            ->with(['requester', 'set.session'])
-            ->orderByDesc('created_at')
-            ->get();
+        $performedCards = $performedSets
+            ->sortBy(fn (Set $set): string => sprintf(
+                '%s|%s',
+                $set->session?->date?->format('Ymd') ?? '99999999',
+                mb_strtolower($set->name)
+            ))
+            ->values()
+            ->map($formatSetCard)
+            ->values();
 
-        $approvalSessions = $targetConsentApprovals
-            ->map(fn (SlotAssignment $approval): array => [
-                'session' => $approval->slot->song->set->session,
-                'set' => $approval->slot->song->set,
-                'song' => $approval->slot->song,
-                'type' => 'target_consent',
-                'approval' => $approval,
-            ])
-            ->toBase()
-            ->merge($pendingApprovals->flatMap(fn (array $group) => $group['assignments']->map(fn (SlotAssignment $approval): array => [
-                'session' => $group['session'],
-                'set' => $group['set'],
-                'song' => $group['song'],
-                'type' => 'set_assignment',
-                'approval' => $approval,
-            ])))
-            ->merge($pendingSongRequests->map(fn (SongRequest $songRequest): array => [
-                'session' => $songRequest->set->session,
-                'set' => $songRequest->set,
-                'song' => null,
-                'type' => 'song_request',
-                'approval' => $songRequest,
-            ]))
-            ->groupBy(fn (array $item) => $item['session']->id)
-            ->sortBy(fn (Collection $items) => $items->first()['session']->date)
-            ->map(function (Collection $sessionItems): array {
-                $session = $sessionItems->first()['session'];
+        $upcomingPlanned = $upcomingCards
+            ->where(fn (array $card): bool => $card['set']->session === null)
+            ->values();
+
+        $upcomingSessionGroups = $upcomingCards
+            ->where(fn (array $card): bool => $card['set']->session !== null)
+            ->groupBy(fn (array $card): int => $card['set']->session->id)
+            ->map(function (Collection $cards): array {
+                $session = $cards->first()['set']->session;
 
                 return [
                     'session' => $session,
-                    'sets' => $sessionItems
-                        ->groupBy(fn (array $item) => $item['set']->id)
-                        ->sortBy(fn (Collection $items) => $items->first()['set']->position)
-                        ->map(function (Collection $setItems): array {
-                            $set = $setItems->first()['set'];
-
-                            return [
-                                'set' => $set,
-                                'songs' => $setItems
-                                    ->filter(fn (array $item) => $item['song'] !== null)
-                                    ->groupBy(fn (array $item) => $item['song']->id)
-                                    ->sortBy(fn (Collection $items) => $items->first()['song']->position)
-                                    ->map(fn (Collection $songItems): array => [
-                                        'song' => $songItems->first()['song'],
-                                        'items' => $songItems->values(),
-                                    ])
-                                    ->values(),
-                                'songRequests' => $setItems
-                                    ->filter(fn (array $item) => $item['type'] === 'song_request')
-                                    ->sortBy(fn (array $item) => $item['approval']->created_at)
-                                    ->values(),
-                            ];
-                        })
-                        ->values(),
+                    'sets' => $cards->values(),
                 ];
             })
+            ->sortBy(fn (array $group): string => $group['session']->date?->format('Ymd') ?? '99999999')
             ->values();
 
-        $bandTemplates = BandTemplate::query()
-            ->with('slots')
-            ->orderBy('name')
-            ->get();
+        $performedSessionGroups = $performedCards
+            ->groupBy(fn (array $card): string => (string) ($card['set']->session?->id ?? 'no-session'))
+            ->map(function (Collection $cards): array {
+                $session = $cards->first()['set']->session;
+
+                return [
+                    'session' => $session,
+                    'sets' => $cards->values(),
+                ];
+            })
+            ->sortBy(fn (array $group): string => $group['session']?->date?->format('Ymd') ?? '99999999')
+            ->values();
 
         return view('my-sets', [
-            'practiceSets' => $practiceSets,
-            'pendingForUser' => $pendingForUser,
-            'targetConsentApprovals' => $targetConsentApprovals,
-            'pendingApprovals' => $pendingApprovals,
-            'pendingSongRequests' => $pendingSongRequests,
-            'approvalSessions' => $approvalSessions,
-            'bandTemplates' => $bandTemplates,
-            'slotOptions' => Slot::options(),
-            'slotConflicts' => $this->slotConflicts(),
+            'upcomingPlanned' => $upcomingPlanned,
+            'upcomingSessionGroups' => $upcomingSessionGroups,
+            'performedSessionGroups' => $performedSessionGroups,
         ]);
     }
 
@@ -242,28 +159,5 @@ class MySetsController extends Controller
         return response()->json([
             'count' => self::pendingApprovalCount($request->user()),
         ]);
-    }
-
-    /**
-     * @return array<string, list<string>>
-     */
-    private function slotConflicts(): array
-    {
-        return collect(SlotType::query()
-            ->with('conflicts:key')
-            ->where('active', true)
-            ->get(['id', 'key'])
-            ->reduce(function (array $conflicts, SlotType $slotType): array {
-                $conflicts[$slotType->key] ??= [];
-
-                foreach ($slotType->conflicts->pluck('key') as $conflictingKey) {
-                    $conflicts[$slotType->key][] = $conflictingKey;
-                    $conflicts[$conflictingKey][] = $slotType->key;
-                }
-
-                return $conflicts;
-            }, []))
-            ->map(fn (array $conflictingKeys) => collect($conflictingKeys)->unique()->values()->all())
-            ->all();
     }
 }

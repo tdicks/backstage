@@ -21,6 +21,28 @@ class SongRequestController extends Controller
 {
     public function store(Request $request, Set $set): JsonResponse|RedirectResponse
     {
+        $set->loadMissing('session');
+
+        if ($set->performed) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This set has already been performed.',
+                ], 422);
+            }
+
+            return back()->with('status', 'This set has already been performed.');
+        }
+
+        if ($set->session?->is_closed && ! $request->user()->is_admin) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This jam session is closed.',
+                ], 422);
+            }
+
+            return back()->with('status', 'This jam session is closed.');
+        }
+
         if (! $set->song_requests) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -39,6 +61,16 @@ class SongRequestController extends Controller
             }
 
             return back()->with('status', 'You can already add songs to your own set.');
+        }
+
+        if ($set->isCollaborator($request->user())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Collaborators can already process song requests for this set.',
+                ], 422);
+            }
+
+            return back()->with('status', 'Collaborators can already process song requests for this set.');
         }
 
         $validated = $request->validate([
@@ -87,14 +119,14 @@ class SongRequestController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Song request submitted to the set owner.',
+                'message' => 'Song request submitted to set managers.',
                 'song_request' => [
                     'id' => $songRequest->id,
                 ],
             ], 201);
         }
 
-        return back()->with('status', 'Song request submitted to the set owner.');
+        return back()->with('status', 'Song request submitted to set managers.');
     }
 
     public function respond(Request $request, SongRequest $songRequest): JsonResponse|RedirectResponse

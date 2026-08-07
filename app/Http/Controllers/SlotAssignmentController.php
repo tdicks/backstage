@@ -22,7 +22,28 @@ class SlotAssignmentController extends Controller
     {
         $user = $request->user();
         $slot->load('song.set');
+        $set = $slot->song->set;
         $attendanceService = app(JamSessionAttendanceService::class);
+
+        if ($set->performed) {
+            $message = 'This set has already been performed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if ($set->session->is_closed && ! $user->is_admin) {
+            $message = 'This jam session is closed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
 
         if (! $user->is_admin && $attendanceService->isNotGoing($slot->song->set->session, $user)) {
             $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before requesting slots.';
@@ -34,7 +55,7 @@ class SlotAssignmentController extends Controller
             return back()->with('status', $message);
         }
 
-        if (! $slot->song->set->signups_open) {
+        if (! $set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
         }
 
@@ -77,9 +98,30 @@ class SlotAssignmentController extends Controller
     {
         $actor = $request->user();
         $slot->load('song.set');
+        $set = $slot->song->set;
         $attendanceService = app(JamSessionAttendanceService::class);
 
-        if (! $slot->song->set->signups_open) {
+        if ($set->performed) {
+            $message = 'This set has already been performed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if ($set->session->is_closed && ! $actor->is_admin) {
+            $message = 'This jam session is closed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if (! $set->signups_open) {
             return back()->with('status', 'Sign ups are closed for this set.');
         }
 
@@ -173,7 +215,13 @@ class SlotAssignmentController extends Controller
                 abort(403);
             }
 
-            $ownerRecommended = $slotAssignment->actor_user_id === $slotAssignment->slot->song->set->owner_id;
+            $set = $slotAssignment->slot->song->set;
+            $actorHasImplicitApprovalAuthority = $slotAssignment->actor !== null
+                && (
+                    $slotAssignment->actor->is_admin
+                    || $slotAssignment->actor_user_id === $set->owner_id
+                    || $set->isCollaborator($slotAssignment->actor)
+                );
             $targetAccepted = $validated['status'] === SlotAssignment::STATUS_ACCEPTED;
 
             if ($targetAccepted && ! $user->is_admin && $attendanceService->isNotGoing($slotAssignment->slot->song->set->session, $slotAssignment->target)) {
@@ -190,15 +238,15 @@ class SlotAssignmentController extends Controller
                 $attendanceService->resetToMaybeForAdminAssignment($slotAssignment->slot->song->set->session, $slotAssignment->target);
             }
 
-            DB::transaction(function () use ($slotAssignment, $targetAccepted, $ownerRecommended): void {
+            DB::transaction(function () use ($slotAssignment, $targetAccepted, $actorHasImplicitApprovalAuthority): void {
                 $slotAssignment->update([
                     'status' => $targetAccepted
-                        ? ($ownerRecommended ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
+                        ? ($actorHasImplicitApprovalAuthority ? SlotAssignment::STATUS_ACCEPTED : SlotAssignment::STATUS_PENDING)
                         : SlotAssignment::STATUS_REJECTED,
                     'responded_at' => now(),
                 ]);
 
-                if ($targetAccepted && $ownerRecommended) {
+                if ($targetAccepted && $actorHasImplicitApprovalAuthority) {
                     $this->assignSlotAndReleaseConflicts($slotAssignment);
                 }
             });
@@ -226,7 +274,7 @@ class SlotAssignmentController extends Controller
 
                 return response()->json([
                     'message' => match (true) {
-                        $targetAccepted && $ownerRecommended => 'Recommendation accepted and slot assigned.',
+                        $targetAccepted && $actorHasImplicitApprovalAuthority => 'Recommendation accepted and slot assigned.',
                         $targetAccepted => 'Recommendation sent to set owner.',
                         default => 'Recommendation response recorded.',
                     },
@@ -245,7 +293,7 @@ class SlotAssignmentController extends Controller
             }
 
             return back()->with('status', match (true) {
-                $targetAccepted && $ownerRecommended => 'Recommendation accepted and slot assigned.',
+                $targetAccepted && $actorHasImplicitApprovalAuthority => 'Recommendation accepted and slot assigned.',
                 $targetAccepted => 'Recommendation sent to set owner.',
                 default => 'Recommendation response recorded.',
             });

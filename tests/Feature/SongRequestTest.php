@@ -377,6 +377,140 @@ test('a requester can remove their own pending song request via ajax', function 
         ->assertForbidden();
 });
 
+test('collaborator cannot submit a song request on their own set', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Collaborator Song Request Guard Jam',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Collaborator Song Request Guard Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+        'collaborator_ids' => [$collaborator->id],
+    ]);
+
+    $this->actingAs($collaborator)
+        ->postJson(route('song-requests.store', $set), [
+            'artist' => 'Collaborator Band',
+            'title' => 'Collaborator Song',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'Collaborators can already process song requests for this set.');
+
+    expect(SongRequest::query()->count())->toBe(0);
+});
+
+test('collaborator can process song requests for their set', function () {
+    $owner = User::factory()->create();
+    $collaborator = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Collaborator Song Request Processing Jam',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Collaborator Song Request Processing Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+        'collaborator_ids' => [$collaborator->id],
+    ]);
+
+    $songRequest = SongRequest::create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Requester Band',
+        'title' => 'Requester Song',
+        'notes' => null,
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($collaborator)
+        ->patchJson(route('song-requests.respond', $songRequest), [
+            'status' => SongRequest::STATUS_ACCEPTED,
+        ])
+        ->assertOk();
+
+    $songRequest = $songRequest->fresh();
+
+    expect($songRequest->status)->toBe(SongRequest::STATUS_ACCEPTED)
+        ->and($songRequest->song_id)->not->toBeNull();
+});
+
+test('non-admin cannot submit a song request on a closed session', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Closed Song Request Session',
+        'date' => now()->addDays(5),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Song Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('song-requests.store', $set), [
+            'artist' => 'Closed Artist',
+            'title' => 'Closed Song',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This jam session is closed.');
+
+    expect(SongRequest::query()->count())->toBe(0);
+});
+
+test('cannot submit a song request on a performed set', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Performed Song Request Session',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Performed Song Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => true,
+        'song_requests' => true,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('song-requests.store', $set), [
+            'artist' => 'Performed Artist',
+            'title' => 'Performed Song',
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This set has already been performed.');
+
+    expect(SongRequest::query()->count())->toBe(0);
+});
+
 test('set cards show requester as you for the current user', function () {
     $owner = User::factory()->create();
     $requester = User::factory()->create(['name' => 'Requester Name']);
@@ -576,7 +710,7 @@ test('a non-owner can request a song via ajax and receive json success', functio
         ])
         ->assertCreated()
         ->assertJson([
-            'message' => 'Song request submitted to the set owner.',
+            'message' => 'Song request submitted to set managers.',
         ]);
 
     expect(SongRequest::query()->where('set_id', $set->id)->where('title', 'Ajax Song')->exists())->toBeTrue();

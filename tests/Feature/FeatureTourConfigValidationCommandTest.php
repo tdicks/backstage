@@ -1319,3 +1319,153 @@ YAML);
         File::delete($secondPath);
     }
 });
+
+test('feature tour loader skips files with __file.enabled false', function () {
+    $path = resource_path('tours/001-disabled-file-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+__file:
+    enabled: false
+
+tours:
+    disabled-file-tour:
+        once_key: disabled-file-tour-v1
+        trigger:
+            mode: auto
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Disabled file'
+                      body: 'This should be ignored by the loader.'
+                      target: '#disabled-file-tour-target'
+YAML);
+
+    try {
+        $payload = app(FeatureTourConfig::class)->payloadForRequest(User::factory()->make());
+
+        expect($payload['tours'])->not->toHaveKey('disabled-file-tour');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour loader skips tours with enabled false', function () {
+    $path = resource_path('tours/001-disabled-tour-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    enabled-tour:
+        once_key: enabled-tour-v1
+        trigger:
+            mode: auto
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Enabled'
+                      body: 'This tour should load.'
+                      target: '#enabled-tour-target'
+
+    disabled-tour:
+        enabled: false
+        once_key: disabled-tour-v1
+        trigger:
+            mode: auto
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Disabled'
+                      body: 'This tour should be skipped.'
+                      target: '#disabled-tour-target'
+YAML);
+
+    try {
+        $payload = app(FeatureTourConfig::class)->payloadForRequest(User::factory()->make());
+
+        expect($payload['tours'])
+            ->toHaveKey('enabled-tour')
+            ->not->toHaveKey('disabled-tour');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator ignores schema issues inside disabled tours', function () {
+    $path = resource_path('tours/001-disabled-tour-validation-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+tours:
+    disabled-invalid-tour:
+        enabled: false
+        once_key: disabled-invalid-tour-v1
+        trigger:
+            mode: button
+            button:
+                target: missing-anchor
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: ''
+                      body: ''
+                      target: missing-anchor
+                      before:
+                        - missing-action
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+
+        expect($exitCode)->toBe(0);
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('feature tour validator rejects non-boolean enabled flags', function () {
+    $path = resource_path('tours/001-invalid-enabled-flags-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+__file:
+    enabled: 'no'
+
+tours:
+    invalid-enabled-tour:
+        enabled: maybe
+        once_key: invalid-enabled-tour-v1
+        trigger:
+            mode: auto
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Invalid enabled'
+                      body: 'This should fail validation.'
+                      target: '#invalid-enabled-tour-target'
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(1)
+            ->and($output)->toContain('__file.enabled must be true or false.');
+    } finally {
+        File::delete($path);
+    }
+});

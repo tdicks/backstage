@@ -2302,7 +2302,7 @@ export function plannedSetsPage(config) {
 			}
 
 			if (status === 'not_going') {
-				return 'border-rose-200 bg-rose-50 text-rose-700';
+				return 'border-slate-300 bg-slate-100 text-slate-700';
 			}
 
 			return 'border-slate-200 bg-slate-50 text-slate-600';

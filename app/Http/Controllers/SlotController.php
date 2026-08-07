@@ -294,6 +294,16 @@ class SlotController extends Controller
         $slotIsClaimable = $attendanceService->slotIsClaimable($slot);
         $canFreeTake = $set->free_for_all && ($slot->isOpen() || $slotIsClaimable);
 
+        if ($set->session->is_closed && ! $user->is_admin) {
+            $message = 'This jam session is closed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
         if (! $user->is_admin && $attendanceService->isNotGoing($set->session, $user)) {
             $message = 'You marked yourself as not attending this session. Set your attendance to Maybe or Going before claiming slots.';
 
@@ -483,6 +493,26 @@ class SlotController extends Controller
         }
 
         $slot->loadMissing('song.set.session');
+        if ($slot->song->set->session->is_closed && ! $request->user()->is_admin) {
+            $message = 'This jam session is closed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if ($slot->song->set->performed) {
+            $message = 'This set has already been performed.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->with('status', $message);
+        }
+
         $slotLabel = Slot::options()[$slot->name] ?? $slot->name;
         $songTitle = $slot->song->artist.' - '.$slot->song->title;
         $setName = $slot->song->set->name;

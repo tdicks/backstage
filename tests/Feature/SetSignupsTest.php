@@ -168,6 +168,218 @@ test('requester can cancel their slot request', function () {
     expect($assignment->refresh()->status)->toBe(SlotAssignment::STATUS_REJECTED);
 });
 
+test('non-admin cannot propose a slot recommendation on a closed session', function () {
+    $owner = User::factory()->create();
+    $actor = User::factory()->create();
+    $target = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Closed Recommendation Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Recommendation Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Forty Six & 2',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($actor)
+        ->postJson(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $target->id,
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This jam session is closed.');
+
+    expect(SlotAssignment::query()->count())->toBe(0);
+});
+
+test('non-admin cannot request a slot on a closed session', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Closed Request Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Request Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Pneuma',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('slot-assignments.request', $slot), [])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This jam session is closed.');
+
+    expect(SlotAssignment::query()->count())->toBe(0);
+});
+
+test('non-admin cannot take a slot on a closed session even in free for all mode', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Closed Take Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Take Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+        'free_for_all' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Lateralus',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('slots.take', $slot), [])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This jam session is closed.');
+
+    expect($slot->fresh()->user_id)->toBeNull();
+});
+
+test('non-admin cannot release a slot on a closed session', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Closed Release Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_closed' => true,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Closed Release Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => false,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Schism',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => $requester->id,
+    ]);
+
+    $this->actingAs($requester)
+        ->postJson(route('slots.release', $slot), [])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This jam session is closed.');
+
+    expect($slot->fresh()->user_id)->toBe($requester->id);
+});
+
+test('cannot propose a slot recommendation on a performed set', function () {
+    $owner = User::factory()->create();
+    $actor = User::factory()->create();
+    $target = User::factory()->create();
+
+    $session = JamSession::create([
+        'name' => 'Performed Recommendation Session',
+        'date' => now()->addDays(3),
+        'description' => null,
+        'is_closed' => false,
+    ]);
+
+    $set = Set::create([
+        'name' => 'Performed Recommendation Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'performed' => true,
+        'signups_open' => true,
+    ]);
+
+    $song = Song::create([
+        'set_id' => $set->id,
+        'artist' => 'Tool',
+        'title' => 'Invincible',
+        'notes' => null,
+    ]);
+
+    $slot = Slot::create([
+        'song_id' => $song->id,
+        'name' => 'drums',
+        'user_id' => null,
+    ]);
+
+    $this->actingAs($actor)
+        ->postJson(route('slot-assignments.propose', $slot), [
+            'target_user_id' => $target->id,
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('message', 'This set has already been performed.');
+
+    expect(SlotAssignment::query()->count())->toBe(0);
+});
+
 test('cannot propose slots to users who hide from proposals', function () {
     $owner = User::factory()->create();
     $actor = User::factory()->create();
