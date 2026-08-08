@@ -2,13 +2,15 @@
     $song = $songGroup['song'];
     $songKey = 'backstage:u'.auth()->id().':slot-finder:song:'.$song->id;
     $slotCountLabel = $songGroup['slot_count'].' open '.str('slot')->plural($songGroup['slot_count']);
+    $songCardConfig = [
+        'songKey' => $songKey,
+        'setKey' => $setKey,
+    ];
+    $songCardData = 'slotFinderSongCard('.json_encode($songCardConfig).')';
 @endphp
 
 <x-sets.presentational.song-card
-    x-data="slotFinderSongCard(@js([
-        'songKey' => $songKey,
-        'setKey' => $setKey,
-    ]))"
+    x-data='{{ $songCardData }}'
     x-show="!removed"
     x-bind:class="removing ? 'opacity-0 translate-y-2 scale-[0.98] pointer-events-none' : ''"
     x-transition.opacity.duration.200ms

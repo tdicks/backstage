@@ -1,4 +1,4 @@
-<x-sets.presentational.section-panel heading="Songs &amp; Slots" class="mt-3 transition hover:border-slate-400 hover:shadow-md">
+<x-sets.presentational.section-panel heading="Songs & Slots" class="mt-3 transition hover:border-slate-400 hover:shadow-md">
 
     <div class="mt-3 space-y-3" x-show="set.can_manage && (set.pending_song_requests || []).length > 0">
         <div class="rounded-md border border-amber-200 bg-amber-50/80 p-3">

@@ -59,7 +59,7 @@ class AppServiceProvider extends ServiceProvider
             $view->with('navJamSessions', JamSession::query()
                 ->visibleTo(request()->user())
                 ->where('is_archived', false)
-                ->orderByDesc('date')
+                ->orderBy('date')
                 ->get(['id', 'name', 'date', 'is_closed', 'is_hidden', 'allow_checkins', 'is_live']));
 
             $view->with('hasArchivedJamSessions', JamSession::query()

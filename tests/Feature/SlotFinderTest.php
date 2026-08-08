@@ -228,7 +228,8 @@ test('slot finder partials reuse the shared songs and slots presentation compone
     $slotPill = file_get_contents(resource_path('views/slot-finder/partials/slot-pill.blade.php'));
 
     expect($setCard)
-        ->toContain('<x-sets.presentational.section-panel heading="Songs &amp; Slots">');
+        ->toContain('<x-sets.presentational.set-card')
+        ->toContain('<x-sets.presentational.section-panel heading="Songs & Slots">');
 
     expect($songCard)
         ->toContain('<x-sets.presentational.song-card')

@@ -1,10 +1,7 @@
 @php
     $slotLabel = $slotOptions[$slot->name] ?? str($slot->name)->replace('_', ' ')->title()->toString();
     $pendingRequestUrl = $slot->pending_request_id ? route('slot-assignments.respond', $slot->pending_request_id) : null;
-@endphp
-
-<article
-    x-data="slotFinderSlotCard(@js([
+    $slotCardConfig = [
         'csrfToken' => csrf_token(),
         'takeUrl' => route('slots.take', $slot),
         'requestUrl' => route('slot-assignments.request', $slot),
@@ -13,17 +10,16 @@
         'freeForAll' => $set->free_for_all,
         'songKey' => $songKey,
         'requested' => (int) $slot->pending_request_count > 0,
-    ]))"
+    ];
+    $slotCardData = 'slotFinderSlotCard('.json_encode($slotCardConfig).')';
+@endphp
+
+<div
+    x-data='{{ $slotCardData }}'
     x-show="!removed"
     x-bind:class="removing ? 'opacity-0 translate-y-2 scale-[0.98] pointer-events-none' : ''"
     x-transition.opacity.duration.200ms
-    class="relative inline-flex w-fit max-w-full cursor-pointer select-none items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs shadow-sm transition-all duration-300 ease-out hover:border-amber-300 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
-    role="button"
-    tabindex="0"
-    @click="activate()"
-    @keydown.enter.prevent="activate()"
-    @keydown.space.prevent="activate()"
-    x-bind:aria-disabled="(busy || removed || (!freeForAll && requested)).toString()"
+    class="relative inline-flex w-fit max-w-full"
 >
     <div
         x-show="freeForAll && (feedback || error)"
@@ -44,7 +40,16 @@
         </div>
     </div>
 
-    <x-sets.presentational.slot-chip tag="div" :label-text="$slotLabel" chip-class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50">
+    <x-sets.presentational.slot-chip
+        tag="button"
+        type="button"
+        :label-text="$slotLabel"
+        chip-class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50"
+        @click="activate()"
+        @keydown.enter.prevent="activate()"
+        @keydown.space.prevent="activate()"
+        x-bind:aria-disabled="(busy || removed || (!freeForAll && requested)).toString()"
+    >
         <x-slot:badge>
             <span
                 x-show="freeForAll"
@@ -79,4 +84,4 @@
             </span>
         </x-slot:badge>
     </x-sets.presentational.slot-chip>
-</article>
+</div>

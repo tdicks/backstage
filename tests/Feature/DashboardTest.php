@@ -105,7 +105,7 @@ test('authenticated users without upcoming slots see the empty dashboard state',
         ->assertSee(route('sessions.index'));
 });
 
-test('navigation lists jam sessions in descending date order', function () {
+test('navigation lists jam sessions in ascending date order', function () {
     $user = User::factory()->create();
 
     $earliestSession = JamSession::create([
@@ -135,15 +135,15 @@ test('navigation lists jam sessions in descending date order', function () {
 
     $content = $response->getContent();
 
-    $latestPosition = strpos($content, 'Latest Jam');
-    $middlePosition = strpos($content, 'Middle Jam');
     $earliestPosition = strpos($content, 'Earliest Jam');
+    $middlePosition = strpos($content, 'Middle Jam');
+    $latestPosition = strpos($content, 'Latest Jam');
 
-    expect($latestPosition)->not->toBeFalse();
-    expect($middlePosition)->not->toBeFalse();
     expect($earliestPosition)->not->toBeFalse();
-    expect($latestPosition)->toBeLessThan($middlePosition);
-    expect($middlePosition)->toBeLessThan($earliestPosition);
+    expect($middlePosition)->not->toBeFalse();
+    expect($latestPosition)->not->toBeFalse();
+    expect($earliestPosition)->toBeLessThan($middlePosition);
+    expect($middlePosition)->toBeLessThan($latestPosition);
 });
 
 test('dashboard shows a dismissible get started quest for new users', function () {

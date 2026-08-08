@@ -5,30 +5,16 @@
         ? $hiddenCardClass
         : 'border-slate-200 bg-slate-50/95 shadow-sm';
     $songCountLabel = $setGroup['song_count'].' '.str('song')->plural($setGroup['song_count']);
+    $setCardData = sprintf(
+        '{ collapsed: false, setKey: %s, remainingSongs: %d, removed: false, removing: false, toggle() { this.collapsed = !this.collapsed; }, removeSet() { if (this.removed || this.removing) { return; } this.removing = true; window.setTimeout(() => { this.removed = true; }, 280); } }',
+        json_encode($setKey),
+        $setGroup['songs']->count(),
+    );
 @endphp
 
-<article
+<x-sets.presentational.set-card
     data-tour="find-a-slot-card"
-    x-data="{
-        collapsed: false,
-        setKey: @js($setKey),
-        remainingSongs: @js($setGroup['songs']->count()),
-        removed: false,
-        removing: false,
-        toggle() {
-            this.collapsed = ! this.collapsed;
-        },
-        removeSet() {
-            if (this.removed || this.removing) {
-                return;
-            }
-
-            this.removing = true;
-            window.setTimeout(() => {
-                this.removed = true;
-            }, 280);
-        },
-    }"
+    x-data='{{ $setCardData }}'
     x-init="collapsed = localStorage.getItem(setKey) === '1'"
     x-effect="localStorage.setItem(setKey, collapsed ? '1' : '0')"
     x-on:slot-finder-song-removed.window="if ($event.detail.setKey === setKey) { remainingSongs -= 1; if (remainingSongs <= 0) { removeSet() } }"
@@ -105,7 +91,7 @@
     </div>
 
     <div x-show="!collapsed" x-cloak x-transition class="mt-4">
-        <x-sets.presentational.section-panel heading="Songs &amp; Slots">
+        <x-sets.presentational.section-panel heading="Songs & Slots">
             <x-slot:meta>
                 <p class="text-xs text-slate-500">{{ $songCountLabel }}</p>
             </x-slot:meta>
@@ -117,4 +103,4 @@
             </div>
         </x-sets.presentational.section-panel>
     </div>
-</article>
+</x-sets.presentational.set-card>
