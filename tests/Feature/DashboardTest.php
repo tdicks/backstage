@@ -105,6 +105,34 @@ test('authenticated users without upcoming slots see the empty dashboard state',
         ->assertSee(route('sessions.index'));
 });
 
+test('navigation only shows jam sessions on or after today', function () {
+    $user = User::factory()->create();
+
+    $pastSession = JamSession::create([
+        'name' => 'Past Jam',
+        'date' => now()->subDay(),
+        'description' => null,
+        'is_archived' => false,
+    ]);
+
+    $futureSession = JamSession::create([
+        'name' => 'Future Jam',
+        'date' => now()->addDays(2),
+        'description' => null,
+        'is_archived' => false,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
+
+    $content = $response->getContent();
+
+    expect($content)->toContain('Future Jam');
+    expect($content)->not->toContain('Past Jam');
+    expect($futureSession->name)->not->toBe($pastSession->name);
+});
+
 test('navigation lists jam sessions in ascending date order', function () {
     $user = User::factory()->create();
 

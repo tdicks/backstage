@@ -4,6 +4,14 @@
             <h2 class="font-semibold text-xl text-slate-100 leading-tight">
                 {{ $pageTitle ?? 'Jam Sessions' }}
             </h2>
+
+            <div class="ml-auto flex items-center gap-3">
+                @if (! ($isArchiveView ?? false) && ($hasArchivedJamSessions ?? false))
+                    <x-secondary-button href="{{ route('sessions.archive') }}">Session Archive</x-secondary-button>
+                @elseif ($isArchiveView )
+                    <x-secondary-button href="{{ route('sessions.index') }}">Jam Sessions</x-secondary-button>
+                @endif
+
             @can('create', App\Models\JamSession::class)
                 @if (! ($isArchiveView ?? false))
                 <x-primary-button @click="openCreate = true">New Session</x-primary-button>
@@ -54,6 +62,7 @@
                 </template>
                 @endif
             @endcan
+            </div>
         </div>
     </x-slot>
 
@@ -92,11 +101,6 @@
                     </div>
                 @endforelse
             </div>
-            @if (! ($isArchiveView ?? false) && ($hasArchivedJamSessions ?? false))
-                <p class="mt-4 text-sm text-slate-500">
-                    Looking for an older jam? Check our <a href="{{ route('sessions.archive') }}" class="underline">archive</a>!
-                </p>
-            @endif
         </div>
     </div>
 </x-app-layout>

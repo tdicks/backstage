@@ -51,7 +51,7 @@ class JamSessionController extends Controller
             ->visibleTo(request()->user())
             ->where('is_archived', false)
             ->withCount(['sets' => fn ($query) => $query->visibleTo(request()->user())])
-            ->latest('date')
+            ->orderBy('date')
             ->get();
 
         $hasArchivedJamSessions = JamSession::query()
@@ -73,7 +73,7 @@ class JamSessionController extends Controller
             ->visibleTo(request()->user())
             ->where('is_archived', true)
             ->withCount(['sets' => fn ($query) => $query->visibleTo(request()->user())])
-            ->latest('date')
+            ->orderBy('date')
             ->get();
 
         return view('sessions.index', [

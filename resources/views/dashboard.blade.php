@@ -96,12 +96,8 @@
                     <section aria-labelledby="next-jam-heading" class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm sm:p-6">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <h2 id="next-jam-heading" class="text-xl font-semibold text-slate-900">Your commitments</h2>
+                                <h2 id="next-jam-heading" class="text-xl font-semibold text-slate-900">Next up...</h2>
                             </div>
-                            <a href="{{ route('my-sets.index') }}" class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400">
-                                My Sets
-                                <x-heroicon-m-arrow-right class="h-4 w-4" aria-hidden="true" />
-                            </a>
                         </div>
 
                         @if ($nextSession)
@@ -115,6 +111,10 @@
                                     Open session
                                     <x-heroicon-m-arrow-top-right-on-square class="h-4 w-4" aria-hidden="true" />
                                 </a>
+                            </div>
+
+                            <div class="mt-6">
+                                <h4 class="text-sm font-semibold text-slate-700">You're playing on:</h4>
                             </div>
 
                             <div class="mt-6 grid gap-3">
@@ -143,9 +143,9 @@
                         <div class="mt-5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center">
                             <x-heroicon-m-musical-note class="mx-auto h-10 w-10 text-slate-400" aria-hidden="true" />
                             <p class="mt-4 text-lg font-semibold text-slate-800">No upcoming slots yet</p>
-                            <p class="mt-2 text-sm text-slate-600">Browse the jam sessions to find a set that needs you.</p>
-                            <a href="{{ route('sessions.index') }}" class="mt-5 inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400">
-                                Browse jam sessions
+                            <p class="mt-2 text-sm text-slate-600">Use the slot finder to see which sets are looking for performers!</p>
+                            <a href="{{ route('slot-finder.index') }}" class="mt-5 inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                                Find a Slot
                                 <x-heroicon-m-arrow-right class="h-4 w-4" aria-hidden="true" />
                             </a>
                         </div>
@@ -157,8 +157,14 @@
                     <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">Quick links</h3>
 
                     <nav class="mt-4 space-y-2" aria-label="Dashboard quick links">
-                        <a href="{{ route('sessions.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
-                            <span>All jam sessions</span>
+
+                        <a href="{{ route('jam-standards.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                            <span>Jam standards</span>
+                            <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
+                        </a>
+
+                        <a href="{{ route('practice-plan.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                            <span>Practice plan</span>
                             <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
                         </a>
 
@@ -167,8 +173,8 @@
                             <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
                         </a>
 
-                        <a href="{{ route('practice-plan.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
-                            <span>Practice plan</span>
+                        <a href="{{ route('sessions.index') }}" class="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                            <span>All jam sessions</span>
                             <x-heroicon-m-arrow-right class="h-4 w-4 text-slate-400 transition group-hover:text-sky-700" aria-hidden="true" />
                         </a>
 

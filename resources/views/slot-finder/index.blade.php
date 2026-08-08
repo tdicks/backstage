@@ -2,9 +2,15 @@
     <x-slot name="header">
         <div>
             <h1 class="mt-1 text-2xl font-semibold text-slate-100">Find a Slot</h1>
-            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                Find a free slot quickly, without scrolling through the listings!
-            </p>
+            @if ($sessionGroups->isEmpty())
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                    There are no open slots right now.
+                </p>
+            @else
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                    These sets are looking for performers!
+                </p>
+            @endif
         </div>
     </x-slot>
 
