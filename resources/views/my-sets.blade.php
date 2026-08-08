@@ -1,814 +1,283 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <h2 class="font-semibold text-xl text-slate-100 leading-tight">
-                {{ __('My Sets') }}
-            </h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-semibold leading-tight text-slate-100">My Sets</h2>
+            </div>
+            <a href="{{ route('planned-sets.index') }}" class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                Planned Sets
+                <x-heroicon-m-arrow-right class="h-4 w-4" aria-hidden="true" />
+            </a>
         </div>
     </x-slot>
 
-    <div class="py-10">
-        <div
-            class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8"
-            x-data="{
-                toast: { visible: false, type: 'error', message: '' },
-                toastTimer: null,
-                refreshing: false,
-                pageUrl: @js(route('my-sets.index')),
-                showToast(type, message) {
-                    this.toast = { visible: true, type, message };
-                    clearTimeout(this.toastTimer);
-                    this.toastTimer = setTimeout(() => this.toast.visible = false, 4500);
-                },
-                async refreshContent() {
-                    if (this.refreshing) {
-                        return;
-                    }
-
-                    this.refreshing = true;
-
-                    try {
-                        const response = await fetch(this.pageUrl, {
-                            headers: {
-                                'Accept': 'text/html',
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                        });
-
-                        if (!response.ok) {
-                            return;
-                        }
-
-                        const html = await response.text();
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        const nextContent = doc.querySelector('[data-my-sets-content]');
-
-                        if (!nextContent) {
-                            return;
-                        }
-
-                        this.$refs.content.innerHTML = nextContent.innerHTML;
-
-                        this.$nextTick(() => {
-                            if (window.Alpine) {
-                                window.Alpine.initTree(this.$refs.content);
-                            }
-                        });
-                    } finally {
-                        this.refreshing = false;
-                    }
-                },
-            }"
-            x-on:my-sets-slot-conflict.window="showToast('error', $event.detail.message)"
-            x-on:approvals-count-changed.window="refreshContent()"
-            x-on:visibilitychange.window="$store.approvals.refresh()"
-        >
-            <template x-teleport="body">
-                <div
-                    x-show="toast.visible"
-                    x-cloak
-                    x-transition.opacity.duration.200ms
-                    class="fixed right-4 top-20 z-[160] max-w-sm rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-xl"
-                    role="status"
-                >
-                    <p class="font-semibold">Slot conflict</p>
-                    <p class="mt-1" x-text="toast.message"></p>
-                </div>
-            </template>
-
-            <div x-ref="content" data-my-sets-content class="space-y-6" x-bind:class="refreshing ? 'cursor-wait' : ''">
-            @php
-                $approvalsTotal = $targetConsentApprovals->count()
-                    + $pendingApprovals->sum(fn ($group) => $group['assignments']->count())
-                    + $pendingSongRequests->count();
-                $hasUpcomingWork = $approvalsTotal > 0 || $pendingForUser->isNotEmpty() || $practiceSets->isNotEmpty();
-            @endphp
-            <section class="grid gap-4 md:grid-cols-3">
-                <div
-                    class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
-                    x-data="{ approvalCount: {{ $approvalsTotal }} }"
-                    @target-consent-processed.window="approvalCount = Math.max(0, approvalCount - 1)"
-                    @pending-approval-processed.window="approvalCount = Math.max(0, approvalCount - 1)"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Approvals</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-900" x-text="approvalCount">{{ $approvalsTotal }}</p>
-                    <p class="mt-1 text-sm text-slate-600">slot requests and song requests for your sets, plus recommendations for you</p>
-                </div>
-                <div
-                    class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm"
-                    x-data="{ pendingItemCount: {{ $pendingForUser->count() }} }"
-                    @pending-item-cancelled.window="pendingItemCount = Math.max(0, pendingItemCount - 1)"
-                >
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pending for you</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-900" x-text="pendingItemCount">{{ $pendingForUser->count() }}</p>
-                    <p class="mt-1 text-sm text-slate-600">your requests and recommendations awaiting a decision</p>
-                </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50/95 p-5 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Practice list</p>
-                    <p class="mt-2 text-2xl font-semibold text-slate-900">{{ $practiceSets->count() }}</p>
-                    <p class="mt-1 text-sm text-slate-600">sets with confirmed slots for you</p>
-                </div>
+    <div class="py-10" x-data="mySetsLibrary()" @keydown.escape.window="closeSetPopover()">
+        <div class="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
+            <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-5">
+                <x-text-input x-model="query" placeholder="Search by set, owner, collaborator, or session" class="block w-full" />
             </section>
 
-            @unless ($hasUpcomingWork)
-                <section class="rounded-xl border border-slate-200 bg-slate-50/95 px-6 py-7 text-center shadow-sm">
-                    <x-heroicon-m-musical-note class="mx-auto h-7 w-7 text-sky-600" aria-hidden="true" />
-                    <h3 class="mt-3 text-lg font-semibold text-slate-900">Your next part is waiting</h3>
-                    <p class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">There is nothing needing your attention just now. Browse the upcoming jams, find a song that speaks to you, and put yourself forward when you are ready.</p>
-                    <div class="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-semibold">
-                        <a href="{{ route('sessions.index') }}" class="text-sky-800 underline decoration-sky-300 underline-offset-2 hover:decoration-sky-700">Explore jam sessions</a>
-                        <a href="{{ route('help') }}" class="text-sky-800 underline decoration-sky-300 underline-offset-2 hover:decoration-sky-700">Need a hand?</a>
+            <section class="space-y-4">
+                <h3 class="text-xl font-semibold text-white">Upcoming</h3>
+
+                @if ($upcomingPlanned->isEmpty() && $upcomingSessionGroups->isEmpty())
+                    <div class="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
+                        No upcoming sets yet.
                     </div>
-                </section>
-            @endunless
+                @endif
 
-            <div
-                x-data="{ pendingCount: {{ $approvalsTotal }}, approvalsCollapsed: false, approvalsKey: 'my-sets-approvals-collapsed' }"
-                x-init="approvalsCollapsed = localStorage.getItem(approvalsKey) === '1'"
-                x-effect="localStorage.setItem(approvalsKey, approvalsCollapsed ? '1' : '0')"
-                @target-consent-processed.window="pendingCount = Math.max(0, pendingCount - 1)"
-                @pending-approval-processed.window="pendingCount = Math.max(0, pendingCount - 1)"
-                x-show="pendingCount > 0"
-                x-transition:enter="transition-all duration-300 ease-out"
-                x-transition:enter-start="grid-rows-[0fr] opacity-0 -translate-y-2 scale-[0.98]"
-                x-transition:enter-end="grid-rows-[1fr] opacity-100 translate-y-0 scale-100"
-                x-transition:leave="transition-all duration-500 ease-in-out"
-                x-transition:leave-start="grid-rows-[1fr] opacity-100 translate-y-0 scale-100"
-                x-transition:leave-end="grid-rows-[0fr] opacity-0 -translate-y-2 scale-[0.98]"
-                class="grid grid-rows-[1fr] transform-gpu"
-                x-cloak
-            >
-                <section class="min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
-                    <div
-                        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
-                        @click="approvalsCollapsed = !approvalsCollapsed"
-                        role="button"
-                        tabindex="0"
-                        @keydown.enter.prevent="approvalsCollapsed = !approvalsCollapsed"
-                        @keydown.space.prevent="approvalsCollapsed = !approvalsCollapsed"
-                        x-bind:aria-expanded="(!approvalsCollapsed).toString()"
-                        x-bind:title="approvalsCollapsed ? 'Click to show approvals' : 'Click to hide approvals'"
-                        aria-label="Toggle approvals"
-                    >
-                        <div>
-                            <h3 class="text-lg font-semibold text-slate-900">Approvals</h3>
-                            <p class="mt-1 text-sm text-slate-600">Recommendations and slot requests that need your decision.</p>
+                @if ($upcomingPlanned->isNotEmpty())
+                    <article class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-5">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Planned</h4>
+                            <span class="text-xs text-slate-500">{{ $upcomingPlanned->count() }}</span>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800" x-text="`${pendingCount} pending`">
-                                {{ $approvalsTotal }} pending
-                            </span>
-                            <x-heroicon-m-chevron-down class="h-4 w-4 text-amber-700 transition" x-bind:class="approvalsCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
-                        </div>
-                    </div>
-
-                    <div class="mt-4" x-show="!approvalsCollapsed" x-transition>
-                    @if ($targetConsentApprovals->isEmpty() && $pendingApprovals->isEmpty() && $pendingSongRequests->isEmpty())
-                        <p class="text-sm text-slate-500">No approvals need your attention right now.</p>
-                    @else
-                    <div class="space-y-3" x-show="pendingCount > 0">
-                        <x-my-sets.approval-hierarchy
-                            :approval-sessions="$approvalSessions"
-                            :band-templates="$bandTemplates"
-                            :slot-options="$slotOptions"
-                            :slot-conflicts="$slotConflicts"
-                        />
-
-                        {{--
-                        @foreach ($targetConsentApprovals as $consentApproval)
-                            @php
-                                $set = $consentApproval->slot->song->set;
-                                $session = $set->session;
-                                $slotLabel = $slotOptions[$consentApproval->slot->name] ?? str($consentApproval->slot->name)->replace('_', ' ')->title();
-                                $conflictingSlot = \App\Services\SlotCompatibility::conflictingSlotForSlot($consentApproval->target_user_id, $consentApproval->slot);
-                                $conflictingSlotLabel = $conflictingSlot ? ($slotOptions[$conflictingSlot->name] ?? str($conflictingSlot->name)->replace('_', ' ')->title()) : null;
-                            @endphp
-                            <article
-                                class="rounded-lg border border-amber-200 bg-amber-50/70 p-4"
-                                x-data="{
-                                    hidden: false,
-                                    busy: false,
-                                    error: '',
-                                    async respond(status) {
-                                        this.busy = true;
-                                        this.error = '';
-
-                                        try {
-                                            const response = await fetch('{{ route('slot-assignments.respond', $consentApproval) }}', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'Accept': 'application/json',
-                                                    'X-Requested-With': 'XMLHttpRequest',
-                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                },
-                                                body: JSON.stringify({
-                                                    _method: 'PATCH',
-                                                    status,
-                                                }),
-                                            });
-
-                                            if (!response.ok) {
-                                                let message = 'Could not update recommendation. Try again.';
-
-                                                try {
-                                                    const payload = await response.json();
-                                                    const validationErrors = Object.values(payload.errors || {}).flat();
-                                                    message = validationErrors[0] || payload.message || message;
-                                                } catch (e) {
-                                                    message = 'Could not update recommendation. Try again.';
-                                                }
-
-                                                if (response.status === 422) {
-                                                    window.dispatchEvent(new CustomEvent('my-sets-slot-conflict', {
-                                                        detail: { message },
-                                                    }));
-                                                }
-
-                                                throw new Error(message);
-                                            }
-
-                                            this.hidden = true;
-                                            window.dispatchEvent(new CustomEvent('target-consent-processed'));
-                                        } catch (e) {
-                                            this.error = e.message || 'Could not update recommendation. Try again.';
-                                        } finally {
-                                            this.busy = false;
-                                        }
-                                    },
-                                }"
-                                x-show="!hidden"
-                                x-transition
-                            >
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="font-semibold text-slate-900">{{ $consentApproval->slot->song->artist }} - {{ $consentApproval->slot->song->title }}</h4>
-                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Slot Recommendation</span>
-                                        </div>
-                                        <p class="text-sm text-slate-700">
-                                            {{ $session->name }} · {{ $session->date->format('D, M j, Y') }} · {{ $set->name }}
-                                        </p>
-                                        <p class="mt-1 text-sm text-slate-700">{{ $consentApproval->actor->name }} recommended you for {{ $slotLabel }}.</p>
-                                        @if ($consentApproval->message)
-                                            <p class="mt-2 text-sm text-slate-600">{{ $consentApproval->message }}</p>
-                                        @endif
-                                        @if ($conflictingSlot)
-                                            <p class="mt-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-sm font-medium text-amber-900">
-                                                Accepting this will move you from {{ $conflictingSlotLabel }} to {{ $slotLabel }} on this song.
-                                            </p>
-                                        @endif
-                                        <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button
-                                            type="button"
-                                            @click="respond('accepted')"
-                                            x-bind:disabled="busy"
-                                            class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
-                                            aria-label="Accept recommendation"
-                                            title="Accept this recommendation"
-                                        >
-                                            <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
-                                            <span>Accept</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click="respond('rejected')"
-                                            x-bind:disabled="busy"
-                                            class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
-                                            aria-label="Reject recommendation"
-                                            title="Reject this recommendation"
-                                        >
-                                            <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                            <span>Reject</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </article>
-                        @endforeach
-
-                        @foreach ($pendingApprovals as $approvalGroup)
-                            <article class="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="font-semibold text-slate-900">{{ $approvalGroup['song']->artist }} - {{ $approvalGroup['song']->title }}</h4>
-                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Set approval</span>
-                                        </div>
-                                        <p class="text-sm text-slate-700">
-                                            {{ $approvalGroup['session']->name }} · {{ $approvalGroup['session']->date->format('D, M j, Y') }} · {{ $approvalGroup['set']->name }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('sessions.show', $approvalGroup['session']) }}" class="text-sm font-medium text-amber-800 underline">Open session</a>
-                                </div>
-
-                                <div class="mt-3 divide-y divide-amber-200/70">
-                                    @foreach ($approvalGroup['assignments'] as $approval)
-                                        @php
-                                            $slotLabel = $slotOptions[$approval->slot->name] ?? str($approval->slot->name)->replace('_', ' ')->title();
-                                            $isRecommendation = $approval->type === \App\Models\SlotAssignment::TYPE_PROPOSAL;
-                                            $conflictingSlot = \App\Services\SlotCompatibility::conflictingSlotForSlot($approval->target_user_id, $approval->slot);
-                                            $conflictingSlotLabel = $conflictingSlot ? ($slotOptions[$conflictingSlot->name] ?? str($conflictingSlot->name)->replace('_', ' ')->title()) : null;
-                                        @endphp
-                                        <div
-                                            class="{{ $isRecommendation ? 'my-3 rounded-lg border border-amber-200 bg-amber-50/70 p-4' : 'py-3' }}"
-                                            x-data="{
-                                                hidden: false,
-                                                busy: false,
-                                                error: '',
-                                                async respond(status) {
-                                                    this.busy = true;
-                                                    this.error = '';
-
-                                                    try {
-                                                        const response = await fetch('{{ route('slot-assignments.respond', $approval) }}', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                                'Accept': 'application/json',
-                                                                'X-Requested-With': 'XMLHttpRequest',
-                                                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                            },
-                                                            body: JSON.stringify({
-                                                                _method: 'PATCH',
-                                                                status,
-                                                            }),
-                                                        });
-
-                                                        if (!response.ok) {
-                                                            let message = 'Could not update approval. Try again.';
-
-                                                            try {
-                                                                const payload = await response.json();
-                                                                const validationErrors = Object.values(payload.errors || {}).flat();
-                                                                message = validationErrors[0] || payload.message || message;
-                                                            } catch (e) {
-                                                                message = 'Could not update approval. Try again.';
-                                                            }
-
-                                                            if (response.status === 422) {
-                                                                window.dispatchEvent(new CustomEvent('my-sets-slot-conflict', {
-                                                                    detail: { message },
-                                                                }));
-                                                            }
-
-                                                            throw new Error(message);
-                                                        }
-
-                                                        this.hidden = true;
-                                                        window.dispatchEvent(new CustomEvent('pending-approval-processed'));
-                                                    } catch (e) {
-                                                        this.error = e.message || 'Could not update approval. Try again.';
-                                                    } finally {
-                                                        this.busy = false;
-                                                    }
-                                                },
-                                            }"
-                                            x-show="!hidden"
-                                            x-transition
-                                        >
-                                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                                <div>
-                                                    @if ($isRecommendation)
-                                                        <div class="flex flex-wrap items-center gap-2">
-                                                            <p class="text-sm font-semibold text-slate-900">{{ $approval->target->name }}</p>
-                                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Recommendation</span>
-                                                        </div>
-                                                        <p class="mt-1 text-sm text-slate-700">{{ $approval->actor->name }} recommended {{ $approval->target->name }} for {{ $slotLabel }}.</p>
-                                                    @else
-                                                        <div class="flex flex-wrap items-center gap-2">
-                                                            <p class="text-sm font-semibold text-slate-900">{{ $slotLabel }}</p>
-                                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Request</span>
-                                                        </div>
-                                                        <p class="mt-1 text-sm text-slate-700">{{ $approval->actor->name }} requested {{ $slotLabel }}.</p>
-                                                    @endif
-                                                    @if ($approval->message)
-                                                        <p class="mt-1 text-sm text-slate-600">{{ $approval->message }}</p>
-                                                    @endif
-                                                    @if ($conflictingSlot)
-                                                        <p class="mt-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-sm font-medium text-amber-900">
-                                                            Approving this will move {{ $approval->target->name }} from {{ $conflictingSlotLabel }} to {{ $slotLabel }} on this song.
-                                                        </p>
-                                                    @endif
-                                                    <p x-show="error" x-text="error" class="mt-1 text-sm text-rose-700"></p>
-                                                </div>
-                                                <div class="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        @click="respond('accepted')"
-                                                        x-bind:disabled="busy"
-                                                        class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
-                                                        aria-label="Approve assignment"
-                                                        title="Approve this assignment"
-                                                    >
-                                                        <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
-                                                        <span>Approve</span>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        @click="respond('rejected')"
-                                                        x-bind:disabled="busy"
-                                                        class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
-                                                        aria-label="Reject assignment"
-                                                        title="Reject this assignment"
-                                                    >
-                                                        <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                                        <span>Reject</span>
-                                                    </button>
-                                                </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                            @foreach ($upcomingPlanned as $card)
+                                @php
+                                    $set = $card['set'];
+                                    $searchText = collect([
+                                        $set->name,
+                                        $set->owner?->name,
+                                        $card['collaboratorNames']->implode(' '),
+                                        'Planned',
+                                    ])->filter()->implode(' ');
+                                    $openUrl = route('planned-sets.index').'#set-'.$set->id;
+                                    $manageUrl = route('planned-sets.index').'#set-'.$set->id;
+                                    $lifecycleLabel = $card['lifecycle'] === \App\Models\Set::LIFECYCLE_DRAFT ? 'Draft' : 'Scheduled';
+                                @endphp
+                                <button
+                                    type="button"
+                                    x-show="matchesSetCard($el)"
+                                    @click="openSetPopover($el)"
+                                    data-search="{{ mb_strtolower($searchText) }}"
+                                    data-name="{{ $set->name }}"
+                                    data-owner="{{ $set->owner?->name ?? 'Unknown' }}"
+                                    data-session="Planned"
+                                    data-date="Not scheduled"
+                                    data-songs="{{ $set->songs_count }}"
+                                    data-lifecycle-label="{{ $lifecycleLabel }}"
+                                    data-owned="{{ $card['isOwned'] ? '1' : '0' }}"
+                                    data-collaborator="{{ $card['isCollaborator'] ? '1' : '0' }}"
+                                    data-has-my-slots="{{ $card['hasMySlots'] ? '1' : '0' }}"
+                                    data-collaborators="{{ $card['collaboratorNames']->implode('|') }}"
+                                    data-open-url="{{ $openUrl }}"
+                                    data-manage-url="{{ $manageUrl }}"
+                                    data-card-id="planned-{{ $set->id }}"
+                                    :aria-expanded="popoverVisible && popoverCardId === 'planned-{{ $set->id }}'"
+                                    class="group relative aspect-square overflow-hidden rounded-xl border border-slate-300 bg-slate-100 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+                                >
+                                    <x-my-sets.artwork-grid :tiles="$card['artworkTiles']" :song-count="$set->songs_count" :seed="$set->id" />
+                                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-900/35 to-transparent"></div>
+                                    <div class="relative z-10 flex h-full flex-col justify-between">
+                                        <p class="line-clamp-2 w-fit max-w-full rounded-md border border-white/20 bg-black/40 px-2 py-1 text-sm font-semibold text-white backdrop-blur-[2px]">{{ $set->name }}</p>
+                                        <div>
+                                            <div class="inline-flex flex-col rounded-md border border-white/20 bg-black/35 px-2 py-1 backdrop-blur-[2px]">
+                                                <p class="text-[11px] text-slate-100">{{ $set->owner?->name ?? 'Unknown' }}</p>
+                                                <p class="mt-1 text-[11px] font-medium text-slate-200">{{ $set->songs_count }} songs</p>
                                             </div>
                                         </div>
-                                    @endforeach
-                                </div>
-                            </article>
-                        @endforeach
-
-                        @foreach ($pendingSongRequests as $songRequest)
-                            <article
-                                class="rounded-lg border border-amber-200 bg-amber-50/70 p-4"
-                                x-data="{
-                                    hidden: false,
-                                    busy: false,
-                                    error: '',
-                                    bandTemplateId: '',
-                                    requestedSlotNames: @js($songRequest->requested_slot_names ?? []),
-                                    slotConflicts: @js($slotConflicts ?? []),
-                                    approvedSlotNames: [],
-                                    slotsConflict(firstSlotName, secondSlotName) {
-                                        if (firstSlotName === secondSlotName) {
-                                            return false;
-                                        }
-
-                                        const firstConflicts = this.slotConflicts[firstSlotName] || [];
-                                        const secondConflicts = this.slotConflicts[secondSlotName] || [];
-
-                                        return firstConflicts.includes(secondSlotName) || secondConflicts.includes(firstSlotName);
-                                    },
-                                    slotSelectionDisabled(slotName) {
-                                        if (this.busy) {
-                                            return true;
-                                        }
-
-                                        if (this.approvedSlotNames.includes(slotName)) {
-                                            return false;
-                                        }
-
-                                        return this.approvedSlotNames.some((selectedSlotName) => this.slotsConflict(selectedSlotName, slotName));
-                                    },
-                                    async respond(status) {
-                                        this.busy = true;
-                                        this.error = '';
-
-                                        const payload = {
-                                            _method: 'PATCH',
-                                            status,
-                                        };
-
-                                        if (status === 'accepted' && this.bandTemplateId !== '') {
-                                            payload.band_template_id = Number(this.bandTemplateId);
-                                        }
-
-                                        if (status === 'accepted' && this.approvedSlotNames.length > 0) {
-                                            payload.approved_slot_names = [...this.approvedSlotNames];
-                                        }
-
-                                        try {
-                                            const response = await fetch('{{ route('song-requests.respond', $songRequest) }}', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'Accept': 'application/json',
-                                                    'X-Requested-With': 'XMLHttpRequest',
-                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                },
-                                                body: JSON.stringify(payload),
-                                            });
-
-                                            if (!response.ok) {
-                                                throw new Error('Could not update song request. Try again.');
-                                            }
-
-                                            this.hidden = true;
-                                            window.dispatchEvent(new CustomEvent('pending-approval-processed'));
-                                        } catch (e) {
-                                            this.error = e.message || 'Could not update song request. Try again.';
-                                        } finally {
-                                            this.busy = false;
-                                        }
-                                    },
-                                }"
-                                x-show="!hidden"
-                                x-transition
-                            >
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="font-semibold text-slate-900">{{ $songRequest->artist }} - {{ $songRequest->title }}</h4>
-                                            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Song request</span>
-                                        </div>
-                                        <p class="text-sm text-slate-700">
-                                            {{ $songRequest->set->session->name }} · {{ $songRequest->set->session->date->format('D, M j, Y') }} · {{ $songRequest->set->name }}
-                                        </p>
-                                        <p class="mt-1 text-sm text-slate-700">Requested by {{ $songRequest->requester->name }}.</p>
-                                        @if ($songRequest->notes)
-                                            <p class="mt-1 text-sm text-slate-600">{{ $songRequest->notes }}</p>
-                                        @endif
-                                        <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
                                     </div>
-                                    <div class="flex flex-col gap-2 sm:items-end">
-                                        <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
-                                            <span>Band template (optional)</span>
-                                            <select
-                                                name="band_template_id"
-                                                x-model="bandTemplateId"
-                                                x-bind:disabled="busy"
-                                                class="block w-full min-w-48 rounded-md border-amber-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-300 sm:w-52"
-                                            >
-                                                <option value="">No template</option>
-                                                @foreach ($bandTemplates as $bandTemplate)
-                                                    <option value="{{ $bandTemplate->id }}">{{ $bandTemplate->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </label>
-                                        @if (! empty($songRequest->requested_slot_names))
-                                            <label class="space-y-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
-                                                <span>Assign requester to slots (optional)</span>
-                                                <div class="space-y-1 rounded-md border border-amber-200 bg-white px-2 py-1.5 sm:w-52">
-                                                    @foreach ($songRequest->requested_slot_names as $requestedSlotName)
-                                                        <label class="flex items-center gap-2 text-xs font-medium normal-case tracking-normal text-slate-700">
-                                                            <input
-                                                                type="checkbox"
-                                                                value="{{ $requestedSlotName }}"
-                                                                x-model="approvedSlotNames"
-                                                                x-bind:disabled="slotSelectionDisabled('{{ $requestedSlotName }}')"
-                                                                class="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                                                            >
-                                                            <span>{{ $slotOptions[$requestedSlotName] ?? str($requestedSlotName)->replace('_', ' ')->title() }}</span>
-                                                        </label>
-                                                    @endforeach
-                                                </div>
-                                            </label>
-                                        @endif
-                                        <div class="flex gap-2">
-                                            <button
-                                                type="button"
-                                                @click="respond('accepted')"
-                                                x-bind:disabled="busy"
-                                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:opacity-40"
-                                                aria-label="Approve song request"
-                                                title="Approve this song request"
-                                            >
-                                                <x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" />
-                                                <span>Approve</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                @click="respond('rejected')"
-                                                x-bind:disabled="busy"
-                                                class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
-                                                aria-label="Reject song request"
-                                                title="Reject this song request"
-                                            >
-                                                <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                                <span>Reject</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        @endforeach
-                        --}}
-                    </div>
-                    @endif
-                    </div>
-                </section>
-            </div>
-
-            @if ($pendingForUser->isNotEmpty())
-                <section
-                    class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm"
-                    x-data="{ pendingCollapsed: false, pendingKey: 'my-sets-pending-collapsed', pendingItemCount: {{ $pendingForUser->count() }} }"
-                    x-init="pendingCollapsed = localStorage.getItem(pendingKey) === '1'"
-                    x-effect="localStorage.setItem(pendingKey, pendingCollapsed ? '1' : '0')"
-                    @pending-item-cancelled.window="pendingItemCount = Math.max(0, pendingItemCount - 1)"
-                    x-show="pendingItemCount > 0"
-                    x-transition
-                >
-                    <div
-                        class="flex cursor-pointer flex-wrap items-center justify-between gap-3"
-                        @click="pendingCollapsed = !pendingCollapsed"
-                        role="button"
-                        tabindex="0"
-                        @keydown.enter.prevent="pendingCollapsed = !pendingCollapsed"
-                        @keydown.space.prevent="pendingCollapsed = !pendingCollapsed"
-                        x-bind:aria-expanded="(!pendingCollapsed).toString()"
-                        x-bind:title="pendingCollapsed ? 'Click to show pending items' : 'Click to hide pending items'"
-                        aria-label="Toggle pending items"
-                    >
-                        <div>
-                            <h3 class="text-lg font-semibold text-slate-900">Pending for you</h3>
-                            <p class="mt-1 text-sm text-slate-600">Songs and slots you've put yourself forward for.</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700" x-text="`${pendingItemCount} pending`">{{ $pendingForUser->count() }} pending</span>
-                            <x-heroicon-m-chevron-down class="h-4 w-4 text-slate-600 transition" x-bind:class="pendingCollapsed ? '' : 'rotate-180'" aria-hidden="true" />
-                        </div>
-                    </div>
-
-                    <div class="mt-4" x-show="!pendingCollapsed" x-transition>
-                        <div class="grid gap-3 lg:grid-cols-2">
-                            @foreach ($pendingForUser as $pending)
-                                @php
-                                    $set = $pending->slot->song->set;
-                                    $session = $set->session;
-                                    $slotLabel = $slotOptions[$pending->slot->name] ?? str($pending->slot->name)->replace('_', ' ')->title();
-                                @endphp
-                                <article
-                                    class="rounded-lg border border-slate-200 bg-white/70 p-4 text-sm text-slate-600"
-                                    x-data="{
-                                        hidden: false,
-                                        busy: false,
-                                        error: '',
-                                        async cancel() {
-                                            this.busy = true;
-                                            this.error = '';
-
-                                            try {
-                                                const response = await fetch('{{ route('slot-assignments.respond', $pending) }}', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'Accept': 'application/json',
-                                                        'X-Requested-With': 'XMLHttpRequest',
-                                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                    },
-                                                    body: JSON.stringify({
-                                                        _method: 'PATCH',
-                                                        status: 'rejected',
-                                                    }),
-                                                });
-
-                                                if (!response.ok) {
-                                                    throw new Error('Request failed');
-                                                }
-
-                                                this.hidden = true;
-                                                window.dispatchEvent(new CustomEvent('pending-item-cancelled'));
-                                            } catch (e) {
-                                                this.error = 'Could not cancel this pending item. Try again.';
-                                            } finally {
-                                                this.busy = false;
-                                            }
-                                        },
-                                    }"
-                                    x-show="!hidden"
-                                    x-transition
-                                >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p class="font-medium text-slate-800">{{ $pending->slot->song->artist }} - {{ $pending->slot->song->title }}</p>
-                                            <p class="mt-1">{{ $session->name }} · {{ $session->date->format('D, M j, Y') }} · {{ $set->name }}</p>
-                                            <p class="mt-1">
-                                                {{ $slotLabel }} ·
-                                                @if ($pending->type === \App\Models\SlotAssignment::TYPE_REQUEST)
-                                                    requested by you
-                                                @else
-                                                    recommended for you by {{ $pending->actor->name }}
-                                                @endif
-                                            </p>
-                                            @if ($pending->message)
-                                                <p class="mt-2 text-slate-500">{{ $pending->message }}</p>
-                                            @endif
-                                            <p x-show="error" x-text="error" class="mt-2 text-sm text-rose-700"></p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            @click="cancel()"
-                                            x-bind:disabled="busy"
-                                            class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 hover:text-rose-800 focus:outline-none focus:ring-2 focus:ring-rose-400 disabled:opacity-40"
-                                            aria-label="This will remove your request for this slot."
-                                            title="This will remove your request for this slot."
-                                        >
-                                            <x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" />
-                                            <span>Cancel</span>
-                                        </button>
-                                    </div>
-                                </article>
+                                </button>
                             @endforeach
                         </div>
-                    </div>
-                </section>
-            @endif
+                    </article>
+                @endif
 
-            @if ($practiceSets->isNotEmpty())
-            <section class="rounded-xl border border-slate-200 bg-slate-50/95 p-6 shadow-sm">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-lg font-semibold text-slate-900">Practice plan</h3>
-                        <p class="mt-1 text-sm text-slate-600">Upcoming confirmed songs, grouped by jam and set.</p>
-                    </div>
-                </div>
-
-                <div class="mt-5 space-y-6">
-                    @forelse ($practiceSets->groupBy(fn ($group) => $group['set']->session->date->format('F Y')) as $monthLabel => $monthGroups)
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-3">
-                                <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ $monthLabel }}</h4>
-                                <div class="h-px flex-1 bg-slate-200"></div>
+                @foreach ($upcomingSessionGroups as $group)
+                    @php
+                        $session = $group['session'];
+                    @endphp
+                    <article class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-5">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-600">{{ $session->name }}</h4>
+                                <p class="text-xs text-slate-500">{{ $session->date?->format('D, M j, Y') }}</p>
                             </div>
-
-                            <div class="space-y-4">
-                                @foreach ($monthGroups as $group)
-                                    @php
-                                        $set = $group['set'];
-                                        $isOwned = $group['isOwned'];
-                                        $isCollaborator = $group['isCollaborator'];
-                                        $isPerformed = $set->performed;
-                                    @endphp
-
-                                    <article class="rounded-xl border {{ $isPerformed ? 'border-slate-200 bg-slate-100/95 text-slate-500' : 'border-slate-200 bg-white/90 text-slate-900' }} p-5 shadow-sm">
-                                        <div class="flex flex-wrap items-start justify-between gap-4">
-                                            <div>
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <h4 class="text-lg font-semibold">
-                                                        <a href="{{ route('sessions.show', $set->session) }}#set-{{ $set->id }}" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">
-                                                            {{ $set->name }}
-                                                        </a>
-                                                    </h4>
-                                                    @if ($isOwned)
-                                                        <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800">Owner</span>
-                                                    @endif
-                                                    @if ($isCollaborator)
-                                                        <span class="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium text-teal-800">Collaborator</span>
-                                                    @endif
-                                                    @if ($isPerformed)
-                                                        <span class="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">Performed</span>
-                                                    @endif
-                                                </div>
-                                                <p class="mt-1 flex flex-wrap items-center gap-1.5 text-sm {{ $isPerformed ? 'text-slate-500' : 'text-slate-600' }}">
-                                                    <span class="inline-flex items-center gap-1.5" title="Set organiser">
-                                                        <x-heroicon-m-user class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                                                        <span class="sr-only">Set organiser</span>
-                                                        <span>{{ $set->owner->name }}</span>
-                                                    </span>
-                                                    <span>·</span>
-                                                    <span>{{ $set->session->name }}</span>
-                                                    <span>·</span>
-                                                    <span>{{ $set->session->date->format('D, M j, Y') }}</span>
-                                                </p>
+                            <span class="text-xs text-slate-500">{{ $group['sets']->count() }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                            @foreach ($group['sets'] as $card)
+                                @php
+                                    $set = $card['set'];
+                                    $searchText = collect([
+                                        $set->name,
+                                        $set->owner?->name,
+                                        $card['collaboratorNames']->implode(' '),
+                                        $session->name,
+                                    ])->filter()->implode(' ');
+                                    $openUrl = route('sessions.show', $session).'#set-'.$set->id;
+                                    $manageUrl = $card['lifecycle'] === \App\Models\Set::LIFECYCLE_DRAFT
+                                        ? route('planned-sets.index').'#set-'.$set->id
+                                        : '';
+                                    $lifecycleLabel = $card['lifecycle'] === \App\Models\Set::LIFECYCLE_DRAFT ? 'Draft' : 'Scheduled';
+                                @endphp
+                                <button
+                                    type="button"
+                                    x-show="matchesSetCard($el)"
+                                    @click="openSetPopover($el)"
+                                    data-search="{{ mb_strtolower($searchText) }}"
+                                    data-name="{{ $set->name }}"
+                                    data-owner="{{ $set->owner?->name ?? 'Unknown' }}"
+                                    data-session="{{ $session->name }}"
+                                    data-date="{{ $session->date?->format('D, M j, Y') }}"
+                                    data-songs="{{ $set->songs_count }}"
+                                    data-lifecycle-label="{{ $lifecycleLabel }}"
+                                    data-owned="{{ $card['isOwned'] ? '1' : '0' }}"
+                                    data-collaborator="{{ $card['isCollaborator'] ? '1' : '0' }}"
+                                    data-has-my-slots="{{ $card['hasMySlots'] ? '1' : '0' }}"
+                                    data-collaborators="{{ $card['collaboratorNames']->implode('|') }}"
+                                    data-open-url="{{ $openUrl }}"
+                                    data-manage-url="{{ $manageUrl }}"
+                                    data-card-id="upcoming-{{ $set->id }}"
+                                    :aria-expanded="popoverVisible && popoverCardId === 'upcoming-{{ $set->id }}'"
+                                    class="group relative aspect-square overflow-hidden rounded-xl border border-slate-300 bg-slate-100 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+                                >
+                                    <x-my-sets.artwork-grid :tiles="$card['artworkTiles']" :song-count="$set->songs_count" :seed="$set->id" />
+                                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-900/35 to-transparent"></div>
+                                    <div class="relative z-10 flex h-full flex-col justify-between">
+                                        <p class="line-clamp-2 w-fit max-w-full rounded-md border border-white/20 bg-black/40 px-2 py-1 text-sm font-semibold text-white backdrop-blur-[2px]">{{ $set->name }}</p>
+                                        <div>
+                                            <div class="inline-flex flex-col rounded-md border border-white/20 bg-black/35 px-2 py-1 backdrop-blur-[2px]">
+                                                <p class="text-[11px] text-slate-100">{{ $set->owner?->name ?? 'Unknown' }}</p>
+                                                <p class="mt-1 text-[11px] font-medium text-slate-200">{{ $set->songs_count }} songs</p>
                                             </div>
                                         </div>
-
-                                        <div class="mt-4 grid gap-3 lg:grid-cols-2">
-                                            @forelse ($group['songs'] as $songGroup)
-                                                @php
-                                                    $song = $songGroup['song'];
-                                                @endphp
-                                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                                                    <h5 class="font-semibold text-slate-900">
-                                                        <a href="{{ route('sessions.show', $set->session) }}#song-{{ $song->id }}" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">
-                                                            {{ $song->artist }} - {{ $song->title }}
-                                                        </a>
-                                                    </h5>
-                                                    @if ($song->notes)
-                                                        <p class="mt-1 text-sm text-slate-600">{{ $song->notes }}</p>
-                                                    @endif
-                                                    <div class="mt-3 flex flex-wrap gap-2">
-                                                        @foreach ($songGroup['slots'] as $slot)
-                                                            @php
-                                                                $slotLabel = $slotOptions[$slot->name] ?? str($slot->name)->replace('_', ' ')->title();
-                                                                $isMine = $slot->user_id === auth()->id();
-                                                            @endphp
-                                                            <a href="{{ route('sessions.show', $set->session) }}#slot-{{ $slot->id }}" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md {{ $isMine ? 'border-sky-200 bg-sky-50 text-sky-800' : ($slot->isOpen() ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800') }}">
-                                                                @if ($isMine)
-                                                                    <span>You are on {{ $slotLabel }}</span>
-                                                                @else
-                                                                    <span>{{ $slotLabel }}</span>
-                                                                @endif
-                                                            </a>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            @empty
-                                                <p class="rounded-lg border border-dashed border-slate-300 bg-white/80 p-4 text-sm text-slate-500">No songs to practise from this set yet.</p>
-                                            @endforelse
-                                        </div>
-                                    </article>
-                                @endforeach
-                            </div>
+                                    </div>
+                                </button>
+                            @endforeach
                         </div>
-                    @empty
-                        <div class="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-                            You do not have any confirmed slots to practise yet.
-                        </div>
-                    @endforelse
-                </div>
+                    </article>
+                @endforeach
             </section>
-            @endif
 
+            <section class="space-y-4">
+                <h3 class="text-xl font-semibold text-white">Performed</h3>
+
+                @if ($performedSessionGroups->isEmpty())
+                    <div class="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
+                        No performed sets yet.
+                    </div>
+                @endif
+
+                @foreach ($performedSessionGroups as $group)
+                    @php
+                        $session = $group['session'];
+                    @endphp
+                    <article class="rounded-xl border border-slate-200 bg-slate-50/95 p-4 shadow-sm sm:p-5">
+                        <div class="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-600">{{ $session?->name ?? 'Unknown Session' }}</h4>
+                                <p class="text-xs text-slate-500">{{ $session?->date?->format('D, M j, Y') ?? 'No date' }}</p>
+                            </div>
+                            <span class="text-xs text-slate-500">{{ $group['sets']->count() }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                            @foreach ($group['sets'] as $card)
+                                @php
+                                    $set = $card['set'];
+                                    $searchText = collect([
+                                        $set->name,
+                                        $set->owner?->name,
+                                        $card['collaboratorNames']->implode(' '),
+                                        $session?->name,
+                                    ])->filter()->implode(' ');
+                                    $openUrl = $session ? route('sessions.show', $session).'#set-'.$set->id : route('my-sets.index');
+                                @endphp
+                                <button
+                                    type="button"
+                                    x-show="matchesSetCard($el)"
+                                    @click="openSetPopover($el)"
+                                    data-search="{{ mb_strtolower($searchText) }}"
+                                    data-name="{{ $set->name }}"
+                                    data-owner="{{ $set->owner?->name ?? 'Unknown' }}"
+                                    data-session="{{ $session?->name ?? 'Unknown Session' }}"
+                                    data-date="{{ $session?->date?->format('D, M j, Y') ?? 'No date' }}"
+                                    data-songs="{{ $set->songs_count }}"
+                                    data-lifecycle-label="Performed"
+                                    data-owned="{{ $card['isOwned'] ? '1' : '0' }}"
+                                    data-collaborator="{{ $card['isCollaborator'] ? '1' : '0' }}"
+                                    data-has-my-slots="{{ $card['hasMySlots'] ? '1' : '0' }}"
+                                    data-collaborators="{{ $card['collaboratorNames']->implode('|') }}"
+                                    data-open-url="{{ $openUrl }}"
+                                    data-manage-url=""
+                                    data-card-id="performed-{{ $set->id }}"
+                                    :aria-expanded="popoverVisible && popoverCardId === 'performed-{{ $set->id }}'"
+                                    class="group relative aspect-square overflow-hidden rounded-xl border border-slate-300 bg-slate-100 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+                                >
+                                    <x-my-sets.artwork-grid :tiles="$card['artworkTiles']" :song-count="$set->songs_count" :seed="$set->id" />
+                                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-900/35 to-transparent"></div>
+                                    <div class="relative z-10 flex h-full flex-col justify-between">
+                                        <p class="line-clamp-2 w-fit max-w-full rounded-md border border-white/20 bg-black/40 px-2 py-1 text-sm font-semibold text-white backdrop-blur-[2px]">{{ $set->name }}</p>
+                                        <div>
+                                            <div class="inline-flex flex-col rounded-md border border-white/20 bg-black/35 px-2 py-1 backdrop-blur-[2px]">
+                                                <p class="text-[11px] text-slate-100">{{ $set->owner?->name ?? 'Unknown' }}</p>
+                                                <p class="mt-1 text-[11px] font-medium text-slate-200">{{ $set->songs_count }} songs</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </button>
+                            @endforeach
+                        </div>
+                    </article>
+                @endforeach
+            </section>
+        </div>
+
+        <div
+            x-show="popoverVisible && selectedSet"
+            x-cloak
+            x-transition.opacity.duration.150ms
+            @click.outside="closeSetPopover()"
+            class="absolute z-40"
+            :style="popoverStyle"
+            role="dialog"
+            aria-label="Set details popover"
+        >
+            <div x-ref="setPopoverPanel" class="relative rounded-xl border border-slate-300 bg-white p-4 shadow-2xl">
+                <div x-show="popoverPlacement === 'bottom'" class="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-s border-t border-slate-300 bg-white"></div>
+                <div x-show="popoverPlacement === 'top'" class="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-e border-b border-slate-300 bg-white"></div>
+
+                <div class="flex items-start justify-between gap-3">
+                    <h3 class="text-base font-semibold text-slate-900" x-text="selectedSet?.name || 'Set details'"></h3>
+                    <button
+                        type="button"
+                        @click="closeSetPopover()"
+                        class="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                        aria-label="Close details"
+                    >
+                        <x-heroicon-m-x-mark class="h-4 w-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <div class="mt-3 space-y-2 text-sm text-slate-700">
+                    <p><span class="font-semibold text-slate-900">Owner:</span> <span x-text="selectedSet?.owner"></span></p>
+                    <p><span class="font-semibold text-slate-900">Session:</span> <span x-text="selectedSet?.session"></span></p>
+                    <p><span class="font-semibold text-slate-900">Date:</span> <span x-text="selectedSet?.date"></span></p>
+                    <p><span class="font-semibold text-slate-900">Songs:</span> <span x-text="selectedSet?.songs"></span></p>
+                    <p><span class="font-semibold text-slate-900">Status:</span> <span x-text="selectedSet?.lifecycle"></span></p>
+
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <span x-show="selectedSet?.isOwned" x-cloak class="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Owned by you</span>
+                        <span x-show="selectedSet?.isCollaborator" x-cloak class="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700">Collaborator</span>
+                        <span x-show="selectedSet?.hasMySlots" x-cloak class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">You have slots</span>
+                    </div>
+
+                    <div x-show="selectedSet?.collaborators?.length" x-cloak>
+                        <p class="font-semibold text-slate-900">Collaborators</p>
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <template x-for="name in (selectedSet?.collaborators || [])" :key="`collaborator-${name}`">
+                                <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600" x-text="name"></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap justify-end gap-2">
+                    <a x-show="selectedSet?.manageUrl" x-cloak :href="selectedSet?.manageUrl || '#'" class="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400">Manage draft</a>
+                    <a x-show="selectedSet?.openUrl" x-cloak :href="selectedSet?.openUrl || '#'" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400">Open set</a>
+                </div>
             </div>
-
         </div>
     </div>
 </x-app-layout>

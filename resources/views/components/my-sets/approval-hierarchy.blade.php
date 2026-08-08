@@ -1,6 +1,17 @@
-@props(['approvalSessions', 'bandTemplates', 'slotOptions', 'slotConflicts' => []])
+@props(['approvalSessions', 'bandTemplates', 'slotOptions', 'slotConflicts' => [], 'tone' => 'slate'])
 
 @php
+    $isAmberTone = $tone === 'amber';
+    $sessionSurfaceClass = $isAmberTone
+        ? 'overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm'
+        : 'overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm';
+    $sessionHeaderClass = $isAmberTone
+        ? 'flex flex-wrap items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/60 px-5 py-4'
+        : 'flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4';
+    $setSurfaceClass = $isAmberTone
+        ? 'overflow-hidden rounded-lg border border-amber-100 bg-amber-50/40'
+        : 'overflow-hidden rounded-lg border border-slate-200 bg-slate-50/80';
+
     $templateSlotNamesByTemplateId = $bandTemplates
         ->mapWithKeys(fn ($template) => [
             (string) $template->id => $template->slots->pluck('name')->values()->all(),
@@ -17,8 +28,8 @@
     @php
         $session = $approvalSession['session'];
     @endphp
-    <section data-approval-session-id="{{ $session->id }}" class="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+    <section data-approval-session-id="{{ $session->id }}" class="{{ $sessionSurfaceClass }}">
+        <div class="{{ $sessionHeaderClass }}">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Jam session</p>
                 <h4 class="mt-1 text-lg font-semibold text-slate-900">
@@ -33,7 +44,7 @@
                 @php
                     $set = $approvalSet['set'];
                 @endphp
-                <section data-approval-set-id="{{ $set->id }}" class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50/80">
+                <section data-approval-set-id="{{ $set->id }}" class="{{ $setSurfaceClass }}">
                     <div class="border-b border-slate-200 px-4 py-3">
                         <h5 class="text-base font-semibold text-slate-900">
                             <a href="{{ route('sessions.show', $set->session) }}#set-{{ $set->id }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $set->name }}</a>

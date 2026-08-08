@@ -14,11 +14,18 @@ class Set extends Model
 {
     use SoftDeletes;
 
+    public const LIFECYCLE_DRAFT = 'draft';
+
+    public const LIFECYCLE_SCHEDULED = 'scheduled';
+
+    public const LIFECYCLE_PERFORMED = 'performed';
+
     protected $fillable = [
         'name',
         'description',
         'owner_id',
         'jam_session_id',
+        'lifecycle_state',
         'position',
         'performed',
         'signups_open',
@@ -27,6 +34,7 @@ class Set extends Model
         'feature_set',
         'free_for_all',
         'collaborator_ids',
+        'candidate_session_ids',
         'deleted_by_user_id',
     ];
 
@@ -34,6 +42,7 @@ class Set extends Model
     {
         return [
             'position' => 'integer',
+            'lifecycle_state' => 'string',
             'performed' => 'boolean',
             'signups_open' => 'boolean',
             'is_hidden' => 'boolean',
@@ -41,6 +50,7 @@ class Set extends Model
             'feature_set' => 'boolean',
             'free_for_all' => 'boolean',
             'collaborator_ids' => 'array',
+            'candidate_session_ids' => 'array',
             'deleted_by_user_id' => 'integer',
         ];
     }
@@ -60,6 +70,46 @@ class Set extends Model
                 ->orWhere('owner_id', $user->id)
                 ->orWhereJsonContains('collaborator_ids', $user->id);
         });
+    }
+
+    public function scopeDraft(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->where('lifecycle_state', self::LIFECYCLE_DRAFT)
+                ->orWhere(function (Builder $query): void {
+                    $query->whereNull('lifecycle_state')
+                        ->whereNull('jam_session_id');
+                });
+        });
+    }
+
+    public function scopeScheduled(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->where('lifecycle_state', self::LIFECYCLE_SCHEDULED)
+                ->orWhere(function (Builder $query): void {
+                    $query->whereNull('lifecycle_state')
+                        ->where('performed', false)
+                        ->whereNotNull('jam_session_id');
+                });
+        });
+    }
+
+    public function scopeForSetLibrary(Builder $query, User $user): Builder
+    {
+        if ($user->is_admin) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $query) use ($user): void {
+            $query->where('owner_id', $user->id)
+                ->orWhereJsonContains('collaborator_ids', $user->id);
+        });
+    }
+
+    public function isDraft(): bool
+    {
+        return ($this->lifecycle_state ?? self::LIFECYCLE_DRAFT) === self::LIFECYCLE_DRAFT;
     }
 
     /**

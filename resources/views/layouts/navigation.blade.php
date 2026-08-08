@@ -95,6 +95,17 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex" data-tour="jam-sessions-navigation">
+                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                        <span class="flex items-center gap-2">
+                            <span>{{ __('Dashboard') }}</span>
+                            <span
+                                class="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
+                                x-show="$store.approvals.count > 0"
+                                x-text="$store.approvals.count"
+                                x-cloak
+                            >{{ $mySetsApprovalCount }}</span>
+                        </span>
+                    </x-nav-link>
                     <div class="relative inline-flex h-full items-center" data-tour="jam-sessions-desktop" x-data="{ openJamSessions: false }" @click.outside="openJamSessions = false">
                         <button
                             @click="openJamSessions = !openJamSessions"
@@ -116,7 +127,7 @@
                             style="display: none;"
                             @click="openJamSessions = false"
                         >
-                            <div class="max-h-80 overflow-y-auto py-1">
+                            <div class="jam-sessions-nav-scroll max-h-80 overflow-y-auto py-1">
                                 <x-dropdown-link :href="route('sessions.index')">
                                     {{ __('All Jam Sessions') }}
                                 </x-dropdown-link>
@@ -150,22 +161,75 @@
                             </div>
                         </div>
                     </div>
-                    <x-nav-link :href="route('my-sets.index')" :active="request()->routeIs('my-sets.*')">
-                        <span>{{ __('My Sets') }}</span>
-                        <span
-                            class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
-                            x-show="$store.approvals.count > 0"
-                            x-text="$store.approvals.count"
-                            x-cloak
-                        >{{ $mySetsApprovalCount }}</span>
-                    </x-nav-link>
-                    <x-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')" data-tour="find-slot-desktop">
-                        {{ __('Find a Slot') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
-                        <span>{{ __('Jam Standards') }}</span>
-                        <span class="ms-2 inline-flex items-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none text-slate-950">New</span>
-                    </x-nav-link>
+                    <div class="relative inline-flex h-full items-center" x-data="{ openSets: false }" @click.outside="openSets = false">
+                        <button
+                            @click="openSets = !openSets"
+                            class="inline-flex h-full items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('my-sets.*') || request()->routeIs('planned-sets.*') ? 'border-amber-400 text-slate-100 focus:border-amber-300' : 'border-transparent text-slate-300 hover:text-slate-100 hover:border-slate-500 focus:text-slate-100 focus:border-slate-500' }} focus:outline-none"
+                        >
+                            <span>{{ __('Sets') }}</span>
+                            <x-heroicon-m-chevron-down class="ms-1 h-4 w-4" aria-hidden="true" />
+                        </button>
+
+                        <div
+                            x-show="openSets"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute start-0 top-full z-50 mt-2 w-72 origin-top-left rounded-md border border-slate-800 bg-slate-900 shadow-2xl ring-1 ring-black/40"
+                            style="display: none;"
+                            @click="openSets = false"
+                        >
+                            <div class="py-1">
+                                <x-dropdown-link :href="route('my-sets.index')">
+                                    {{ __('My Sets') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('planned-sets.index')">
+                                    {{ __('Planned Sets') }}
+                                </x-dropdown-link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative inline-flex h-full items-center" x-data="{ openTools: false }" @click.outside="openTools = false">
+                        <button
+                            @click="openTools = !openTools"
+                            class="inline-flex h-full items-center border-b-2 bg-transparent px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out appearance-none {{ request()->routeIs('slot-finder.*') || request()->routeIs('jam-standards.*') || request()->routeIs('practice-plan.*') ? 'border-amber-400 text-slate-100 focus:border-amber-300' : 'border-transparent text-slate-300 hover:text-slate-100 hover:border-slate-500 focus:text-slate-100 focus:border-slate-500' }} focus:outline-none"
+                        >
+                            <span>{{ __('Tools') }}</span>
+                            <x-heroicon-m-chevron-down class="ms-1 h-4 w-4" aria-hidden="true" />
+                        </button>
+
+                        <div
+                            x-show="openTools"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute start-0 top-full z-50 mt-2 w-72 origin-top-left rounded-md border border-slate-800 bg-slate-900 shadow-2xl ring-1 ring-black/40"
+                            style="display: none;"
+                            @click="openTools = false"
+                        >
+                            <div class="py-1">
+                                <x-dropdown-link :href="route('jam-standards.index')">
+                                    <span class="flex items-center gap-2">
+                                        <span>{{ __('Jam Standards') }}</span>
+                                    </span>
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('slot-finder.index')">
+                                    {{ __('Find a Slot') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('practice-plan.index')">
+                                    {{ __('Practice Plan') }}
+                                </x-dropdown-link>
+                            </div>
+                        </div>
+                    </div>
+
                     <x-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                         {{ __("Who's Who") }}
                     </x-nav-link>
@@ -306,12 +370,12 @@
                     </span>
                 @endif
                 <a
-                    href="{{ route('my-sets.index') }}"
+                    href="{{ route('dashboard') }}"
                     class="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold leading-none text-amber-800 shadow-sm transition hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950"
                     x-show="! open && $store.approvals.count > 0"
                     x-text="$store.approvals.count"
                     x-cloak
-                    aria-label="View pending My Sets approvals"
+                    aria-label="View pending Dashboard approvals"
                 >{{ $mySetsApprovalCount }}</a>
                 <button
                     type="button"
@@ -361,6 +425,16 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1" data-tour="jam-sessions-mobile">
+            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                <span>{{ __('Dashboard') }}</span>
+                <span
+                    class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
+                    x-show="$store.approvals.count > 0"
+                    x-text="$store.approvals.count"
+                    x-cloak
+                >{{ $mySetsApprovalCount }}</span>
+            </x-responsive-nav-link>
+            <p class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Jam Sessions</p>
             <x-responsive-nav-link :href="route('sessions.index')" :active="request()->routeIs('sessions.*')">
                 {{ __('All Jam Sessions') }}
             </x-responsive-nav-link>
@@ -384,21 +458,24 @@
                 </x-responsive-nav-link>
             @endforeach
             <div class="mx-4 my-1 border-t border-slate-800"></div>
+            <p class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Sets</p>
             <x-responsive-nav-link :href="route('my-sets.index')" :active="request()->routeIs('my-sets.*')">
-                <span>{{ __('My Sets') }}</span>
-                <span
-                    class="ms-2 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-amber-800"
-                    x-show="$store.approvals.count > 0"
-                    x-text="$store.approvals.count"
-                    x-cloak
-                >{{ $mySetsApprovalCount }}</span>
+                {{ __('My Sets') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('planned-sets.index')" :active="request()->routeIs('planned-sets.*')">
+                {{ __('Planned Sets') }}
+            </x-responsive-nav-link>
+
+            <div class="mx-4 my-1 border-t border-slate-800"></div>
+            <p class="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Tools</p>
+            <x-responsive-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
+                <span>{{ __('Jam Standards') }}</span>
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('slot-finder.index')" :active="request()->routeIs('slot-finder.*')" data-tour="find-slot-mobile">
                 {{ __('Find a Slot') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('jam-standards.index')" :active="request()->routeIs('jam-standards.*')">
-                <span>{{ __('Jam Standards') }}</span>
-                <span class="ms-2 inline-flex items-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none text-slate-950">New</span>
+            <x-responsive-nav-link :href="route('practice-plan.index')" :active="request()->routeIs('practice-plan.*')">
+                {{ __('Practice Plan') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('directory.index')" :active="request()->routeIs('directory.*')">
                 {{ __("Who's Who") }}

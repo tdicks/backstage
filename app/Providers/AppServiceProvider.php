@@ -2,11 +2,11 @@
 
 namespace App\Providers;
 
-use App\Http\Controllers\MySetsController;
 use App\Http\Controllers\RecycleBinController;
 use App\Models\JamSession;
 use App\Models\User;
 use App\Services\AppNoticeService;
+use App\Services\DashboardActionQueueService;
 use App\Services\ManualSlotTransferService;
 use App\Services\NotificationService;
 use App\Support\FeatureTourConfig;
@@ -124,7 +124,7 @@ class AppServiceProvider extends ServiceProvider
             return (int) request()->attributes->get('backstage.pending_approval_count');
         }
 
-        $count = MySetsController::pendingApprovalCount($user);
+        $count = app(DashboardActionQueueService::class)->pendingApprovalCount($user);
         request()->attributes->set('backstage.pending_approval_count', $count);
 
         return $count;

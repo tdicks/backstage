@@ -62,7 +62,7 @@
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                     x-show="(slotIsOpen || slotIsClaimable) && !assignedToCurrentUser"
                     @click="openActionMenu = false; takeSlot()"
-                    x-bind:disabled="busyAction || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }}) || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
                     <span>Take this slot</span>
@@ -74,7 +74,7 @@
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                     x-show="(slotIsOpen || slotIsClaimable) && !assignedToCurrentUser && !hasPendingOwnRequest"
                     @click="openActionMenu = false; requestSlot()"
-                    x-bind:disabled="busyAction || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }}) || (currentUserNotGoing && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-hand-raised class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span>Request slot</span>
@@ -87,7 +87,7 @@
                     @click="openActionMenu = false; releaseSlot()"
                     class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                     x-show="assignedToCurrentUser"
-                    x-bind:disabled="busyAction"
+                    x-bind:disabled="busyAction || ({{ $jamSessionClosed ? 'true' : 'false' }} && {{ auth()->user()?->is_admin ? 'false' : 'true' }})"
                 >
                     <x-heroicon-m-arrow-left-on-rectangle class="h-4 w-4 text-slate-500" aria-hidden="true" />
                     <span>Release slot</span>

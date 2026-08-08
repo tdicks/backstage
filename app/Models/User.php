@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 
-#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'is_deleted_account', 'deleted_account_at', 'bio', 'onboarding_dismissed_at', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences', 'feature_tour_state', 'notifications_snoozed_until', 'notifications_snoozed_forever'])]
+#[Fillable(['name', 'email', 'mobile_number', 'password', 'is_admin', 'is_deleted_account', 'deleted_account_at', 'bio', 'onboarding_dismissed_at', 'hide_from_directory', 'hide_from_slot_proposals', 'slot_coverage', 'notification_preferences', 'feature_tour_state', 'dashboard_widget_order', 'dashboard_widget_sizes', 'dashboard_widget_layouts', 'notifications_snoozed_until', 'notifications_snoozed_forever'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -59,6 +59,9 @@ class User extends Authenticatable
             'slot_coverage' => 'array',
             'notification_preferences' => 'array',
             'feature_tour_state' => 'array',
+            'dashboard_widget_order' => 'array',
+            'dashboard_widget_sizes' => 'array',
+            'dashboard_widget_layouts' => 'array',
             'notifications_snoozed_forever' => 'boolean',
             'notifications_snoozed_until' => 'datetime',
             'password' => 'hashed',

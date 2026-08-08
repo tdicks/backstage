@@ -50,10 +50,20 @@
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Attendance</h3>
                     <p>
-                        Attendance helps everyone read the room before the jam starts. Use the controls in a session header to mark yourself as <span class="font-semibold text-slate-900">Going</span>, <span class="font-semibold text-slate-900">Maybe</span>, or <span class="font-semibold text-slate-900">Not going</span>.
+                        Attendance helps everyone read the room before the jam starts. Use the controls in a session header to mark yourself as <span class="font-semibold text-slate-900">Going</span>, <span class="font-semibold text-slate-900">Not Going</span>, or <span class="font-semibold text-slate-900">Not Specified</span>.
                     </p>
                     <p>
                         This is separate from sign-in. Sign-in records who is physically there on the day, while attendance is the planning signal people use ahead of time.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Dashboard Queues</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Dashboard</span> as your action queue. Approvals and requests are listed there so you can handle decisions in one place.
+                    </p>
+                    <p>
+                        You can still open <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> for set browsing, but approvals are now dashboard-first.
                     </p>
                 </div>
 
@@ -75,12 +85,31 @@
                     <p>
                         When you create a set, you become the person looking after it. Open the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu to add songs or edit the set details. You can also invite other players to help manage the set with you.
                     </p>
+                    <p>
+                        If plans change, owners, collaborators, and admins can use <span class="font-semibold text-slate-900">Unschedule Set</span> from set actions. This removes the set from the jam session and returns it to Planned Sets.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Planned Sets</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Sets</span> then <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Planned Sets</span> to prepare a draft before picking a session.
+                    </p>
+                    <p>
+                        Drafts can include songs and slots, so you can build the full set list before scheduling. Use <span class="font-semibold text-slate-900">Add Song</span> from set actions, then <span class="font-semibold text-slate-900">Add Slot</span> from each song menu as needed.
+                    </p>
+                    <p>
+                        In the planned set editor, you can choose whether to accept song requests and whether sign ups are open. Click any slot chip to open slot actions, where you can take it, request it, or recommend another player (when sign ups are open). You can also add collaborators by typing a name in the editor. Attendance on planned sets uses the same yes or no choices as jam attendance, so both stay in sync.
+                    </p>
+                    <p>
+                        If your draft has pending song or slot requests, use the request cards in that planned set to approve or reject them. Approved requests update the planned set immediately.
+                    </p>
                 </div>
 
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Adding Songs</h3>
                     <p>
-                        From the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu, choose <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>. Enter the song title and artist, then choose a band template before saving. The band template gives the song a sensible starting lineup, such as vocals, lead guitar, rhythm guitar, bass, drums, keys, or whatever setup your group uses.
+                        From the <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-bars-3 class="h-3.5 w-3.5" aria-hidden="true" /> Set actions</span> menu, choose <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-plus class="h-3.5 w-3.5" aria-hidden="true" /> Add Song</span>. Start typing an artist or title to use song suggestions, then choose a band template before saving. The band template gives the song a sensible starting lineup, such as vocals, lead guitar, rhythm guitar, bass, drums, keys, or whatever setup your group uses.
                     </p>
                     <p>
                         Choose the template that feels closest to the version you want to play. You can add more slots later, including another band template via <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-pencil-square class="h-3.5 w-3.5" aria-hidden="true" /> Edit slot</span>. Any duplicate slots won't get overwritten.
@@ -116,10 +145,10 @@
                 <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
                     <h3 class="text-lg font-semibold text-slate-950">Keeping Track in My Sets</h3>
                     <p>
-                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> as your personal set list for the jam. It gathers the parts you have coming up, the requests you have made, and any recommendations waiting for your answer, so you can quickly see what needs your attention before the session starts.
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> as your set library. It splits sets into <span class="font-semibold text-slate-900">Upcoming</span> and <span class="font-semibold text-slate-900">Performed</span> and groups them by session, with a separate <span class="font-semibold text-slate-900">Planned</span> area for unscheduled drafts.
                     </p>
                     <p>
-                        If you own a set, <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> also shows the approvals you need to handle. It is the easiest place to check whether someone is waiting on you, confirm who is playing, and keep your set ready for the room.
+                        Click any set card to open more detail and jump straight to that set.
                     </p>
                 </div>
 
@@ -129,10 +158,20 @@
                         When you use <span class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm"><x-heroicon-m-hand-raised class="h-3.5 w-3.5" aria-hidden="true" /> Request slot</span>, the set owner gets to decide whether to approve it. Until they say yes, the slot is not yours yet, so everyone can see that it is still being sorted out.
                     </p>
                     <p>
-                        If you own a set, <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">My Sets</span> is your main place to keep on top of requests. Use <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /> Approve</span> when the part is theirs, or <span class="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800 shadow-sm"><x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" /> Reject</span> the request if the song needs a different player or arrangement.
+                        If you own a set, use the approvals panel on <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Dashboard</span> to keep on top of requests. Use <span class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-sm"><x-heroicon-m-check class="h-3.5 w-3.5" aria-hidden="true" /> Approve</span> when the part is theirs, or <span class="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800 shadow-sm"><x-heroicon-m-x-mark class="h-3.5 w-3.5" aria-hidden="true" /> Reject</span> the request if the song needs a different player or arrangement.
                     </p>
                     <p>
                         If approving a request would give someone two clashing parts in the same set, Backstage will stop the approval and explain what needs fixing first.
+                    </p>
+                </div>
+
+                <div class="space-y-5 rounded-lg border border-slate-200 bg-white/90 p-5 shadow-sm">
+                    <h3 class="text-lg font-semibold text-slate-950">Practice Plan</h3>
+                    <p>
+                        Use <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Tools</span> then <span class="inline-flex rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-sm">Practice Plan</span> to see songs where you already have assigned slots.
+                    </p>
+                    <p>
+                        This page is for rehearsal focus. It pulls your active parts into one place and links back to each set.
                     </p>
                 </div>
 

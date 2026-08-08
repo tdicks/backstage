@@ -148,6 +148,7 @@ class JamSessionController extends Controller
             'attendanceStatus' => $this->attendanceService->statusForUser($jamSession, request()->user()),
             'attendanceStatuses' => JamSessionAttendance::statuses(),
             'attendanceRequiresDropoutAction' => $this->attendanceService->userRequiresDropoutActionPrompt($jamSession, request()->user()),
+            'pageTitle' => $jamSession->name.' - Jam Session',
         ]);
     }
 

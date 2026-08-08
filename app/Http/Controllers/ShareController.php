@@ -46,14 +46,18 @@ class ShareController extends Controller
 
         $description = $songs->isNotEmpty()
             ? $songs->join('; ')
-            : 'A set at '.$set->session->name;
+            : ($set->session ? 'A set at '.$set->session->name : 'A planned set in Backstage');
+
+        $sessionSummary = $set->session
+            ? $set->session->name.' - '.$set->session->date->format('l, F j, Y')
+            : 'Not scheduled yet';
 
         return view('share.show', [
             'title' => $set->owner->name.'\'s set - '.$set->name,
             'description' => $description,
             'url' => route('share.set', $set),
             'heading' => $set->owner->name.'\'s set - '.$set->name,
-            'summary' => $set->session->name.' - '.$set->session->date->format('l, F j, Y'),
+            'summary' => $sessionSummary,
             'items' => $songs,
         ]);
     }

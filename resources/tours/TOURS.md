@@ -60,6 +60,8 @@ The root structure is:
 
 ```yaml
 version: 1
+__file:
+  enabled: true
 anchors: {}
 actions: {}
 tours: {}
@@ -73,6 +75,24 @@ tours: {}
 - Purpose: config version marker
 - Default in payload when missing: 1
 - Validator behavior: warns if not numeric
+
+### __file
+
+- Type: object
+- Optional key: enabled
+- `enabled: false` skips the entire YAML file during load and validation processing.
+- `enabled` must be a boolean when provided.
+
+Example:
+
+```yaml
+version: 1
+
+__file:
+  enabled: false
+
+tours: {}
+```
 
 ### anchors
 
@@ -212,6 +232,28 @@ tours:
 When multiple YAML files define the same key, the value from the later filename wins.
 
 ### tour fields
+
+### enabled
+
+- Type: boolean
+- Default: true
+- When set to false, the tour is skipped by the loader and not included in runtime payloads.
+
+Example:
+
+```yaml
+tours:
+  onboarding:
+    enabled: false
+    once_key: onboarding-v1
+    trigger:
+      mode: auto
+    variants:
+      default:
+        steps:
+          - title: 'Disabled'
+            body: 'This tour is not processed.'
+```
 
 ### once_key
 

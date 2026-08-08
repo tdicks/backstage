@@ -22,6 +22,7 @@
     $canEditSet = $isAdmin || $isSetOwner;
     $canManageCollaborators = $isAdmin || $isSetOwner;
     $setLocked = $set->performed;
+    $canUnscheduleSet = $canManageSet && ! $setLocked;
     $sessionLocked = (bool) ($set->session?->is_closed ?? false);
     $canRequestSong = ! $sessionLocked && ! $setLocked && $set->song_requests && ! $isSetOwner && ! $isCollaborator;
     $totalSlots = $set->songs->sum(fn ($song) => $song->slots->count());
@@ -62,7 +63,7 @@
         ? 'text-sky-700 hover:bg-sky-50 focus:bg-sky-50'
         : 'text-slate-700 hover:bg-slate-100 focus:bg-slate-100';
     $setCardClass = match (true) {
-        $ownerIsNotGoing => 'border-rose-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(251_113_133_/_0.6),inset_0_0_20px_rgb(254_205_211_/_0.55)]',
+        $ownerIsNotGoing => 'border-slate-300 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(148_163_184_/_0.35),inset_0_0_20px_rgb(226_232_240_/_0.5)]',
         $set->feature_set && $set->is_hidden => 'border-sky-400 bg-amber-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
         $set->feature_set => 'border-amber-400 bg-amber-50/95 shadow-sm',
         $set->is_hidden => 'border-sky-400 bg-slate-50/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.05),inset_0_0_8px_rgb(125_211_252_/_0.65),inset_0_0_20px_rgb(186_230_253_/_0.55)]',
@@ -172,7 +173,7 @@
                     </span>
                 </span>
                 @if ($ownerIsNotGoing)
-                    <span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-rose-700" title="Set owner marked not attending">
+                    <span class="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-700" title="Set owner marked not attending">
                         Owner cannot attend
                     </span>
                 @endif
@@ -183,9 +184,9 @@
                         <span class="sr-only">Performed</span>
                     </span>
                 @else
-                    <span class="inline-flex items-center" title="Planned">
+                    <span class="inline-flex items-center" title="Scheduled">
                         <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
-                        <span class="sr-only">Not performed yet</span>
+                        <span class="sr-only">Scheduled</span>
                     </span>
                 @endif
 
@@ -278,7 +279,7 @@
                         data-session-action-menu
                         class="z-[80] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
                     >
-                    @if ($canManageSet && ! $setLocked && ! $isAdminManagingOtherSet)
+                    @if ($canManageSet && ! $setLocked)
                         <button
                             type="button"
                             @disabled($sessionLocked && !$isAdmin)
@@ -335,6 +336,22 @@
                                     <span class="sr-only"> Admin action</span>
                                 @endif
                                 Manage Collaborators
+                            </span>
+                        </button>
+                    @endif
+                    @if ($canUnscheduleSet)
+                        <button
+                            type="button"
+                            @click="openActionMenu = false; openUnscheduleSetModal()"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition focus:outline-none {{ $setManageMenuItemClass }}"
+                        >
+                            <x-heroicon-m-arrow-uturn-left class="h-4 w-4" aria-hidden="true" />
+                            <span>
+                                @if ($isAdminManagingOtherSet)
+                                    <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                                    <span class="sr-only"> Admin action</span>
+                                @endif
+                                Unschedule Set
                             </span>
                         </button>
                     @endif
@@ -432,6 +449,32 @@
         </div>
     </div>
     <div x-ref="setBodyContainer" x-show="contentLoaded" x-cloak></div>
+
+    @if ($canUnscheduleSet)
+        <x-prompt-modal
+            open="openUnscheduleSet"
+            title="Unschedule set"
+            description="This will remove the set from this jam session and return it to Planned Sets."
+            close-action="openUnscheduleSet = false"
+        >
+            <p class="text-sm text-slate-700">Are you sure you want to unschedule this set from {{ $set->session->name }}?</p>
+
+            <x-slot name="actions">
+                <x-modal-secondary-button type="button" @click="openUnscheduleSet = false">Cancel</x-modal-secondary-button>
+                <form method="POST" action="{{ route('sets.unschedule', $set) }}">
+                    @csrf
+                    @method('PATCH')
+                    <x-danger-button type="submit">
+                        @if ($isAdminManagingOtherSet)
+                            <x-admin-shield-icon class="mr-1 inline h-4 w-4 text-sky-500" aria-hidden="true" />
+                            <span class="sr-only">Admin action: </span>
+                        @endif
+                        Unschedule Set
+                    </x-danger-button>
+                </form>
+            </x-slot>
+        </x-prompt-modal>
+    @endif
 
     <x-sessions.set-snapshot-modal />
     <x-sessions.attachments-modal />

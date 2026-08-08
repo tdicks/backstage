@@ -402,6 +402,7 @@ export function sessionSetCard(config) {
         titleLookupUrl: config.titleLookupUrl,
         songRequestStoreUrl: config.songRequestStoreUrl,
         openSetEdit: false,
+        openUnscheduleSet: false,
         openCollaborators: false,
         collaboratorsList: config.initialCollaborators ?? [],
         collaboratorNames: (config.initialCollaborators ?? []).map((c) => c.name),
@@ -597,6 +598,7 @@ export function sessionSetCard(config) {
             this.closeSnapshotModal();
             this.closeAttachmentsModal();
             this.openSetEdit = false;
+            this.openUnscheduleSet = false;
             this.openSong = false;
             this.openSongRequest = false;
             this.openCollaborators = false;
@@ -1128,6 +1130,10 @@ export function sessionSetCard(config) {
             this.songRequestsDraft = this.initialSongRequestsEnabled;
             this.freeForAllDraft = this.initialFreeForAll;
             this.openSetEdit = true;
+        },
+        openUnscheduleSetModal() {
+            window.dispatchEvent(new CustomEvent('close-session-modals'));
+            this.openUnscheduleSet = true;
         },
         openCollaboratorsModal() {
             window.dispatchEvent(new CustomEvent('close-session-modals'));
@@ -1685,6 +1691,8 @@ export function sessionSongCard(config) {
         canMoveSongDown: config.canMoveSongDown,
         busyAction: false,
         actionError: '',
+        actionFeedback: '',
+        actionFeedbackTimer: null,
         reorderBusy: false,
         mobileSongReorderBusy: false,
         reorderError: '',
@@ -1724,6 +1732,27 @@ export function sessionSongCard(config) {
         },
         canDragSlots() {
             return this.canReorderSlots && !this.hasOpenDragBlockingModal();
+        },
+        clearActionFeedback() {
+            clearTimeout(this.actionFeedbackTimer);
+            this.actionFeedbackTimer = null;
+            this.actionFeedback = '';
+        },
+        showActionFeedback(message, duration = 2500) {
+            if (!message) {
+                this.clearActionFeedback();
+                return;
+            }
+
+            this.actionFeedback = message;
+            clearTimeout(this.actionFeedbackTimer);
+            this.actionFeedbackTimer = setTimeout(() => {
+                if (this.actionFeedback === message) {
+                    this.actionFeedback = '';
+                }
+
+                this.actionFeedbackTimer = null;
+            }, duration);
         },
         refreshSessionSets() {
             window.dispatchEvent(new CustomEvent('refresh-session-sets', {
@@ -2544,7 +2573,7 @@ export function sessionAttendanceControl(config) {
                 return 'border-slate-200 bg-slate-50 text-slate-700';
             }
 
-            return 'border-rose-200 bg-rose-50 text-rose-700';
+            return 'border-slate-300 bg-slate-100 text-slate-700';
         },
     };
 }
@@ -3308,7 +3337,7 @@ export function sessionSlotRow(config) {
                 this.busyAction = false;
             }
         },
-        async deleteSlot(event) {
+        async deleteSlot() {
             if (this.setLocked) {
                 return;
             }
@@ -3323,6 +3352,9 @@ export function sessionSlotRow(config) {
             this.clearActionFeedback();
 
             try {
+                const body = new FormData();
+                body.set('_method', 'DELETE');
+
                 const response = await fetch(config.destroySlotUrl, {
                     method: 'POST',
                     headers: {
@@ -3330,7 +3362,7 @@ export function sessionSlotRow(config) {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': config.csrfToken,
                     },
-                    body: new FormData(event.target),
+                    body,
                 });
 
                 if (!response.ok) {

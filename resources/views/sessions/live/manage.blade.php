@@ -429,28 +429,54 @@
                                         </div>
                                         <span class="mt-1.5 flex flex-wrap gap-1">
                                             <template x-for="slot in song.slots" :key="slot.id">
-                                                <button
-                                                    type="button"
-                                                    @click="openEditSlotModal(set, song, slot)"
-                                                    x-bind:disabled="!canManageLiveJam || set.status === 'finished' || song.completed"
-                                                    class="inline-block rounded-md px-2 py-1 text-left text-xs transition disabled:cursor-default"
-                                                    :class="{
-                                                        'bg-emerald-900/80 text-emerald-50 ring-1 ring-emerald-400/80': slot.filled && slot.checked_in,
-                                                        'bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800': slot.filled && !slot.checked_in,
-                                                        'bg-slate-800 text-slate-500': !slot.filled,
-                                                        'opacity-50': song.completed,
-                                                        'hover:ring-2 hover:ring-amber-400': canManageLiveJam && set.status !== 'finished' && !song.completed
-                                                    }"
-                                                    :title="canManageLiveJam && set.status !== 'finished' && !song.completed ? 'Edit assignment' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
-                                                >
-                                                    <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
-                                                    <template x-if="slot.manual_performer_name">
-                                                        <span class="ml-1 inline-flex items-center" title="Manually assigned">
-                                                            <x-heroicon-m-pencil-square class="h-3 w-3" aria-hidden="true" />
-                                                        </span>
-                                                    </template>
-                                                    <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
-                                                </button>
+                                                <div class="relative inline-block">
+                                                    <button
+                                                        type="button"
+                                                        @click.stop="toggleLiveSlotActions(set, song, slot)"
+                                                        x-bind:disabled="!canManageLiveJam || set.status === 'finished' || song.completed"
+                                                        class="inline-block rounded-md px-2 py-1 text-left text-xs transition disabled:cursor-default"
+                                                        :class="{
+                                                            'bg-emerald-900/80 text-emerald-50 ring-1 ring-emerald-400/80': slot.filled && slot.checked_in,
+                                                            'bg-emerald-950/60 text-emerald-300 ring-1 ring-emerald-800': slot.filled && !slot.checked_in,
+                                                            'bg-slate-800 text-slate-500': !slot.filled,
+                                                            'opacity-50': song.completed,
+                                                            'hover:ring-2 hover:ring-amber-400': canManageLiveJam && set.status !== 'finished' && !song.completed
+                                                        }"
+                                                        :title="canManageLiveJam && set.status !== 'finished' && !song.completed ? 'Slot actions' : (slot.checked_in ? 'Checked in' : 'Not checked in')"
+                                                    >
+                                                        <span x-text="slot.user_name ? `${slot.name}: ${slot.user_name}` : slot.name"></span>
+                                                        <template x-if="slot.manual_performer_name">
+                                                            <span class="ml-1 inline-flex items-center" title="Manually assigned">
+                                                                <x-heroicon-m-pencil-square class="h-3 w-3" aria-hidden="true" />
+                                                            </span>
+                                                        </template>
+                                                        <x-checked-in-dot x-show="slot.checked_in" x-cloak class="ml-1" />
+                                                    </button>
+
+                                                    <div
+                                                        x-show="isLiveSlotActionsOpen(set, song, slot)"
+                                                        x-cloak
+                                                        x-transition.opacity.duration.100ms
+                                                        @click.outside="closeLiveSlotActions()"
+                                                        class="absolute right-0 z-40 mt-1 w-36 overflow-hidden rounded-md border border-slate-700 bg-slate-950/95 p-1 shadow-lg"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            @click="openLiveSlotEditor(set, song, slot)"
+                                                            class="flex w-full items-center justify-start rounded px-2 py-1.5 text-left text-xs font-medium text-slate-100 transition hover:bg-slate-800"
+                                                        >
+                                                            Edit Slot
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            x-show="slot.filled"
+                                                            @click="clearLiveSlotAssignment(set, song, slot)"
+                                                            class="mt-0.5 flex w-full items-center justify-start rounded px-2 py-1.5 text-left text-xs font-medium text-amber-300 transition hover:bg-amber-950/70"
+                                                        >
+                                                            Clear Slot
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </template>
                                         </span>
                                     </li>
@@ -647,6 +673,7 @@
             assignmentConflictPending: false,
             assignmentConflictCooldown: false,
             assignmentConflictTimer: null,
+            liveSlotActionsOpenKey: null,
             editingAssignment: null,
             assignmentUsers: config.assignmentUsers ?? [],
             assignmentForm: {
@@ -1144,10 +1171,38 @@
                 return { user_id: '', manual_performer_name: this.editAssignedUserQuery.trim() };
             },
 
+            liveSlotActionsKey(set, song, slot) {
+                return `${set.id}:${song.id}:${slot.id}`;
+            },
+
+            isLiveSlotActionsOpen(set, song, slot) {
+                return this.liveSlotActionsOpenKey === this.liveSlotActionsKey(set, song, slot);
+            },
+
+            toggleLiveSlotActions(set, song, slot) {
+                if (!this.canManageLiveJam || set.status === 'finished' || song.completed) {
+                    return;
+                }
+
+                const key = this.liveSlotActionsKey(set, song, slot);
+                this.liveSlotActionsOpenKey = this.liveSlotActionsOpenKey === key ? null : key;
+            },
+
+            closeLiveSlotActions() {
+                this.liveSlotActionsOpenKey = null;
+            },
+
+            openLiveSlotEditor(set, song, slot) {
+                this.closeLiveSlotActions();
+                this.openEditSlotModal(set, song, slot);
+            },
+
             openEditSlotModal(set, song, slot) {
                 if (!this.canManageLiveJam || set.isLiveSet) {
                     return;
                 }
+
+                this.closeLiveSlotActions();
 
                 this.editingAssignment = { set, song, slot };
                 this.assignmentForm = { slotKey: slot.slot_key };
@@ -1173,6 +1228,45 @@
                 this.initialEditAssignedUserName = '';
                 this.initialEditManualPerformerName = '';
                 this.showEditUserSuggestions = false;
+            },
+
+            async clearLiveSlotAssignment(set, song, slot) {
+                if (!this.canManageLiveJam || set.status === 'finished' || song.completed || this.assignmentSaveBusy) {
+                    return;
+                }
+
+                this.closeLiveSlotActions();
+                this.assignmentSaveBusy = true;
+                this.assignmentSaveError = '';
+
+                try {
+                    const response = await fetch(config.slotUpdateUrlTemplate.replace('__slot__', slot.id), {
+                        method: 'PATCH',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': config.csrfToken,
+                        },
+                        body: JSON.stringify({
+                            name: slot.slot_key,
+                            user_id: null,
+                            manual_performer_name: '',
+                            replace_conflicting_assignment: false,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const payload = await response.json().catch(() => ({}));
+                        throw new Error(payload.message || 'Could not clear this slot.');
+                    }
+
+                    await this.fetchData({ force: true });
+                } catch (error) {
+                    this.assignmentSaveError = error.message || 'Could not clear this slot.';
+                } finally {
+                    this.assignmentSaveBusy = false;
+                }
             },
 
             async submitLiveSlotEdit() {
@@ -1228,16 +1322,6 @@
                 } finally {
                     this.assignmentSaveBusy = false;
                 }
-            },
-
-            async clearLiveSlot() {
-                if (!this.editingAssignment || this.assignmentSaveBusy) {
-                    return;
-                }
-
-                this.editAssignedUserId = '';
-                this.editAssignedUserQuery = '';
-                await this.submitLiveSlotEdit();
             },
 
             saveEditSet() {

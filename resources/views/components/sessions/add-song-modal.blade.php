@@ -44,12 +44,12 @@
             </div>
             <div x-show="songSlotAdditionMode === 'template'" x-cloak>
                 <x-input-label :value="'Band Template'" />
-                <select name="band_template_id" x-bind:disabled="songSlotAdditionMode !== 'template'" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                <x-select name="band_template_id" x-bind:disabled="songSlotAdditionMode !== 'template'">
                     <option value="">Choose a band template</option>
                     @foreach ($templates as $template)
                         <option value="{{ $template->id }}">{{ $template->name }}</option>
                     @endforeach
-                </select>
+                </x-select>
             </div>
             <div x-show="songSlotAdditionMode === 'manual'" x-cloak>
                 <p class="text-sm font-medium text-slate-700">Choose slots manually</p>

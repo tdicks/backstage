@@ -21,6 +21,28 @@ class SongRequestController extends Controller
 {
     public function store(Request $request, Set $set): JsonResponse|RedirectResponse
     {
+        $set->loadMissing('session');
+
+        if ($set->performed) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This set has already been performed.',
+                ], 422);
+            }
+
+            return back()->with('status', 'This set has already been performed.');
+        }
+
+        if ($set->session?->is_closed && ! $request->user()->is_admin) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This jam session is closed.',
+                ], 422);
+            }
+
+            return back()->with('status', 'This jam session is closed.');
+        }
+
         if (! $set->song_requests) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -39,6 +61,16 @@ class SongRequestController extends Controller
             }
 
             return back()->with('status', 'You can already add songs to your own set.');
+        }
+
+        if ($set->isCollaborator($request->user())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Collaborators can already process song requests for this set.',
+                ], 422);
+            }
+
+            return back()->with('status', 'Collaborators can already process song requests for this set.');
         }
 
         $validated = $request->validate([
@@ -69,6 +101,10 @@ class SongRequestController extends Controller
 
         $set->loadMissing('session');
 
+        $actionUrl = $set->session
+            ? route('sessions.show', $set->session).'#set-'.$set->id
+            : route('planned-sets.index');
+
         app(NotificationService::class)->notifyUsers(
             NotificationTypeCatalog::SONG_REQUEST_RECEIVED,
             app(NotificationService::class)->managersForSet($set),
@@ -76,21 +112,21 @@ class SongRequestController extends Controller
             [
                 'title' => 'New song request',
                 'body' => $request->user()->name.' requested '.$songRequest->artist.' - '.$songRequest->title.' for '.$set->name.'.',
-                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_url' => $actionUrl,
                 'action_label' => 'Review request',
             ]
         );
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Song request submitted to the set owner.',
+                'message' => 'Song request submitted to set managers.',
                 'song_request' => [
                     'id' => $songRequest->id,
                 ],
             ], 201);
         }
 
-        return back()->with('status', 'Song request submitted to the set owner.');
+        return back()->with('status', 'Song request submitted to set managers.');
     }
 
     public function respond(Request $request, SongRequest $songRequest): JsonResponse|RedirectResponse

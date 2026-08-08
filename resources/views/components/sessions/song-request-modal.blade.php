@@ -26,20 +26,19 @@
             </div>
             <div x-show="requestSongMode === 'catalog'" x-cloak>
                 <x-input-label for="request_catalog_song_{{ $set->id }}" value="Catalog song" />
-                <select
+                <x-select
                     id="request_catalog_song_{{ $set->id }}"
                     x-model="requestCatalogSongId"
                     @change="applyRequestCatalogSong()"
-                    class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
                 >
                     <option value="">Choose a song</option>
                     @foreach ($jamStandardSongs as $song)
                         <option value="{{ $song->id }}">{{ $song->artist }} - {{ $song->title }}</option>
                     @endforeach
-                </select>
+                </x-select>
                 <input type="hidden" name="jam_standard_song_id" :value="requestSongMode === 'catalog' ? requestCatalogSongId : ''">
             </div>
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-2" x-show="requestSongMode === 'manual'" x-cloak>
                 <div class="relative">
                     <x-input-label for="request_artist_{{ $set->id }}" value="Artist" />
                     <x-text-input
@@ -47,12 +46,11 @@
                         name="artist"
                         x-model="requestArtistQuery"
                         @input="queueRequestArtistLookup()"
-                        x-bind:readonly="requestSongMode === 'catalog'"
                         @focus="showRequestArtistSuggestions = requestArtistSuggestions.length > 0"
                         @keydown.escape="showRequestArtistSuggestions = false"
                         class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
                         autocomplete="off"
-                        required
+                        x-bind:required="requestSongMode === 'manual'"
                     />
                     <p class="mt-1 text-xs text-slate-500">Start typing an artist to fetch Deezer suggestions.</p>
                     <div x-show="requestArtistLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up artists...</div>
@@ -82,12 +80,11 @@
                         name="title"
                         x-model="requestTitleQuery"
                         @input="queueRequestTitleLookup()"
-                        x-bind:readonly="requestSongMode === 'catalog'"
                         @focus="showRequestTitleSuggestions = requestTitleSuggestions.length > 0"
                         @keydown.escape="showRequestTitleSuggestions = false"
                         class="mt-1 block w-full rounded-lg border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-200"
                         autocomplete="off"
-                        required
+                        x-bind:required="requestSongMode === 'manual'"
                     />
                     <p class="mt-1 text-xs text-slate-500">Song suggestions are scoped to the selected artist.</p>
                     <div x-show="requestTitleLookupBusy" x-cloak class="mt-1 text-xs text-slate-500">Looking up songs...</div>

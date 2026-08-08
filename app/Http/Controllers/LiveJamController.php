@@ -143,7 +143,17 @@ class LiveJamController extends Controller
 
         $sets = $visibleSets
             ->where('performed', false)
-            ->with(['owner', 'songs' => fn ($q) => $q->with(['slots.user'])])
+            ->withCount('attachments')
+            ->with([
+                'owner',
+                'songs' => fn ($q) => $q
+                    ->withCount('attachments')
+                    ->with([
+                        'slots' => fn ($slotQuery) => $slotQuery
+                            ->with('user')
+                            ->withCount('attachments'),
+                    ]),
+            ])
             ->get();
 
         $liveState = $this->getLiveState($jamSession->id);
@@ -213,12 +223,14 @@ class LiveJamController extends Controller
                 'health' => $health,
                 'total_slots' => $totalSlots,
                 'filled_slots' => $filledSlots,
+                'attachments_count' => (int) ($set->attachments_count ?? 0),
                 'duration_seconds' => $totalDurationSeconds,
                 'has_duration_estimate' => $hasDurationEstimate,
                 'songs' => $set->songs->map(fn ($song) => [
                     'id' => $song->id,
                     'artist' => $song->artist,
                     'title' => $song->title,
+                    'attachments_count' => (int) ($song->attachments_count ?? 0),
                     'duration' => $song->duration,
                     'source' => $song->source,
                     'completed' => in_array($song->id, $completedSongIds, true),
@@ -231,6 +243,7 @@ class LiveJamController extends Controller
                         'manual_performer_name' => $slot->manual_performer_name,
                         'filled' => $slot->user_id !== null || $slot->manual_performer_name !== null,
                         'checked_in' => $slot->user_id !== null && $checkedInUserIds->contains($slot->user_id),
+                        'attachments_count' => (int) ($slot->attachments_count ?? 0),
                     ])->values()->all(),
                 ])->values()->all(),
             ];
