@@ -8,42 +8,66 @@ anchors:
   jam-standards-select-songs: 
     selector: '[data-tour="jam-standards-select-songs"]'
     view: surround
+  jam-standards-select-songs-mobile:
+    selector: '[data-tour="jam-standards-select-songs-mobile"]'
   jam-standards-create-set: 
     selector: '[data-tour="jam-standards-create-set"]'
-  jam-standards-quick-set-modal:
-    selector: '[data-tour="jam-standards-quick-set-modal"]'
   jam-standards-quick-set-form:
     selector: '[data-tour="jam-standards-quick-set-form"]'
   jam-standards-quick-set-session:
     selector: '#catalog-quick-set-session'
   jam-standards-quick-set-submit:
     selector: '[data-tour="jam-standards-quick-set-submit"]'
+  jam-standards-songs-first-two-mobile:
+    selector: '[x-ref="catalogCards"] > article:nth-of-type(-n+2)'
+    view: surround
+  jam-standards-create-set-mobile: 
+    selector: '[data-tour="jam-standards-create-set-mobile"]'
 
 actions:
   first-song-checked:
     type: set-checked
-    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:first-child > td > input[type="checkbox"]'
+    target: '[data-tour="jam-standards-songs-list"] tbody tr:nth-of-type(1) td:nth-of-type(1) input[type="checkbox"]'
     checked: true
     wait_ms: 100
     max_attempts: 1
   second-song-checked:
     type: set-checked
-    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:nth-child(2) > td > input[type="checkbox"]'
+    target: '[data-tour="jam-standards-songs-list"] tbody tr:nth-of-type(2) td:nth-of-type(1) input[type="checkbox"]'
     checked: true
     wait_ms: 100
     max_attempts: 1
   first-song-unchecked:
     type: set-checked
-    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:first-child > td > input[type="checkbox"]'
+    target: '[data-tour="jam-standards-songs-list"] tbody tr:nth-of-type(1) td:nth-of-type(1) input[type="checkbox"]'
     checked: false
     wait_ms: 100
     max_attempts: 1
   second-song-unchecked:
     type: set-checked
-    target: '[data-tour="jam-standards-songs-list"] > tbody > tr:nth-child(2) > td > input[type="checkbox"]'
+    target: '[data-tour="jam-standards-songs-list"] tbody tr:nth-of-type(2) td:nth-of-type(1) input[type="checkbox"]'
     checked: false
     wait_ms: 100
     max_attempts: 1
+  first-song-click-mobile:
+    type: click
+    target: '[x-ref="catalogCards"] > article:nth-of-type(1)'
+    wait_ms: 100
+  second-song-click-mobile:
+    type: click
+    target: '[x-ref="catalogCards"] > article:nth-of-type(2)'
+    wait_ms: 100
+  jam-standards-select-songs-mobile-clicked:
+    type: click
+    target: '[data-tour="jam-standards-select-songs-mobile"] button'
+    wait_ms: 100
+    max_attempts: 1
+  jam-standards-click-cancel-mobile:
+    type: click
+    target: '[data-tour="jam-standards-click-cancel-mobile"]'
+    wait_ms: 100
+    max_attempts: 1
+  
 
 tours:
   jam-standards:
@@ -54,7 +78,8 @@ tours:
     routes:
       - jam-standards.*
     variants:
-      all:
+      desktop:
+        media_query: '(min-width: 1024px)'
         steps:
           - title: 'Search bar'
             body: 'You can use the search bar to find songs by artist or title, and filter results by performers.'
@@ -76,6 +101,37 @@ tours:
             next:
               - first-song-unchecked
               - second-song-unchecked
+      mobile:
+        media_query: '(max-width: 1023px)'
+        steps:
+          - title: 'Search bar'
+            body: 'You can use the search bar to find songs by artist or title, and filter results by performers.'
+            target: jam-standards-search
+          - title: 'Which parts do you know?'
+            body: 'Select the parts you know how to play. You can select multiple parts.'
+            target: jam-standards-select-parts
+          - title: 'Create a set'
+            body: 'If you want to make a quick set using songs from the catalogue, click Select Songs.'
+            target: jam-standards-select-songs-mobile
+            next:
+              - jam-standards-select-songs-mobile-clicked
+
+          - title: 'Create a set'
+            body: 'Choose the songs you want from the catalogue.'
+            target: jam-standards-songs-first-two-mobile
+            after:
+              - first-song-click-mobile
+              - second-song-click-mobile
+          - title: 'Create a set'
+            body: 'And then choose Create Set.'
+            target: jam-standards-create-set-mobile
+          - title: 'All done!'
+            body: 'The set will be posted into the jam session you selected, along with any slots you picked.'
+            next:
+              - first-song-click-mobile
+              - second-song-click-mobile
+              - jam-standards-click-cancel-mobile
+
 
   jam-standards-quick-set-modal-tour:
     once_key: jam-standards-quick-set-modal-v1

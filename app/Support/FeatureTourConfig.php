@@ -342,24 +342,22 @@ class FeatureTourConfig
                     $rawTarget = $step['target'] ?? null;
                     $target = is_string($rawTarget) ? trim($rawTarget) : '';
 
-                    if ($target === '') {
-                        continue;
-                    }
+                    if ($target !== '') {
+                        if (! $this->isSelectorReference($target) && ! array_key_exists($target, $anchors)) {
+                            $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] references unknown anchor [{$target}].";
+                        } else {
+                            if (! $this->isSelectorReference($target)) {
+                                $referencedAnchors[$target] = true;
+                            }
 
-                    if (! $this->isSelectorReference($target) && ! array_key_exists($target, $anchors)) {
-                        $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] references unknown anchor [{$target}].";
-                    } else {
-                        if (! $this->isSelectorReference($target)) {
-                            $referencedAnchors[$target] = true;
-                        }
+                            $resolvedSelector = $this->resolveSelectorReference($target, $anchors);
+                            $missingDataTourMarker = is_string($resolvedSelector)
+                                ? $this->missingDataTourMarker($resolvedSelector, $availableDataTourMarkers)
+                                : null;
 
-                        $resolvedSelector = $this->resolveSelectorReference($target, $anchors);
-                        $missingDataTourMarker = is_string($resolvedSelector)
-                            ? $this->missingDataTourMarker($resolvedSelector, $availableDataTourMarkers)
-                            : null;
-
-                        if ($missingDataTourMarker !== null) {
-                            $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] target resolves to missing data-tour marker [{$missingDataTourMarker}] in resources/views.";
+                            if ($missingDataTourMarker !== null) {
+                                $errors[] = "Tour [{$tourId}] variant [{$variantId}] step [{$stepIndex}] target resolves to missing data-tour marker [{$missingDataTourMarker}] in resources/views.";
+                            }
                         }
                     }
 

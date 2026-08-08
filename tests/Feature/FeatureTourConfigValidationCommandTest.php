@@ -920,6 +920,43 @@ YAML);
     }
 });
 
+test('feature tour validator validates actions on steps without targets', function () {
+    $path = resource_path('tours/001-untargeted-step-action-test.yaml');
+
+    File::put($path, <<<'YAML'
+version: 1
+
+actions:
+    cleanup:
+        type: click
+        target: '#cleanup-target'
+
+tours:
+    untargeted-step-action-tour:
+        once_key: untargeted-step-action-tour-v1
+        authenticated: true
+        trigger:
+            mode: info-icon
+        routes:
+            - dashboard
+        variants:
+            default:
+                steps:
+                    - title: 'Final step'
+                      body: 'This step has no target but still runs an action.'
+                      next:
+                        - cleanup
+YAML);
+
+    try {
+        $exitCode = Artisan::call('app:validate-feature-tours-config');
+
+        expect($exitCode)->toBe(0);
+    } finally {
+        File::delete($path);
+    }
+});
+
 test('feature tour validator accepts after actions and validates their references', function () {
     $path = resource_path('tours/001-after-action-test.yaml');
 

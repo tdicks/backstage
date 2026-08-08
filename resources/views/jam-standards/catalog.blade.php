@@ -127,7 +127,7 @@
                 <x-modal-primary-button data-tour="jam-standards-create-set" type="button" @click="openQuickSetModal()">Create Set <span class="ml-1" x-text="`(${selectedSongIds.length})`"></span></x-modal-primary-button>
             </div>
             </div>
-            <div class="mt-3 md:hidden">
+            <div data-tour="jam-standards-select-songs-mobile" class="mt-3 md:hidden">
                 <div x-show="!mobileSelectionMode" x-cloak>
                     <button type="button" @click="openMobileSelectionMode()" class="inline-flex items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400">
                         <x-heroicon-m-check-circle class="h-4 w-4" aria-hidden="true" />
@@ -137,7 +137,7 @@
                 <div x-show="mobileSelectionMode" x-cloak class="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-emerald-900 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
                         <p class="font-semibold"><span x-text="selectedSongIds.length"></span> selected</p>
-                        <button type="button" @click="cancelMobileSelectionMode()" class="text-sm font-medium text-emerald-800 underline decoration-emerald-300 underline-offset-2">Cancel</button>
+                        <button data-tour="jam-standards-click-cancel-mobile" type="button" @click="cancelMobileSelectionMode()" class="text-sm font-medium text-emerald-800 underline decoration-emerald-300 underline-offset-2">Cancel</button>
                     </div>
                     <p class="mt-2 text-xs text-emerald-800/90">Tap cards to add or remove songs for this quick set.</p>
                     <div class="mt-3 flex flex-wrap gap-2">
