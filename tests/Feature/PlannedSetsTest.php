@@ -181,6 +181,52 @@ test('planned sets page derives availability from jam attendance', function () {
         ->and($availability['going_names'])->toContain('Manual Performer');
 });
 
+test('planned set slot badges show a manual assignment icon for manual performer names', function () {
+    $owner = User::factory()->create();
+
+    $set = Set::query()->create([
+        'name' => 'Manual Assignment Preview',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Example Artist',
+        'title' => 'Example Song',
+        'position' => 1,
+    ]);
+
+    $song->slots()->create([
+        'name' => 'vocals',
+        'position' => 1,
+        'manual_performer_name' => 'Manual Performer',
+    ]);
+
+    $view = regressionResource('views/sets/planned/partials/set-card/songs-and-slots.blade.php');
+
+    expectContainsAll($view, [
+        'x-bind:title="slot.manual_performer_name ? \'Manually assigned\' : \'\'"',
+        'x-heroicon-m-pencil-square',
+        'slot.manual_performer_name',
+    ]);
+});
+
+test('planned set slot popovers surface notes and manual assignment indicators', function () {
+    $view = regressionResource('views/sets/planned/partials/set-card/songs-and-slots.blade.php');
+
+    expectContainsAll($view, [
+        'x-heroicon-m-chat-bubble-left-ellipsis',
+        'slot.notes',
+        'Notes',
+        'x-bind:title="slot.manual_performer_name ? \'Manually assigned\' : \'\'"',
+    ]);
+});
+
 test('a planned set can be scheduled into a future open jam session', function () {
     $owner = User::factory()->create();
 

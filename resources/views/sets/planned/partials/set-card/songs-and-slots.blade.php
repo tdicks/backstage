@@ -142,12 +142,28 @@
                                 expanded-expr="isSlotActionPopoverOpen(slot.id).toString()"
                             >
                                 <x-slot:badge>
-                                    <span
-                                        class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                                        x-bind:class="slotAssigneeBadgeClass(slot)"
-                                        x-text="slotAssigneeName(slot)"
-                                    ></span>
+                                    <div class="inline-flex items-center gap-1">
+                                        <span
+                                            class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                                            x-bind:class="slotAssigneeBadgeClass(slot)"
+                                            x-bind:title="slot.manual_performer_name ? 'Manually assigned' : ''"
+                                        >
+                                            <span x-text="slotAssigneeName(slot)"></span>
+                                            <template x-if="slot.manual_performer_name">
+                                                <span class="inline-flex items-center" aria-hidden="true">
+                                                    <x-heroicon-m-pencil-square class="h-3.5 w-3.5" />
+                                                </span>
+                                            </template>
+                                        </span>
+
+                                        <template x-if="slot.notes">
+                                            <span class="inline-flex items-center  p-1 text-slate-600" aria-hidden="true" x-bind:title="'Has notes'">
+                                                <x-heroicon-m-chat-bubble-left-ellipsis class="h-3.5 w-3.5" />
+                                            </span>
+                                        </template>
+                                    </div>
                                 </x-slot:badge>
+
                             </x-sets.presentational.slot-chip>
 
                             <div
@@ -157,11 +173,22 @@
                                 @click.outside="closeSlotActions()"
                                 class="absolute left-0 z-30 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
                             >
+                                <p class="mb-1 text-sm font-medium text-slate-900" x-text="slot.label"></p>
+                                <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                    <span x-text="slot.is_open ? 'Open' : `Assigned to ${slotAssigneeName(slot)}`"></span>
+                                    <template x-if="slot.manual_performer_name">
+                                        <span class="inline-flex items-center" aria-hidden="true" x-bind:title="'Manually assigned'">
+                                            <x-heroicon-m-pencil-square class="h-3.5 w-3.5" />
+                                        </span>
+                                    </template>
+                                </div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-show="slot.notes" x-cloak>Slot Notes</p>
+                                <div class="mt-2 mb-2 rounded-md border border-amber-100 bg-amber-50/70 px-3 py-2 text-sm text-amber-900" x-show="slot.notes" x-cloak>
+                                    <p class="mt-1 whitespace-pre-wrap text-sm text-amber-950" x-text="slot.notes"></p>
+                                </div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Slot Actions</p>
-                                <p class="mt-1 text-sm font-medium text-slate-900" x-text="slot.label"></p>
-                                <p class="text-xs text-slate-500" x-text="slot.is_open ? 'Open' : `Assigned to ${slotAssigneeName(slot)}`"></p>
 
-                                <p class="mt-1 text-[11px] font-medium uppercase tracking-wide text-amber-700" x-show="set.free_for_all">
+                                <p class="mt-2 text-[11px] font-medium uppercase tracking-wide text-amber-700" x-show="set.free_for_all">
                                     Free for all
                                 </p>
 
