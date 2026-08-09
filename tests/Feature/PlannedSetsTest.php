@@ -10,7 +10,9 @@ use App\Models\SlotType;
 use App\Models\Song;
 use App\Models\SongRequest;
 use App\Models\User;
+use App\Services\DeezerArtworkLookupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
@@ -225,6 +227,193 @@ test('planned set slot popovers surface notes and manual assignment indicators',
         'Notes',
         'x-bind:title="slot.manual_performer_name ? \'Manually assigned\' : \'\'"',
     ]);
+});
+
+test('planned set edit slot modal exposes a delete slot action', function () {
+    $owner = User::factory()->create();
+
+    Set::query()->create([
+        'name' => 'Deleteable Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('planned-sets.index'))
+        ->assertOk()
+        ->assertSee('Delete Slot')
+        ->assertSee('destroySlotUrlTemplate');
+});
+
+test('planned set edit song modal exposes a delete song action', function () {
+    $owner = User::factory()->create();
+
+    $set = Set::query()->create([
+        'name' => 'Song Delete Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $set->songs()->create([
+        'artist' => 'Delete Artist',
+        'title' => 'Delete Song',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('planned-sets.index'))
+        ->assertOk()
+        ->assertSee('Delete Song')
+        ->assertSee('songDestroyUrlTemplate');
+});
+
+test('planned set song deletion works when the set has no jam session', function () {
+    $owner = User::factory()->create();
+
+    $set = Set::query()->create([
+        'name' => 'Planned Song Delete Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Delete Artist',
+        'title' => 'Delete Song',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson(route('songs.destroy', $song))
+        ->assertOk()
+        ->assertJsonPath('message', 'Song removed.');
+
+    expect(Song::find($song->id))->toBeNull();
+});
+
+test('planned set song addition refreshes the cached artwork tile key', function () {
+    $owner = User::factory()->create();
+    $service = app(DeezerArtworkLookupService::class);
+
+    $set = Set::query()->create([
+        'name' => 'Artwork Refresh Draft',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $set->songs()->create([
+        'artist' => 'First Artist',
+        'title' => 'First Song',
+        'position' => 1,
+    ]);
+
+    $cacheKey = $service->artworkCacheKeyForSet($set);
+    Cache::put($cacheKey, [['url' => 'https://example.test/old.jpg', 'label' => 'Old']]);
+
+    $this->actingAs($owner)
+        ->postJson(route('planned-sets.songs.store', $set), [
+            'artist' => 'Second Artist',
+            'title' => 'Second Song',
+        ])
+        ->assertCreated();
+
+    expect(Cache::has($cacheKey))->toBeFalse();
+});
+
+test('song deletion refreshes the cached artwork tile key for scheduled sets too', function () {
+    $owner = User::factory()->create();
+    $service = app(DeezerArtworkLookupService::class);
+
+    $session = JamSession::query()->create([
+        'name' => 'Artwork Refresh Session',
+        'date' => now()->addDays(5),
+        'description' => null,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Artwork Refresh Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'lifecycle_state' => Set::LIFECYCLE_SCHEDULED,
+        'position' => 1,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Delete Artist',
+        'title' => 'Delete Song',
+        'position' => 1,
+    ]);
+
+    $cacheKey = $service->artworkCacheKeyForSet($set);
+    Cache::put($cacheKey, [['url' => 'https://example.test/old.jpg', 'label' => 'Old']]);
+
+    $this->actingAs($owner)
+        ->deleteJson(route('songs.destroy', $song))
+        ->assertOk();
+
+    expect(Cache::has($cacheKey))->toBeFalse();
+});
+
+test('song updates refresh the cached artwork tile key for scheduled sets too', function () {
+    $owner = User::factory()->create();
+    $service = app(DeezerArtworkLookupService::class);
+
+    $session = JamSession::query()->create([
+        'name' => 'Artwork Update Session',
+        'date' => now()->addDays(6),
+        'description' => null,
+    ]);
+
+    $set = Set::query()->create([
+        'name' => 'Artwork Update Set',
+        'description' => null,
+        'owner_id' => $owner->id,
+        'jam_session_id' => $session->id,
+        'lifecycle_state' => Set::LIFECYCLE_SCHEDULED,
+        'position' => 1,
+        'performed' => false,
+        'is_hidden' => false,
+    ]);
+
+    $song = $set->songs()->create([
+        'artist' => 'Old Artist',
+        'title' => 'Old Song',
+        'position' => 1,
+    ]);
+
+    $cacheKey = $service->artworkCacheKeyForSet($set);
+    Cache::put($cacheKey, [['url' => 'https://example.test/old.jpg', 'label' => 'Old']]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('songs.update', $song), [
+            'artist' => 'New Artist',
+            'title' => 'New Song',
+        ])
+        ->assertRedirect();
+
+    expect(Cache::has($cacheKey))->toBeFalse();
 });
 
 test('a planned set can be scheduled into a future open jam session', function () {

@@ -6,9 +6,13 @@
 
 @php
     $totalSongs = max(0, (int) $songCount);
-    $tileCount = max(1, min(4, $totalSongs > 0 ? $totalSongs : count($tiles)));
+    $tilesCollection = collect($tiles)->values();
+    $uniqueTileCount = $tilesCollection->count();
+    $tileCount = $uniqueTileCount > 0
+        ? min(4, $uniqueTileCount)
+        : max(1, min(4, $totalSongs > 0 ? $totalSongs : 1));
 
-    $tilesCollection = collect($tiles)->take($tileCount)->values();
+    $tilesCollection = $tilesCollection->take($tileCount)->values();
 
     while ($tilesCollection->count() < $tileCount) {
         $tilesCollection->push([

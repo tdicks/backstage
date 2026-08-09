@@ -76,9 +76,15 @@
             </div>
         </div>
 
-        <div class="mt-6 flex items-center justify-between gap-3">
-            <x-danger-button type="button" @click="clearEditedSlot()" x-bind:disabled="slotEditBusy">Clear Slot</x-danger-button>
-            <div class="flex justify-end gap-3">
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <x-danger-button
+                type="button"
+                x-show="canDeleteActiveSlot()"
+                @click="deleteActiveSlot()"
+                x-bind:disabled="slotEditBusy"
+            >Delete Slot</x-danger-button>
+            <div class="flex flex-wrap justify-end gap-3">
+                <x-danger-button type="button" @click="clearEditedSlot()" x-bind:disabled="slotEditBusy">Clear Slot</x-danger-button>
                 <x-modal-secondary-button type="button" @click="closeEditSlotModal()">Cancel</x-modal-secondary-button>
                 <x-modal-primary-button type="button" @click="submitEditSlot()" x-bind:disabled="slotEditBusy || assignmentConflictCooldown" x-text="slotEditBusy ? 'Saving...' : 'Save'"></x-modal-primary-button>
             </div>

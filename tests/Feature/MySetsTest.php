@@ -192,3 +192,19 @@ test('my sets hides hidden sets when user is not owner or collaborator and has n
         ->assertOk()
         ->assertDontSee('Hidden Set');
 });
+
+test('my sets artwork grid collapses duplicate artwork tiles into one visible tile', function () {
+    $html = view('components.my-sets.artwork-grid', [
+        'tiles' => [
+            [
+                'url' => 'https://cdn-images.dzcdn.net/images/cover/example/250x250-000000-80-0-0.jpg',
+                'label' => 'Artist One - Song One',
+            ],
+        ],
+        'songCount' => 4,
+        'seed' => 39,
+    ])->render();
+
+    expect(substr_count($html, '<img'))->toBe(1);
+    expect($html)->not->toContain('No artwork');
+});

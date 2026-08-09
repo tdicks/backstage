@@ -77,9 +77,12 @@
             </div>
         </div>
 
-        <div class="mt-6 flex justify-end gap-3">
-            <x-modal-secondary-button type="button" @click="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-edit-song' }))">Cancel</x-modal-secondary-button>
-            <x-modal-primary-button type="button" @click="saveSongEdit()" x-bind:disabled="songEditBusy" x-text="songEditBusy ? 'Saving...' : 'Save'"></x-modal-primary-button>
+        <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <x-danger-button type="button" x-show="canDeleteActiveSong()" @click="deleteActiveSong()" x-bind:disabled="songEditBusy">Delete Song</x-danger-button>
+            <div class="flex justify-end gap-3">
+                <x-modal-secondary-button type="button" @click="window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-edit-song' }))">Cancel</x-modal-secondary-button>
+                <x-modal-primary-button type="button" @click="saveSongEdit()" x-bind:disabled="songEditBusy" x-text="songEditBusy ? 'Saving...' : 'Save'"></x-modal-primary-button>
+            </div>
         </div>
     </div>
 </x-modal>

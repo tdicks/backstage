@@ -6,6 +6,7 @@ use App\Models\BandTemplate;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\Song;
+use App\Services\DeezerArtworkLookupService;
 use App\Services\NotificationService;
 use App\SessionCardFragment;
 use App\Support\NotificationTypeCatalog;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class SongController extends Controller
 {
-    public function store(Request $request, Set $set): JsonResponse|RedirectResponse
+    public function store(Request $request, Set $set, DeezerArtworkLookupService $artworkLookupService): JsonResponse|RedirectResponse
     {
         $this->authorize('create', [Song::class, $set]);
 
@@ -30,6 +31,8 @@ class SongController extends Controller
             'slot_names' => ['nullable', 'array'],
             'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
+
+        $artworkLookupService->forgetArtworkTilesForSet($set);
 
         $nextSongPosition = ((int) $set->songs()->max('position')) + 1;
 
@@ -93,7 +96,7 @@ class SongController extends Controller
         return back()->with('status', 'Song added to set.');
     }
 
-    public function update(Request $request, Song $song): RedirectResponse
+    public function update(Request $request, Song $song, DeezerArtworkLookupService $artworkLookupService): RedirectResponse
     {
         $this->authorize('update', $song);
 
@@ -103,6 +106,9 @@ class SongController extends Controller
             'notes' => ['nullable', 'string'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $song->loadMissing('set.songs');
+        $artworkLookupService->forgetArtworkTilesForSet($song->set);
 
         $song->update([
             'artist' => $validated['artist'],
@@ -169,12 +175,14 @@ class SongController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Song $song): RedirectResponse
+    public function destroy(Request $request, Song $song, DeezerArtworkLookupService $artworkLookupService): JsonResponse|RedirectResponse
     {
         $this->authorize('delete', $song);
         $song->loadMissing('set.session', 'set.songs.slots');
         $set = $song->set;
         $title = $song->artist.' - '.$song->title;
+
+        $artworkLookupService->forgetArtworkTilesForSet($set);
 
         $song->delete();
 
@@ -185,10 +193,18 @@ class SongController extends Controller
             [
                 'title' => 'Set updated',
                 'body' => request()->user()->name.' removed '.$title.' from '.$set->name.'.',
-                'action_url' => route('sessions.show', $set->session).'#set-'.$set->id,
+                'action_url' => $set->session !== null
+                    ? route('sessions.show', $set->session).'#set-'.$set->id
+                    : route('planned-sets.index'),
                 'action_label' => 'Open set',
             ]
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Song removed.',
+            ]);
+        }
 
         return back()->with('status', 'Song removed.');
     }

@@ -13,6 +13,7 @@ use App\Models\SlotType;
 use App\Models\Song;
 use App\Models\SongRequest;
 use App\Models\User;
+use App\Services\DeezerArtworkLookupService;
 use App\Services\SlotCompatibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -661,7 +662,7 @@ class PlannedSetController extends Controller
         ]);
     }
 
-    public function addSong(Request $request, Set $set): JsonResponse
+    public function addSong(Request $request, Set $set, DeezerArtworkLookupService $artworkLookupService): JsonResponse
     {
         $this->authorize('managePlanned', $set);
 
@@ -681,6 +682,8 @@ class PlannedSetController extends Controller
             'slot_names' => ['nullable', 'array'],
             'slot_names.*' => ['string', 'in:'.implode(',', Slot::keys())],
         ]);
+
+        $artworkLookupService->forgetArtworkTilesForSet($set);
 
         $nextSongPosition = ((int) $set->songs()->max('position')) + 1;
 
@@ -744,6 +747,8 @@ class PlannedSetController extends Controller
             'duration' => ['nullable', 'integer', 'min:1', 'required_with:source'],
             'source' => ['nullable', 'string', 'in:deezer', 'required_with:duration'],
         ]);
+
+        $artworkLookupService->forgetArtworkTilesForSet($set);
 
         $song->update([
             'artist' => $validated['artist'],

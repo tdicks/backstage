@@ -10,6 +10,7 @@ export function plannedSetsPage(config) {
 		jamStandardSongs: config.jamStandardSongs || [],
 		slotOptions: config.slotOptions || {},
 		slotConflicts: config.slotConflicts || {},
+		destroySlotUrlTemplate: config.destroySlotUrlTemplate || '',
 		filterQuery: '',
 		filterMenuOpen: false,
 		selectedAttributeFilters: [],
@@ -707,6 +708,66 @@ export function plannedSetsPage(config) {
 			}
 
 			return Boolean(context.set.can_manage);
+		},
+
+		canDeleteActiveSlot() {
+			const context = this.slotEditContext();
+			return Boolean(context?.set?.can_manage && context?.slot?.id);
+		},
+
+		destroySlotUrl() {
+			const context = this.slotEditContext();
+			if (!context?.slot?.id) {
+				return '';
+			}
+
+			return (this.destroySlotUrlTemplate || '').replace('__SLOT_ID__', String(context.slot.id));
+		},
+
+		async deleteActiveSlot() {
+			const context = this.slotEditContext();
+			if (this.slotEditBusy || !context) {
+				return;
+			}
+
+			const confirmed = window.confirm('Delete this slot?');
+			if (!confirmed) {
+				return;
+			}
+
+			this.slotEditBusy = true;
+			this.errorMessage = '';
+
+			try {
+				const body = new FormData();
+				body.set('_method', 'DELETE');
+
+				const response = await fetch(this.destroySlotUrl(), {
+					method: 'POST',
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+						'X-CSRF-TOKEN': config.csrfToken,
+					},
+					body,
+				});
+
+				if (!response.ok) {
+					throw new Error('Request failed');
+				}
+
+				this.closeEditSlotModal();
+				this.resetSlotActionState();
+				this.statusMessage = 'Slot deleted.';
+				this.replaceSetSong(context.set.id, {
+					...context.song,
+					slots: (context.song.slots || []).filter((slot) => Number(slot.id) !== Number(context.slot.id)),
+				});
+			} catch (e) {
+				this.errorMessage = e?.message || 'Could not delete slot.';
+			} finally {
+				this.slotEditBusy = false;
+			}
 		},
 
 		openEditSlotModal() {
@@ -1783,6 +1844,90 @@ export function plannedSetsPage(config) {
 				window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-edit-song' }));
 			} catch (e) {
 				this.errorMessage = e?.message || 'Could not update song.';
+			} finally {
+				this.songEditBusy = false;
+			}
+		},
+
+		songEditContext() {
+			const set = this.sets.find((candidate) => Number(candidate.id) === Number(this.songEditEditor.set_id));
+			if (!set) {
+				return null;
+			}
+
+			const song = (set.songs || []).find((candidate) => Number(candidate.id) === Number(this.songEditEditor.song_id));
+			if (!song) {
+				return null;
+			}
+
+			return {
+				set,
+				song,
+			};
+		},
+
+		canDeleteActiveSong() {
+			const context = this.songEditContext();
+			return Boolean(context?.set?.can_manage && context?.song?.id);
+		},
+
+		songDestroyUrl() {
+			const context = this.songEditContext();
+			if (!context?.song?.id) {
+				return '';
+			}
+
+			return (config.songDestroyUrlTemplate || '').replace('__SONG_ID__', String(context.song.id));
+		},
+
+		async deleteActiveSong() {
+			const context = this.songEditContext();
+			if (this.songEditBusy || !context) {
+				return;
+			}
+
+			if (!window.confirm('Delete this song from the set? This cannot be undone.')) {
+				return;
+			}
+
+			this.songEditBusy = true;
+			this.errorMessage = '';
+
+			try {
+				const body = new FormData();
+				body.set('_method', 'DELETE');
+
+				const response = await fetch(this.songDestroyUrl(), {
+					method: 'POST',
+					headers: {
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest',
+						'X-CSRF-TOKEN': config.csrfToken,
+					},
+					body,
+				});
+
+				const payload = await response.json().catch(() => ({}));
+
+				if (!response.ok) {
+					throw new Error(payload?.message || 'Request failed');
+				}
+
+				this.sets = this.sets.map((set) => {
+					if (Number(set.id) !== Number(context.set.id)) {
+						return set;
+					}
+
+					return {
+						...set,
+						songs: (set.songs || []).filter((song) => Number(song.id) !== Number(context.song.id)),
+					};
+				});
+
+				this.statusMessage = payload.message || 'Song deleted.';
+				window.dispatchEvent(new CustomEvent('close-modal', { detail: 'planned-set-edit-song' }));
+			} catch (e) {
+				this.errorMessage = e?.message || 'Could not delete song.';
 			} finally {
 				this.songEditBusy = false;
 			}

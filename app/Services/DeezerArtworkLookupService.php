@@ -25,14 +25,10 @@ class DeezerArtworkLookupService
             ];
         }
 
-        $setSignature = $songs
-            ->map(fn ($song): string => mb_strtolower((string) $song->artist).'|'.mb_strtolower((string) $song->title))
-            ->implode(';');
-
-        $cacheKey = 'deezer:set-artwork:'.$set->id.':'.sha1($setSignature);
+        $cacheKey = $this->artworkCacheKeyForSet($set, $maxTiles);
 
         return Cache::remember($cacheKey, now()->addDays(7), function () use ($songs): array {
-            return $songs
+            $tiles = $songs
                 ->map(function ($song): array {
                     $artist = trim((string) $song->artist);
                     $title = trim((string) $song->title);
@@ -44,7 +40,64 @@ class DeezerArtworkLookupService
                 })
                 ->values()
                 ->all();
+
+            return $this->uniqueArtworkTiles($tiles);
         });
+    }
+
+    /**
+     * @param  list<array{url: string|null, label: string}>  $tiles
+     * @return list<array{url: string|null, label: string}>
+     */
+    public function uniqueArtworkTiles(array $tiles): array
+    {
+        $seenUrls = [];
+
+        $uniqueTiles = [];
+
+        foreach ($tiles as $tile) {
+            $url = (string) ($tile['url'] ?? '');
+            $normalizedUrl = trim($url);
+
+            if ($normalizedUrl === '') {
+                $uniqueTiles[] = $tile;
+
+                continue;
+            }
+
+            if (isset($seenUrls[$normalizedUrl])) {
+                continue;
+            }
+
+            $seenUrls[$normalizedUrl] = true;
+            $uniqueTiles[] = $tile;
+        }
+
+        return array_values($uniqueTiles);
+    }
+
+    public function forgetArtworkTilesForSet(Set $set, int $maxTiles = 4): void
+    {
+        $cacheKey = $this->artworkCacheKeyForSet($set, $maxTiles);
+
+        if ($cacheKey !== null) {
+            Cache::forget($cacheKey);
+        }
+    }
+
+    public function artworkCacheKeyForSet(Set $set, int $maxTiles = 4): ?string
+    {
+        $songs = $set->songs->take($maxTiles)->values();
+
+        if ($songs->isEmpty()) {
+            return null;
+        }
+
+        $setSignature = $songs
+            ->map(fn ($song): string => mb_strtolower((string) $song->artist).'|'.mb_strtolower((string) $song->title))
+            ->implode(';');
+
+        return 'deezer:set-artwork:'.$set->id.':'.sha1($setSignature);
     }
 
     private function coverUrlForSong(string $artist, string $title): ?string
