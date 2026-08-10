@@ -88,6 +88,7 @@
     data-set-free-for-all="{{ $set->free_for_all ? '1' : '0' }}"
     data-set-has-attachments="{{ ($set->attachments_count ?? 0) > 0 ? '1' : '0' }}"
     data-set-summary-url="{{ route('sets.summary', $set) }}"
+    data-set-snapshot-url="{{ route('sets.snapshot', $set) }}"
     data-set-body-url="{{ route('sessions.sets.body', [$set->session, $set]) }}"
     class="rounded-xl border {{ $setCardClass }} p-6"
     x-bind:data-set-open="(!setCollapsed).toString()"
@@ -112,6 +113,7 @@
         'freeForAllDraft' => (bool) $set->free_for_all,
         'shareSetUrl' => route('share.set', $set),
         'setDirectUrl' => route('sessions.show', $set->session).'#set-'.$set->id,
+        'setSnapshotUrl' => route('sets.snapshot', $set),
         'songsReorderUrl' => route('songs.reorder', $set),
         'songStoreUrl' => route('songs.store', $set),
         'songRequestStoreUrl' => route('song-requests.store', $set),

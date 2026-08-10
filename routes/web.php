@@ -36,6 +36,7 @@ use App\Http\Controllers\SlotFinderController;
 use App\Http\Controllers\SongController;
 use App\Http\Controllers\SongRequestController;
 use App\Http\Controllers\UserDirectoryController;
+use App\Models\Set;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -225,6 +226,19 @@ Route::middleware('auth')->group(function () {
     Route::post('/slots/{slot}/requests', [SlotAssignmentController::class, 'request'])->name('slot-assignments.request');
     Route::post('/slots/{slot}/proposals', [SlotAssignmentController::class, 'propose'])->name('slot-assignments.propose');
     Route::patch('/slot-assignments/{slotAssignment}/respond', [SlotAssignmentController::class, 'respond'])->name('slot-assignments.respond');
+
+    Route::get('/sets/{set}/snapshot', [SetController::class, 'snapshot'])->name('sets.snapshot');
+
+    if (config('app.debug')) {
+        Route::get('/sets/{set}/snapshot/raw', function (Request $request, Set $set) {
+            $snapshot = app(SetController::class)->snapshot($request, $set);
+
+            return response()->make($snapshot->render(), 200, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'X-Robots-Tag' => 'noindex, nofollow',
+            ]);
+        })->name('sets.snapshot.raw');
+    }
 
     Route::get('/lookups/deezer/artists', [DeezerLookupController::class, 'artists'])->name('lookups.deezer.artists');
     Route::get('/lookups/deezer/tracks', [DeezerLookupController::class, 'tracks'])->name('lookups.deezer.tracks');

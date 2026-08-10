@@ -3,11 +3,8 @@
     <section class="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 text-slate-900 shadow-2xl sm:max-h-[calc(100dvh-3rem)]" role="dialog" aria-modal="true" aria-label="Set snapshot" @click.stop>
         <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6">
             <div>
-                <div class="flex items-center gap-2 text-sky-700">
-                    <x-heroicon-m-photo class="h-5 w-5" aria-hidden="true" />
-                    <span class="text-xs font-semibold uppercase tracking-widest">Set snapshot</span>
-                </div>
-                <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-600">A snapshot of the set right now. Copy it, save it, or share it with the players so everyone has the same chart.</p>
+                <h4 class="text-lg font-semibold text-slate-900">Set Snapshot</h4>
+                <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-600">This is an image of the set for sharing outside of the app!</p>
             </div>
             <button type="button" @click="closeSnapshotModal()" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-400" aria-label="Close set snapshot" title="Close">
                 <x-heroicon-m-x-mark class="h-5 w-5" aria-hidden="true" />

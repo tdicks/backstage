@@ -128,3 +128,66 @@ test('summary endpoint uses You for current user assignee display', function () 
     $response->assertJsonPath('songs.0.slot_map.bass.display', 'You');
     $response->assertJsonPath('songs.0.slot_map.bass.is_current_user', true);
 });
+
+test('snapshot endpoint renders a blade snapshot for png conversion', function () {
+    $owner = User::factory()->create();
+    $performer = User::factory()->create(['name' => 'Actual Performer']);
+
+    [, $set] = createSessionWithSet($owner);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'The Band',
+        'title' => 'The Snapshot',
+        'notes' => null,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'bass',
+        'user_id' => $performer->id,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sets.snapshot', $set))
+        ->assertOk()
+        ->assertSee('data-snapshot-width="468"', false)
+        ->assertSee('viewBox="0 0 64 64"', false)
+        ->assertDontSee('BACKSTAGE')
+        ->assertSee('The Band')
+        ->assertSee('Actual Performer')
+        ->assertSee('background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;', false);
+});
+
+test('debug snapshot route exposes the rendered html source', function () {
+    if (! config('app.debug')) {
+        $this->markTestSkipped('Debug-only route is disabled when app.debug is false.');
+    }
+
+    $owner = User::factory()->create();
+
+    [, $set] = createSessionWithSet($owner);
+
+    $song = Song::query()->create([
+        'set_id' => $set->id,
+        'artist' => 'Debug Artist',
+        'title' => 'Debug Snapshot',
+        'notes' => null,
+    ]);
+
+    Slot::query()->create([
+        'song_id' => $song->id,
+        'name' => 'vocals',
+        'manual_performer_name' => 'Manual Performer',
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('sets.snapshot.raw', $set))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/html; charset=UTF-8')
+        ->assertSee('data-snapshot-width=', false)
+        ->assertSee('viewBox="0 0 64 64"', false)
+        ->assertSee('Manual Performer')
+        ->assertSee('viewBox="0 0 20 20"', false)
+        ->assertSee('data-slot="icon"', false);
+});
