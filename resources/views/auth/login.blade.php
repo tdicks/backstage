@@ -5,9 +5,23 @@
     @if ($socialLoginsEnabled && ($googleSocialLoginsEnabled || $facebookSocialLoginsEnabled))
         <div class="space-y-3">
             @if ($googleSocialLoginsEnabled)
-                <a href="{{ route('social.redirect', 'google') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    {{ __('Continue with Google') }}
-                </a>
+                @push('scripts')
+                <script src="https://accounts.google.com/gsi/client" async></script>
+                @endpush
+
+                <div id="g_id_onload"
+                    data-client_id="{{ config('services.google.client_id') }}"
+                    data-login_uri="{{ route('social.redirect', 'google') }}"
+                    data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                    data-type="standard"
+                    data-size="large"
+                    data-theme="outline"
+                    data-text="sign_in_with"
+                    data-shape="rectangular"
+                    data-logo_alignment="left">
+                </div>
             @endif
             @if ($facebookSocialLoginsEnabled)
                 <a href="{{ route('social.redirect', 'facebook') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">

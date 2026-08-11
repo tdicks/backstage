@@ -39,6 +39,8 @@
                 {{ $slot }}
             </div>
 
+            @stack('scripts')
+
             <footer class="mt-8 text-center text-xs text-slate-400">
                 <p>&copy; {{ date('Y') }} TJD Tech</p>
                 <nav class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2" aria-label="Footer">
