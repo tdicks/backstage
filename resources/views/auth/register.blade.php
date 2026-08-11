@@ -8,7 +8,7 @@
 
                 <div id="g_id_onload"
                     data-client_id="{{ config('services.google.client_id') }}"
-                    data-login_uri="{{ route('social.redirect', 'google') }}"
+                    data-login_uri="{{ route('social.callback', 'google') }}"
                     data-auto_prompt="false">
                 </div>
                 <div class="g_id_signin"
