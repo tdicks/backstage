@@ -77,12 +77,12 @@
                                             </button>
                                         </p>
                                     </div>
-                                    <div class="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+                                    <div class="mt-2 flex flex-wrap gap-2 text-xs">
                                         @foreach ($songGroup['mySlots'] as $slot)
                                             @php
                                                 $slotLabel = $slotOptions[$slot->name] ?? str((string) $slot->name)->replace('_', ' ')->title()->toString();
                                             @endphp
-                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50/90 px-2.5 py-1 text-sky-800">
                                                 <span>{{ $slotLabel }}</span>
                                                 <button
                                                     type="button"
