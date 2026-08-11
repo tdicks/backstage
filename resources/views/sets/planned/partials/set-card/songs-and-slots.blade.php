@@ -85,6 +85,19 @@
     <div class="mt-2 space-y-2" x-show="(set.songs || []).length > 0">
         <template x-for="song in (set.songs || [])" :key="`set-${set.id}-song-${song.id}`">
             <x-sets.presentational.song-card x-data="{ openSongActionMenu: false }" title-expr="`${song.artist} - ${song.title}`" notes-expr="song.notes" notes-show-expr="song.notes">
+                <x-slot:titleSuffix>
+                    <button
+                        type="button"
+                        @click="openAttachmentsForEntity('song', song.id, `Song: ${song.artist} - ${song.title}`, `song-${song.id}`, song.attachments_count)"
+                        x-bind:class="attachmentIconClasses(`song-${song.id}`, song.attachments_count)"
+                        class="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        aria-label="Song attachments"
+                        title="Song attachments"
+                    >
+                        <x-heroicon-m-paper-clip class="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                </x-slot:titleSuffix>
+
                 <x-slot:actions>
                     <div class="relative" x-show="set.can_manage">
                         <button
@@ -124,6 +137,14 @@
                                 <x-heroicon-m-pencil-square class="h-4 w-4" x-bind:class="slotAdminIconClass(set)" aria-hidden="true" />
                                 <x-admin-shield-icon x-show="isAdminManagingOtherSet(set)" x-cloak class="h-4 w-4 text-sky-500" aria-hidden="true" />
                                 <span>Edit Song</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="openSongActionMenu = false; openAttachmentsForEntity('song', song.id, `Song: ${song.artist} - ${song.title}`, `song-${song.id}`, song.attachments_count)"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                            >
+                                <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                                <span>Attachments</span>
                             </button>
 
                         </div>

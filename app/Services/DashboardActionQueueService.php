@@ -193,6 +193,7 @@ class DashboardActionQueueService
             ->whereHas('songs.slots', fn ($query) => $query->where('user_id', $user->id))
             ->withCount('attachments')
             ->with([
+                'owner',
                 'session',
                 'songs' => fn ($songQuery) => $songQuery
                     ->withCount('attachments')

@@ -47,9 +47,13 @@ class PlannedSetController extends Controller
             ->withCount('attachments')
             ->with([
                 'owner:id,name',
-                'songs.slots.user',
-                'songs.slots.assignments.actor:id,name',
-                'songs.slots.assignments.target:id,name',
+                'songs' => fn ($query) => $query
+                    ->withCount('attachments')
+                    ->with([
+                        'slots.user',
+                        'slots.assignments.actor:id,name',
+                        'slots.assignments.target:id,name',
+                    ]),
                 'songRequests' => fn ($query) => $query
                     ->where('status', SongRequest::STATUS_PENDING)
                     ->with(['requester:id,name', 'bandTemplate:id,name', 'jamStandardSong:id,band_template_id'])
@@ -1357,6 +1361,7 @@ class PlannedSetController extends Controller
             'free_for_all' => (bool) $set->free_for_all,
             'song_requests' => (bool) $set->song_requests,
             'signups_open' => (bool) $set->signups_open,
+            'attachments_count' => (int) ($set->attachments_count ?? 0),
             'has_attachments' => ((int) ($set->attachments_count ?? 0)) > 0,
             'owner' => [
                 'id' => $set->owner?->id,
@@ -1437,6 +1442,7 @@ class PlannedSetController extends Controller
     private function toSongPayload(Song $song, ?User $viewer = null): array
     {
         $slotOptions = Slot::options();
+        $attachmentsCount = (int) ($song->attachments_count ?? $song->attachments()->count());
 
         return [
             'id' => $song->id,
@@ -1445,6 +1451,8 @@ class PlannedSetController extends Controller
             'notes' => $song->notes,
             'duration' => $song->duration,
             'source' => $song->source,
+            'attachments_count' => $attachmentsCount,
+            'has_attachments' => $attachmentsCount > 0,
             'slots' => $song->slots
                 ->map(fn (Slot $slot): array => $this->toSlotPayload($slot, $slotOptions, $viewer))
                 ->values()

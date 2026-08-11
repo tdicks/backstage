@@ -180,65 +180,26 @@
                     </span>
                 @endif
 
-                @if ($set->performed)
-                    <span class="inline-flex items-center" title="Performed">
-                        <x-heroicon-m-check-circle class="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                        <span class="sr-only">Performed</span>
-                    </span>
-                @else
-                    <span class="inline-flex items-center" title="Scheduled">
-                        <x-heroicon-m-clock class="h-4 w-4 text-sky-600" aria-hidden="true" />
-                        <span class="sr-only">Scheduled</span>
-                    </span>
-                @endif
-
-                @if (! $set->performed && ! $sessionLocked)
-                    <span class="inline-flex items-center" title="Sign ups {{ $set->signups_open ? 'open' : 'closed' }}">
-                        @if ($set->signups_open)
-                            <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" aria-hidden="true" />
-                            <span class="sr-only">Sign ups open</span>
-                        @else
-                            <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" aria-hidden="true" />
-                            <span class="sr-only">Sign ups closed</span>
-                        @endif
-                    </span>
-                    @if ($set->free_for_all && $set->signups_open)
-                        <span class="inline-flex items-center" title="Free for all mode">
-                            <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
-                            <span class="sr-only">Free for all mode</span>
-                        </span>
-                    @endif
-                @endif
-
-                @if ($set->is_hidden)
-                    <span class="inline-flex items-center" title="Hidden set">
-                        <x-heroicon-m-eye-slash class="h-4 w-4 {{ $setHiddenIconClass }}" aria-hidden="true" />
-                        <span class="sr-only">Hidden set</span>
-                    </span>
-                @endif
-
-                <button
-                    type="button"
-                    x-show="attachmentCount > 0"
-                    x-cloak
-                    @click.stop="openAttachmentsModal()"
-                    class="inline-flex items-center rounded-sm text-slate-500 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    aria-label="Open set attachments"
-                    title="Open set attachments"
-                >
-                    <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
-                    <span class="sr-only">Set has attachments</span>
-                </button>
-
-                @if ($isAdmin && ! $set->performed && ! $sessionLocked)
-                    <span
-                        class="inline-flex items-center"
-                        title="Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled"
-                    >
-                        <span class="h-2.5 w-2.5 rounded-full {{ $healthDotClass }}"></span>
-                        <span class="sr-only">Set health: {{ $filledSlots }}/{{ $totalSlots }} slots filled</span>
-                    </span>
-                @endif
+                <x-sets.status-strip
+                    :status="$set->performed ? 'performed' : 'scheduled'"
+                    :show-signups="! $set->performed && ! $sessionLocked"
+                    :signups-open="$set->signups_open"
+                    :show-free-for-all="! $set->performed && ! $sessionLocked"
+                    :free-for-all="$set->free_for_all && $set->signups_open"
+                    :show-hidden="true"
+                    :hidden="$set->is_hidden"
+                    :hidden-icon-class="$setHiddenIconClass"
+                    :show-attachments="true"
+                    :attachment-button="true"
+                    has-attachments-expr="attachmentCount > 0"
+                    attachment-click="openAttachmentsModal()"
+                    attachment-title="Open set attachments"
+                    attachment-icon-class="text-slate-500"
+                    :show-health="$isAdmin && ! $set->performed && ! $sessionLocked"
+                    :health-dot-class="$healthDotClass"
+                    :health-title="'Set health: '.$filledSlots.'/'.$totalSlots.' slots filled'"
+                    :health-sr-label="'Set health: '.$filledSlots.'/'.$totalSlots.' slots filled'"
+                />
             </div>
             @if ($set->description)
                 <p class="mt-2 text-sm {{ $setDescriptionTextClass }}">{{ $set->description }}</p>

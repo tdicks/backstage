@@ -12,11 +12,17 @@
 <div {{ $attributes->class($wrapperClass) }}>
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0 flex-1">
-            @if ($titleExpr)
-                <p class="text-sm font-semibold text-slate-900" x-text="{{ $titleExpr }}"></p>
-            @else
-                <p class="text-sm font-semibold text-slate-900">{{ $titleText }}</p>
-            @endif
+            <div class="flex items-start gap-1.5">
+                @if ($titleExpr)
+                    <p class="text-sm font-semibold text-slate-900" x-text="{{ $titleExpr }}"></p>
+                @else
+                    <p class="text-sm font-semibold text-slate-900">{{ $titleText }}</p>
+                @endif
+
+                @isset($titleSuffix)
+                    {{ $titleSuffix }}
+                @endisset
+            </div>
 
             @if ($notesExpr)
                 <p class="mt-1 text-xs text-slate-600" @if ($notesShowExpr) x-show="{{ $notesShowExpr }}" x-cloak @endif x-text="{{ $notesExpr }}"></p>

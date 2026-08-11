@@ -49,6 +49,9 @@
             titleLookupUrl: @js(route('lookups.deezer.tracks')),
             attendanceUpdateUrlTemplate: @js(route('sessions.attendance.update', '__SESSION_ID__')),
             scheduleUrlTemplate: @js(route('planned-sets.schedule', '__SET_ID__')),
+            setAttachmentsUrlTemplate: @js(route('sets.attachments.index', '__ID__')),
+            songAttachmentsUrlTemplate: @js(route('songs.attachments.index', '__ID__')),
+            slotAttachmentsUrlTemplate: @js(route('slots.attachments.index', '__ID__')),
         })"
     >
         <div x-show="statusMessage" x-cloak x-transition.opacity class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
@@ -171,5 +174,6 @@
         @include('sets.planned.partials.modal-availability')
         @include('sets.planned.partials.modal-dropout-choice')
         @include('sets.planned.partials.modal-schedule')
+        @include('components.sessions.attachments-modal')
     </div>
 </x-app-layout>

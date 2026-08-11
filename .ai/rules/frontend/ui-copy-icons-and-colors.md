@@ -21,3 +21,9 @@
 - Slot badges and set/session state indicators should match established semantics.
 - For menu/status changes, ensure icon/title/sr-only text remain aligned.
 - Keep state labels consistent between tooltip text and screen-reader text.
+
+## Set Card Spacing Consistency
+- Keep set-card spacing consistent across Find a Slot, Planned Sets, and Practice Plan.
+- Standard set-card outer padding is `p-4`.
+- Standard inner section/card padding is `p-3` unless a specific flow requires denser or looser spacing.
+- Avoid introducing page-specific responsive padding variants on set cards unless there is a clear UX need.

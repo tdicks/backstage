@@ -1,5 +1,8 @@
+import { createDashboardAttachmentState } from './widgetState/dashboardAttachmentState';
+
 export function plannedSetsPage(config) {
 	return {
+		...createDashboardAttachmentState(config),
 		sets: config.initialSets || [],
 		currentUserId: Number(config.currentUserId || 0),
 		currentUserIsAdmin: Boolean(config.currentUserIsAdmin || false),

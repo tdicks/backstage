@@ -17,7 +17,7 @@
     }"
     x-init="collapsed = localStorage.getItem(sessionKey) === '1'"
     x-effect="localStorage.setItem(sessionKey, collapsed ? '1' : '0')"
-    class="rounded-xl border {{ $sessionCardClass }} p-5 sm:p-6"
+    class="rounded-xl border {{ $sessionCardClass }} p-4"
 >
     <div
         class="flex cursor-pointer items-start justify-between gap-4"
@@ -56,7 +56,7 @@
         </a>
     </div>
 
-    <div x-show="!collapsed" x-cloak x-transition class="mt-5 space-y-4">
+    <div x-show="!collapsed" x-cloak x-transition class="mt-4 space-y-4">
         @foreach ($sessionGroup['sets'] as $setGroup)
             @include('slot-finder.partials.set-card', ['session' => $session, 'setGroup' => $setGroup, 'hiddenCardClass' => $hiddenCardClass, 'slotOptions' => $slotOptions])
         @endforeach

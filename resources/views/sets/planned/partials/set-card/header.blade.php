@@ -10,32 +10,24 @@
                 </span>
             </span>
 
-            <span class="inline-flex items-center" title="Planned">
-                <x-heroicon-m-clock class="h-4 w-4 text-slate-400" aria-hidden="true" />
-                <span class="sr-only">Planned</span>
-            </span>
-
-            <span class="inline-flex items-center" x-bind:title="`Sign ups ${set.signups_open ? 'open' : 'closed'}`">
-                <x-heroicon-m-lock-open class="h-4 w-4 text-emerald-700" x-show="set.signups_open" x-cloak aria-hidden="true" />
-                <x-heroicon-m-lock-closed class="h-4 w-4 text-amber-700" x-show="!set.signups_open" x-cloak aria-hidden="true" />
-                <span class="sr-only" x-text="set.signups_open ? 'Sign ups open' : 'Sign ups closed'"></span>
-            </span>
-
-            <span class="inline-flex items-center" x-show="set.free_for_all" x-cloak title="Free for all mode">
-                <x-heroicon-m-fire class="h-4 w-4 text-orange-500" aria-hidden="true" />
-                <span class="sr-only">Free for all mode</span>
-            </span>
-
-            <span class="inline-flex items-center" x-bind:title="set.song_requests ? 'Song requests open' : 'Song requests closed'">
-                <x-heroicon-m-musical-note class="h-4 w-4 text-emerald-700" x-show="set.song_requests" x-cloak aria-hidden="true" />
-                <x-heroicon-m-musical-note class="h-4 w-4 text-slate-400" x-show="!set.song_requests" x-cloak aria-hidden="true" />
-                <span class="sr-only" x-text="set.song_requests ? 'Song requests open' : 'Song requests closed'"></span>
-            </span>
-
-            <span class="inline-flex items-center" x-show="set.is_hidden" x-cloak title="Hidden set">
-                <x-heroicon-m-eye-slash class="h-4 w-4 text-sky-500" aria-hidden="true" />
-                <span class="sr-only">Hidden set</span>
-            </span>
+            <x-sets.status-strip
+                status="planned"
+                :show-signups="true"
+                signups-open-expr="set.signups_open"
+                :show-song-requests="true"
+                song-requests-open-expr="set.song_requests"
+                :show-free-for-all="true"
+                free-for-all-expr="set.free_for_all"
+                :show-hidden="true"
+                hidden-expr="set.is_hidden"
+                :show-attachments="true"
+                :attachment-button="true"
+                has-attachments-expr="true"
+                attachment-click="openAttachmentsForEntity('set', set.id, `Set: ${set.name}`, `set-${set.id}`, set.attachments_count)"
+                attachment-title="Set attachments"
+                attachment-button-class="inline-flex items-center rounded-md p-0.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                attachment-button-class-expr="attachmentIconClasses(`set-${set.id}`, set.attachments_count)"
+            />
         </div>
         <p class="mt-2 text-sm text-slate-700" x-show="set.description" x-text="set.description"></p>
     </div>
@@ -89,6 +81,14 @@
                 <x-heroicon-m-pencil-square class="h-4 w-4" x-bind:class="slotAdminIconClass(set)" aria-hidden="true" />
                 <x-admin-shield-icon x-show="isAdminManagingOtherSet(set)" x-cloak class="h-4 w-4 text-sky-500" aria-hidden="true" />
                 <span>Edit Set</span>
+            </button>
+            <button
+                type="button"
+                @click="openSetActionMenu = false; openAttachmentsForEntity('set', set.id, `Set: ${set.name}`, `set-${set.id}`, set.attachments_count)"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+            >
+                <x-heroicon-m-paper-clip class="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <span>Attachments</span>
             </button>
             <button
                 type="button"
