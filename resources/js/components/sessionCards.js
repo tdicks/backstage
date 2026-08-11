@@ -121,203 +121,64 @@ function canvasBlob(canvas) {
     });
 }
 
-function truncateCanvasText(context, value, maxWidth) {
-    if (context.measureText(value).width <= maxWidth) {
-        return value;
+function renderSnapshotMarkupToBlob(markup, scale = 2) {
+    const template = document.createElement('template');
+    template.innerHTML = markup.trim();
+    const snapshotRoot = template.content.firstElementChild;
+
+    if (!snapshotRoot) {
+        return Promise.reject(new Error('Could not create the set snapshot.'));
     }
 
-    let text = value;
-    while (text.length > 0 && context.measureText(`${text}...`).width > maxWidth) {
-        text = text.slice(0, -1);
+    const width = Number(snapshotRoot.dataset.snapshotWidth || 0);
+    const height = Number(snapshotRoot.dataset.snapshotHeight || 0);
+
+    if (!width || !height) {
+        return Promise.reject(new Error('Could not create the set snapshot.'));
     }
 
-    return `${text}...`;
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+            <foreignObject width="100%" height="100%">
+                ${snapshotRoot.outerHTML}
+            </foreignObject>
+        </svg>
+    `;
+
+    const image = new Image();
+
+    return new Promise((resolve, reject) => {
+        image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = width * scale;
+            canvas.height = height * scale;
+
+            const context = canvas.getContext('2d');
+            context.scale(scale, scale);
+            context.drawImage(image, 0, 0, width, height);
+
+            canvasBlob(canvas).then(resolve).catch(reject);
+        };
+
+        image.onerror = () => reject(new Error('Could not render the set snapshot.'));
+        image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    });
 }
 
-function drawPersonIcon(context, left, top) {
-    context.strokeStyle = '#64748b';
-    context.lineWidth = 1.75;
-    context.beginPath();
-    context.arc(left + 7, top + 5, 3.25, 0, Math.PI * 2);
-    context.moveTo(left + 1.5, top + 15);
-    context.quadraticCurveTo(left + 7, top + 9.5, left + 12.5, top + 15);
-    context.stroke();
-}
-
-function drawCalendarIcon(context, left, top) {
-    context.strokeStyle = '#64748b';
-    context.lineWidth = 1.75;
-    context.strokeRect(left + 1.5, top + 3, 12, 11);
-    context.beginPath();
-    context.moveTo(left + 1.5, top + 7);
-    context.lineTo(left + 13.5, top + 7);
-    context.moveTo(left + 4.5, top + 1);
-    context.lineTo(left + 4.5, top + 5);
-    context.moveTo(left + 10.5, top + 1);
-    context.lineTo(left + 10.5, top + 5);
-    context.stroke();
-}
-
-function drawBackstageLogo(context, right, top) {
-    const size = 28;
-    const left = right - 106;
-    context.strokeStyle = '#0f172a';
-    context.lineWidth = 2;
-    context.beginPath();
-    context.roundRect(left, top, size, size, 7);
-    context.moveTo(left + 8, top + 7);
-    context.lineTo(left + 8, top + 21);
-    context.moveTo(left + 8, top + 7);
-    context.lineTo(left + 16, top + 7);
-    context.quadraticCurveTo(left + 21, top + 7, left + 21, top + 11.5);
-    context.quadraticCurveTo(left + 21, top + 16, left + 16, top + 16);
-    context.lineTo(left + 8, top + 16);
-    context.moveTo(left + 8, top + 16);
-    context.lineTo(left + 16, top + 16);
-    context.quadraticCurveTo(left + 21, top + 16, left + 21, top + 20.5);
-    context.quadraticCurveTo(left + 21, top + 25, left + 16, top + 25);
-    context.lineTo(left + 8, top + 25);
-    context.stroke();
-    context.strokeStyle = '#f59e0b';
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.moveTo(left + 24, top + 3);
-    context.lineTo(left + 24, top + 25);
-    context.stroke();
-    context.fillStyle = '#0f172a';
-    context.font = '700 13px Instrument Sans, sans-serif';
-    context.fillText('Backstage', left + 36, top + 18);
-}
-
-function drawAssignmentPill(context, assignment, left, top, maxWidth) {
-    const isOpen = assignment?.state === 'open';
-    const isAssigned = assignment?.state === 'user';
-    const value = assignment?.display || (isOpen ? 'Open' : '-');
-    const availableTextWidth = maxWidth - 18;
-    const label = truncateCanvasText(context, value, availableTextWidth);
-    const textWidth = context.measureText(label).width;
-    const pillWidth = Math.min(maxWidth, textWidth + 18);
-
-    if (!isAssigned && !isOpen) {
-        context.fillStyle = '#94a3b8';
-        context.fillText(label, left + 10, top + 19);
-        return;
-    }
-
-    if (isOpen) {
-        context.fillStyle = '#fffbeb';
-        context.strokeStyle = '#fcd34d';
-    } else if (assignment.is_manual) {
-        context.fillStyle = '#fff7ed';
-        context.strokeStyle = '#fdba74';
-    } else {
-        context.fillStyle = '#ecfdf5';
-        context.strokeStyle = '#a7f3d0';
-    }
-
-    context.lineWidth = 1;
-    context.beginPath();
-    context.roundRect(left, top, pillWidth, 26, 13);
-    context.fill();
-    context.stroke();
-    context.fillStyle = isOpen ? '#92400e' : assignment.is_manual ? '#9a3412' : '#065f46';
-    context.fillText(label, left + 9, top + 17.5);
-}
-
-async function renderSetSummaryImage(summary, setName, ownerName, sessionDate) {
-    const slots = summary.slot_names ?? [];
-    const songs = summary.songs ?? [];
-    const scale = 2;
-    const padding = 32;
-    const songColumnWidth = 280;
-    const slotColumnWidth = 170;
-    const headerHeight = 108;
-    const tableHeaderHeight = 42;
-    const rowHeight = 56;
-    const footerHeight = 40;
-    const headerPanelTop = 16;
-    const headerPanelHeight = 78;
-    const width = (padding * 2) + songColumnWidth + (slots.length * slotColumnWidth);
-    const height = headerHeight + tableHeaderHeight + Math.max(1, songs.length) * rowHeight + footerHeight;
-    const canvas = document.createElement('canvas');
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-
-    const context = canvas.getContext('2d');
-    context.scale(scale, scale);
-    context.fillStyle = '#e2e8f0';
-    context.fillRect(0, 0, width, height);
-    context.fillStyle = '#0ea5e9';
-    context.fillRect(0, 0, width, 8);
-    context.fillStyle = '#ffffff';
-    context.beginPath();
-    context.roundRect(padding, headerPanelTop, width - (padding * 2), headerPanelHeight, 10);
-    context.fill();
-    context.strokeStyle = '#cbd5e1';
-    context.lineWidth = 1;
-    context.stroke();
-    context.fillStyle = '#0369a1';
-    context.font = '700 10px Instrument Sans, sans-serif';
-    context.fillText('SETLIST', padding + 14, 33);
-    context.fillStyle = '#0f172a';
-    context.font = '700 24px Instrument Sans, sans-serif';
-    context.fillText(setName, padding + 14, 59);
-    drawBackstageLogo(context, width - padding, 26);
-    context.fillStyle = '#475569';
-    context.font = '14px Instrument Sans, sans-serif';
-    drawPersonIcon(context, padding + 14, 69);
-    context.fillText(ownerName, padding + 33, 84);
-    const ownerWidth = context.measureText(ownerName).width;
-    const calendarLeft = padding + 33 + ownerWidth + 22;
-    drawCalendarIcon(context, calendarLeft, 69);
-    context.fillText(sessionDate, calendarLeft + 19, 84);
-
-    const tableTop = headerHeight;
-    context.fillStyle = '#0f172a';
-    context.beginPath();
-    context.roundRect(padding, tableTop, width - (padding * 2), tableHeaderHeight, 8);
-    context.fill();
-    context.font = '700 12px Instrument Sans, sans-serif';
-    context.fillStyle = '#f8fafc';
-    context.fillText('ARTIST / TITLE', padding + 14, tableTop + 26);
-
-    slots.forEach((slot, index) => {
-        const left = padding + songColumnWidth + (index * slotColumnWidth);
-        context.fillText(truncateCanvasText(context, slot.label.toUpperCase(), slotColumnWidth - 24), left + 12, tableTop + 26);
+async function renderSetSummaryImage(summaryUrl) {
+    const response = await fetch(summaryUrl, {
+        headers: {
+            'Accept': 'text/html',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
     });
 
-    const rows = songs.length > 0 ? songs : [{ artist: 'No songs in this set yet.', title: '', slot_map: {} }];
-    rows.forEach((song, rowIndex) => {
-        const top = tableTop + tableHeaderHeight + (rowIndex * rowHeight);
-        context.fillStyle = rowIndex % 2 === 0 ? '#ffffff' : '#f8fafc';
-        context.beginPath();
-        context.roundRect(padding, top + 2, width - (padding * 2), rowHeight - 4, 7);
-        context.fill();
-        context.strokeStyle = '#f1f5f9';
-        context.lineWidth = 1;
-        context.beginPath();
-        context.roundRect(padding, top + 2, width - (padding * 2), rowHeight - 4, 7);
-        context.stroke();
-        context.fillStyle = '#0f172a';
-        context.font = '600 13px Instrument Sans, sans-serif';
-        context.fillText(truncateCanvasText(context, `${song.artist}${song.title ? ` - ${song.title}` : ''}`, songColumnWidth - 26), padding + 14, top + 32);
-        context.font = '600 12px Instrument Sans, sans-serif';
+    if (!response.ok) {
+        throw new Error('Could not load the set snapshot.');
+    }
 
-        slots.forEach((slot, slotIndex) => {
-            const assignment = song.slot_map?.[slot.name];
-            const left = padding + songColumnWidth + (slotIndex * slotColumnWidth);
-            drawAssignmentPill(context, assignment, left + 10, top + 15, slotColumnWidth - 20);
-        });
-    });
-
-    const footerTop = height - footerHeight;
-    context.fillStyle = '#64748b';
-    context.font = '500 11px Instrument Sans, sans-serif';
-    context.textAlign = 'center';
-    context.fillText(window.location.hostname, width / 2, footerTop + 25);
-    context.textAlign = 'start';
-
-    return canvasBlob(canvas);
+    const markup = await response.text();
+    return renderSnapshotMarkupToBlob(markup);
 }
 
 function queueLazySetBody(rootElement, load) {
@@ -1020,19 +881,7 @@ export function sessionSetCard(config) {
             this.summaryImageCopied = false;
 
             try {
-                const response = await fetch(config.setSummaryUrl, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Could not load the set table.');
-                }
-
-                const summary = await response.json();
-                const blob = await renderSetSummaryImage(summary, config.setName, config.ownerName, config.sessionDate);
+                const blob = await renderSetSummaryImage(config.setSnapshotUrl);
 
                 this.closeSnapshotModal();
                 this.snapshotImageBlob = blob;

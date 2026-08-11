@@ -86,6 +86,7 @@
         'freeForAllDraft' => (bool) $set->free_for_all,
         'shareSetUrl' => route('share.set', $set),
         'setDirectUrl' => route('sessions.show', $set->session).'#set-'.$set->id,
+        'setSnapshotUrl' => route('sets.snapshot', $set),
         'songsReorderUrl' => route('songs.reorder', $set),
         'songStoreUrl' => route('songs.store', $set),
         'songRequestStoreUrl' => route('song-requests.store', $set),

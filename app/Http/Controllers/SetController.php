@@ -8,6 +8,7 @@ use App\Models\JamSessionSignIn;
 use App\Models\Set;
 use App\Models\Slot;
 use App\Models\SongRequest;
+use App\Models\User;
 use App\Services\JamSessionAttendanceService;
 use App\Services\NotificationService;
 use App\Support\NotificationTypeCatalog;
@@ -16,9 +17,29 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class SetController extends Controller
 {
+    public function snapshot(Request $request, Set $set): View
+    {
+        $this->authorize('view', $set);
+        $this->authorize('view', $set->session);
+
+        $set->load([
+            'owner:id,name',
+            'session:id,date',
+            'songs.slots.user:id,name',
+        ]);
+
+        return view('sets.snapshot', [
+            'set' => $set,
+            'ownerName' => $set->owner?->name ?? '',
+            'sessionDateLabel' => $set->session?->date?->format('D, M j, Y') ?? '',
+            'summary' => $this->summaryPayload($set, $request->user()),
+        ]);
+    }
+
     public function summary(Set $set): JsonResponse
     {
         $this->authorize('view', $set);
@@ -331,5 +352,96 @@ class SetController extends Controller
     private static function newSetDeferredNotificationCacheKey(Set $set): string
     {
         return 'notifications:set_created:deferred:'.$set->id;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function summaryPayload(Set $set, ?User $viewer = null): array
+    {
+        $viewerId = $viewer?->id;
+
+        $set->loadMissing([
+            'songs.slots.user:id,name',
+        ]);
+
+        $checkedInUserIds = JamSessionSignIn::query()
+            ->where('jam_session_id', $set->jam_session_id)
+            ->pluck('user_id')
+            ->all();
+
+        $slotOptions = Slot::options();
+        $slotNames = collect(array_keys($slotOptions))
+            ->filter(fn (string $slotName) => $set->songs->contains(fn ($song) => $song->slots->contains('name', $slotName)))
+            ->values();
+
+        $songs = $set->songs->map(function ($song) use ($slotNames, $checkedInUserIds, $viewerId) {
+            $slotMap = [];
+
+            foreach ($slotNames as $slotName) {
+                $slot = $song->slots->firstWhere('name', $slotName);
+
+                if (! $slot) {
+                    $slotMap[$slotName] = [
+                        'state' => 'empty',
+                        'display' => '-',
+                        'checked_in' => false,
+                        'is_manual' => false,
+                        'is_current_user' => false,
+                    ];
+
+                    continue;
+                }
+
+                if ($slot->user) {
+                    $isCurrentUser = $slot->user->id === $viewerId;
+
+                    $slotMap[$slotName] = [
+                        'state' => 'user',
+                        'display' => $slot->user->name,
+                        'checked_in' => in_array($slot->user->id, $checkedInUserIds, true),
+                        'is_manual' => false,
+                        'is_current_user' => $isCurrentUser,
+                    ];
+
+                    continue;
+                }
+
+                if (! blank($slot->manual_performer_name)) {
+                    $slotMap[$slotName] = [
+                        'state' => 'user',
+                        'display' => $slot->manual_performer_name,
+                        'checked_in' => false,
+                        'is_manual' => true,
+                        'is_current_user' => false,
+                    ];
+
+                    continue;
+                }
+
+                $slotMap[$slotName] = [
+                    'state' => 'open',
+                    'display' => 'Open',
+                    'checked_in' => false,
+                    'is_manual' => false,
+                    'is_current_user' => false,
+                ];
+            }
+
+            return [
+                'id' => $song->id,
+                'artist' => $song->artist,
+                'title' => $song->title,
+                'slot_map' => $slotMap,
+            ];
+        })->values();
+
+        return [
+            'slot_names' => $slotNames->map(fn (string $name) => [
+                'name' => $name,
+                'label' => $slotOptions[$name] ?? ucfirst(str_replace('_', ' ', $name)),
+            ])->values(),
+            'songs' => $songs,
+        ];
     }
 }
