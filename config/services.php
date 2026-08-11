@@ -22,6 +22,12 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    'social_auth' => [
+        'enabled' => env('ENABLE_SOCIAL_AUTH', false),
+        'google' => env('GOOGLE_SOCIAL_AUTH', false),
+        'facebook' => env('FACEBOOK_SOCIAL_AUTH', false),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

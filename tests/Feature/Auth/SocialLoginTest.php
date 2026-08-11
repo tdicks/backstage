@@ -1,20 +1,17 @@
 <?php
 
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    Setting::query()->create([
-        'key' => 'enable_social_logins',
-        'name' => 'Enable Social Logins',
-        'input_type' => 'checkbox',
-        'value' => '1',
-    ]);
+    Config::set('services.social_auth.enabled', true);
+    Config::set('services.social_auth.google', true);
+    Config::set('services.social_auth.facebook', true);
 });
 
 test('guest can be redirected to a supported social provider', function () {
@@ -87,7 +84,7 @@ test('unsupported social providers are not routed', function () {
 });
 
 test('social login setting hides buttons and blocks provider redirects', function () {
-    Setting::query()->where('key', 'enable_social_logins')->update(['value' => '0']);
+    Config::set('services.social_auth.enabled', false);
 
     $this->get(route('login'))
         ->assertOk()
@@ -98,19 +95,27 @@ test('social login setting hides buttons and blocks provider redirects', functio
         ->assertNotFound();
 });
 
-test('social login buttons and provider redirects require an enabled setting', function () {
-    Setting::query()->where('key', 'enable_social_logins')->delete();
+test('social login buttons and provider redirects respect per-provider config', function () {
+    Config::set('services.social_auth.google', false);
+    Config::set('services.social_auth.facebook', true);
 
     $this->get(route('login'))
         ->assertOk()
         ->assertDontSee('Continue with Google')
-        ->assertDontSee('Continue with Facebook');
+        ->assertSee('Continue with Facebook');
 
     $this->get(route('register'))
         ->assertOk()
         ->assertDontSee('Register with Google')
-        ->assertDontSee('Register with Facebook');
+        ->assertSee('Register with Facebook');
 
     $this->get(route('social.redirect', 'google'))
         ->assertNotFound();
+
+    Socialite::shouldReceive('driver->redirect')
+        ->once()
+        ->andReturn(redirect('https://www.facebook.com'));
+
+    $this->get(route('social.redirect', 'facebook'))
+        ->assertRedirect('https://www.facebook.com');
 });

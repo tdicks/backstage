@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Setting;
 use App\Models\SocialAccount;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -19,16 +18,16 @@ class SocialLoginController extends Controller
 
     public function redirect(string $provider): RedirectResponse
     {
-        $this->abortIfSocialLoginsDisabled();
         $this->abortIfUnsupportedProvider($provider);
+        $this->abortIfSocialLoginsDisabled($provider);
 
         return Socialite::driver($provider)->redirect();
     }
 
     public function callback(string $provider): RedirectResponse
     {
-        $this->abortIfSocialLoginsDisabled();
         $this->abortIfUnsupportedProvider($provider);
+        $this->abortIfSocialLoginsDisabled($provider);
 
         try {
             $socialUser = Socialite::driver($provider)->user();
@@ -94,8 +93,11 @@ class SocialLoginController extends Controller
         abort_unless(in_array($provider, self::PROVIDERS, true), 404);
     }
 
-    private function abortIfSocialLoginsDisabled(): void
+    private function abortIfSocialLoginsDisabled(string $provider): void
     {
-        abort_unless(Setting::enabled('enable_social_logins'), 404);
+        abort_unless(
+            config('services.social_auth.enabled', false) && config("services.social_auth.$provider", false),
+            404
+        );
     }
 }

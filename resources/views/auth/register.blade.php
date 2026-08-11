@@ -1,12 +1,16 @@
 <x-guest-layout>
-    @if ($socialLoginsEnabled)
+    @if ($socialLoginsEnabled && ($googleSocialLoginsEnabled || $facebookSocialLoginsEnabled))
         <div class="space-y-3">
-            <a href="{{ route('social.redirect', 'google') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                {{ __('Register with Google') }}
-            </a>
-            <a href="{{ route('social.redirect', 'facebook') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                {{ __('Register with Facebook') }}
-            </a>
+            @if ($googleSocialLoginsEnabled)
+                <a href="{{ route('social.redirect', 'google') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    {{ __('Register with Google') }}
+                </a>
+            @endif
+            @if ($facebookSocialLoginsEnabled)
+                <a href="{{ route('social.redirect', 'facebook') }}" class="flex w-full items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    {{ __('Register with Facebook') }}
+                </a>
+            @endif
         </div>
 
         <div class="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-500">

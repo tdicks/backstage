@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +24,9 @@ class RegisteredUserController extends Controller
         $returnTo = $request->query('return_to');
 
         return view('auth.register', [
-            'socialLoginsEnabled' => Setting::enabled('enable_social_logins'),
+            'socialLoginsEnabled' => config('services.social_auth.enabled', false),
+            'googleSocialLoginsEnabled' => config('services.social_auth.google', false),
+            'facebookSocialLoginsEnabled' => config('services.social_auth.facebook', false),
             'returnTo' => $this->isJamRegisterReturnUrl($returnTo, $request) ? $returnTo : null,
         ]);
     }
