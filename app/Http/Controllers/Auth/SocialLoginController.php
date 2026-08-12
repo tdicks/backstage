@@ -85,7 +85,7 @@ class SocialLoginController extends Controller
 
         Auth::login($user, remember: true);
 
-        return redirect()->intended(route('my-sets.index', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     private function abortIfUnsupportedProvider(string $provider): void
