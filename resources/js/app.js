@@ -6,6 +6,7 @@ import { slotFinderSongCard, slotFinderSlotCard } from './components/slotFinder'
 import { lazySessionSets } from './components/lazySessionSets';
 import { getStartedQuest } from './components/getStartedQuest';
 import { dashboardActionQueues } from './components/dashboardActionQueues';
+import { dashboardFreshGridstackPersistence, initDashboardFreshGridstackPage } from './components/dashboardFreshGridstackPage';
 import { dashboardLayoutPreviewPage, dashboardPage } from './components/dashboardLayoutPreviewPage';
 import { liveQuickSet } from './components/liveQuickSet';
 import { mySetsLibrary } from './components/mySetsLibrary';
@@ -85,6 +86,7 @@ registerSessionCards(Alpine);
 Alpine.data('lazySessionSets', lazySessionSets);
 Alpine.data('getStartedQuest', getStartedQuest);
 Alpine.data('dashboardActionQueues', dashboardActionQueues);
+Alpine.data('dashboardFreshGridstackPersistence', dashboardFreshGridstackPersistence);
 Alpine.data('dashboardLayoutPreviewPage', dashboardLayoutPreviewPage);
 Alpine.data('dashboardPage', dashboardPage);
 Alpine.data('jamStandardsCatalog', jamStandardsCatalog);
@@ -121,6 +123,8 @@ window.addEventListener('pending-approval-processed', () => {
 window.addEventListener('hashchange', () => window.focusSessionFragmentTarget());
 
 Alpine.start();
+
+initDashboardFreshGridstackPage();
 
 syncPendingTitleFromStores();
 void initFeatureTours();

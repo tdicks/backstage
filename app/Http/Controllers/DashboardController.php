@@ -126,6 +126,11 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function freshGridstack(): View
+    {
+        return view('dashboard.fresh-gridstack');
+    }
+
     public function layoutPreview(Request $request, DashboardActionQueueService $queueService): View
     {
         $user = $request->user();

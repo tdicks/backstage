@@ -70,6 +70,7 @@ Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard/fresh-gridstack', [DashboardController::class, 'freshGridstack'])->name('dashboard.fresh-gridstack');
     Route::get('/dashboard/layout-preview', [DashboardController::class, 'layoutPreview'])->name('dashboard.layout-preview');
     Route::post('/dashboard/layout-preview/widget-order', [DashboardController::class, 'updateLayoutPreviewWidgetOrder'])->name('dashboard.layout-preview.widget-order.update');
     Route::get('/dashboard/action-queues', [DashboardController::class, 'actionQueues'])->name('dashboard.action-queues');

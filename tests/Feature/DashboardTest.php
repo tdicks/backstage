@@ -328,6 +328,14 @@ test('authenticated users can view the dashboard layout preview', function () {
         ->assertSee('Looking around');
 });
 
+test('authenticated users can view the fresh gridstack dashboard page', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard.fresh-gridstack'))
+        ->assertOk();
+});
+
 test('dashboard layout preview hydrates the saved widget order', function () {
     $user = User::factory()->create([
         'dashboard_widget_layouts' => [
