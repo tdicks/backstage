@@ -25,7 +25,7 @@
         <div x-show="busy" x-cloak class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">Refreshing approvals...</div>
 
         <div x-ref="actionQueuesContent">
-            @include('dashboard.layout-preview.widgets.action-inbox', [
+            @include('dashboard.widgets.action-inbox', [
                 'approvalsTotal' => $approvalsTotal,
                 'pendingForUser' => $pendingForUser,
                 'approvalSessions' => $approvalSessions,

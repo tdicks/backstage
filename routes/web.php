@@ -69,10 +69,7 @@ Route::view('/about', 'static.about')->name('about');
 Route::view('/privacy-policy', 'static.privacy')->name('privacy');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/dashboard/fresh-gridstack', [DashboardController::class, 'freshGridstack'])->name('dashboard.fresh-gridstack');
-    Route::get('/dashboard/layout-preview', [DashboardController::class, 'layoutPreview'])->name('dashboard.layout-preview');
-    Route::post('/dashboard/layout-preview/widget-order', [DashboardController::class, 'updateLayoutPreviewWidgetOrder'])->name('dashboard.layout-preview.widget-order.update');
+    Route::get('/dashboard', [DashboardController::class, 'gridstack'])->name('dashboard');
     Route::get('/dashboard/action-queues', [DashboardController::class, 'actionQueues'])->name('dashboard.action-queues');
     Route::post('/dashboard/get-started/dismiss', [DashboardController::class, 'dismissGetStartedQuest'])->name('dashboard.get-started.dismiss');
     Route::post('/feature-tours/state', [FeatureTourStateController::class, 'update'])->name('feature-tours.state.update');

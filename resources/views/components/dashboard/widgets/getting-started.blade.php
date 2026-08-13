@@ -11,7 +11,7 @@
     @endphp
 
     <x-dashboard.widget-card :widget-id="$widgetId" :panel-classes="$panelClasses">
-        @include('dashboard.layout-preview.widgets.getting-started', [
+                @include('dashboard.widgets.getting-started', [
             'getStartedItems' => $context['getStartedItems'] ?? [],
             'allGetStartedItemsCompleted' => $context['allGetStartedItemsCompleted'] ?? false,
         ])

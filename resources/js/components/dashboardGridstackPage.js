@@ -1,6 +1,6 @@
 import { GridStack } from 'gridstack';
 
-const LAYOUT_STORAGE_KEY = 'dashboard.fresh-gridstack.layout.v1';
+const LAYOUT_STORAGE_KEY = 'dashboard.gridstack.layout.v1';
 
 function sanitizeLayout(layout) {
 	if (!Array.isArray(layout)) {
@@ -49,17 +49,17 @@ function serializeGridLayout(grid) {
 		.filter(Boolean);
 }
 
-export function initDashboardFreshGridstackPage() {
-	const roots = Array.from(document.querySelectorAll('[data-dashboard-fresh-gridstack]'));
+export function initDashboardGridstackPage() {
+	const roots = Array.from(document.querySelectorAll('[data-dashboard-gridstack]'));
 
 	for (const root of roots) {
 		if (!(root instanceof HTMLElement)) {
 			continue;
 		}
 
-		const container = root.querySelector('[data-fresh-gridstack-canvas]');
-		const summary = root.querySelector('[data-fresh-gridstack-summary]');
-		const toggleButton = root.querySelector('[data-fresh-gridstack-toggle]');
+		const container = root.querySelector('[data-gridstack-canvas]');
+		const summary = root.querySelector('[data-gridstack-summary]');
+		const toggleButton = root.querySelector('[data-gridstack-toggle]');
 
 		if (!(container instanceof HTMLElement) || !(summary instanceof HTMLElement) || !(toggleButton instanceof HTMLButtonElement)) {
 			continue;
@@ -81,10 +81,10 @@ export function initDashboardFreshGridstackPage() {
 		const applyLayoutMode = () => {
 			grid.enableMove(layoutUnlocked);
 			grid.enableResize(layoutUnlocked);
-			root.classList.toggle('fresh-gridstack-editing', layoutUnlocked);
+			root.classList.toggle('dashboard-gridstack-editing', layoutUnlocked);
 			summary.textContent = layoutUnlocked
-				? 'Layout unlocked: drag and resize placeholders.'
-				: 'Layout locked: click Unlock layout to move placeholders.';
+				? 'Layout unlocked: drag and resize widgets.'
+				: 'Layout locked: click Unlock layout to move widgets.';
 			toggleButton.textContent = layoutUnlocked ? 'Lock layout' : 'Unlock layout';
 		};
 
@@ -95,7 +95,7 @@ export function initDashboardFreshGridstackPage() {
 
 			persistTimer = window.setTimeout(() => {
 				const layout = serializeGridLayout(grid);
-				root.dispatchEvent(new CustomEvent('fresh-gridstack:layout-changed', {
+				root.dispatchEvent(new CustomEvent('dashboard-gridstack:layout-changed', {
 					detail: { layout },
 				}));
 			}, 120);
@@ -137,7 +137,7 @@ export function initDashboardFreshGridstackPage() {
 	}
 }
 
-export function dashboardFreshGridstackPersistence() {
+export function dashboardGridstackPersistence() {
 	return {
 		initialLayoutJson: '[]',
 		init() {
@@ -149,7 +149,7 @@ export function dashboardFreshGridstackPersistence() {
 				this.initialLayoutJson = '[]';
 			}
 
-			this.$el.addEventListener('fresh-gridstack:layout-changed', (event) => {
+			this.$el.addEventListener('dashboard-gridstack:layout-changed', (event) => {
 				const layout = sanitizeLayout(event.detail?.layout ?? []);
 				window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
 			});
