@@ -23,6 +23,8 @@ class Setting extends Model
         'color',
     ];
 
+    public const DASHBOARD_DEFAULT_WIDGET_LAYOUT_KEY = 'dashboard.default_widget_layout';
+
     public function isEnabled(): bool
     {
         return filter_var($this->value, FILTER_VALIDATE_BOOL);

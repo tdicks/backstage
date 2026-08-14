@@ -9,6 +9,7 @@ import {
 	isDisplayed,
 	setRichTextWithIcons,
 	resolveAnchorReference,
+	getTriggerMode,
 	unionRect,
 	drawConnectorBetweenRects,
 	drawConnectorForSide,
@@ -468,10 +469,20 @@ export class FeatureTourRunner {
 		this.backButton.textContent = 'Back';
 		this.backButton.addEventListener('click', () => this.back());
 
+		this.skipButton = document.createElement('button');
+		this.skipButton.type = 'button';
+		this.skipButton.className = 'feature-tour-button feature-tour-button-secondary feature-tour-button-skip';
+		this.skipButton.textContent = 'Skip';
+		this.skipButton.addEventListener('click', () => this.finish({ markComplete: true }));
+
 		this.nextButton = document.createElement('button');
 		this.nextButton.type = 'button';
 		this.nextButton.className = 'feature-tour-button feature-tour-button-primary';
 		this.nextButton.addEventListener('click', () => this.next());
+
+		if (getTriggerMode(this.tour) === 'auto') {
+			this.actionsWrap.appendChild(this.skipButton);
+		}
 
 		this.actionsWrap.append(this.backButton, this.nextButton);
 		this.panel.append(this.closeButton, this.stepLabel, this.title, this.body, this.actionsWrap);

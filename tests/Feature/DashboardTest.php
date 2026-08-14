@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -73,6 +74,44 @@ test('dashboard loads initial layout from the user profile', function () {
         ->assertSee('"h":4', false);
 });
 
+test('dashboard uses the captured default layout when the user has no saved layout', function () {
+    Setting::query()->create([
+        'key' => Setting::DASHBOARD_DEFAULT_WIDGET_LAYOUT_KEY,
+        'name' => 'Default dashboard layout',
+        'input_type' => 'textarea',
+        'value' => json_encode([
+            ['id' => 'quick-moves', 'x' => 3, 'y' => 2, 'w' => 5, 'h' => 2],
+        ], JSON_THROW_ON_ERROR),
+    ]);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('"quick-moves","x":3,"y":2,"w":5,"h":2', false);
+});
+
+test('dashboard keeps a user saved layout instead of the captured default', function () {
+    Setting::query()->create([
+        'key' => Setting::DASHBOARD_DEFAULT_WIDGET_LAYOUT_KEY,
+        'name' => 'Default dashboard layout',
+        'input_type' => 'textarea',
+        'value' => json_encode([
+            ['id' => 'quick-moves', 'x' => 3, 'y' => 2, 'w' => 5, 'h' => 2],
+        ], JSON_THROW_ON_ERROR),
+    ]);
+    $user = User::factory()->create([
+        'dashboard_widget_layouts' => [
+            ['id' => 'quick-moves', 'x' => 1, 'y' => 4, 'w' => 6, 'h' => 2],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('"quick-moves","x":1,"y":4,"w":6,"h":2', false)
+        ->assertDontSee('"quick-moves","x":3,"y":2,"w":5,"h":2', false);
+});
 test('dashboard layout updates are saved to the authenticated user profile', function () {
     $user = User::factory()->create();
 

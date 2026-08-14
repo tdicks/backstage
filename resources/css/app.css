@@ -310,6 +310,10 @@
     background: rgb(51 65 85);
 }
 
+.feature-tour-button-skip {
+    margin-right: auto;
+}
+
 .feature-tour-button:disabled {
     cursor: not-allowed;
     opacity: 0.55;

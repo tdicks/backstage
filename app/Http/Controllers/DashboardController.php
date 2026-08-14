@@ -6,6 +6,7 @@ use App\Models\BandTemplate;
 use App\Models\JamSession;
 use App\Models\JamSessionAttendance;
 use App\Models\Set;
+use App\Models\Setting;
 use App\Models\Slot;
 use App\Models\SlotType;
 use App\Models\User;
@@ -133,7 +134,7 @@ class DashboardController extends Controller
         return view('dashboard.gridstack', [
             'widgetCatalog' => $widgets,
             'enabledWidgetIds' => $enabledWidgetIds,
-            'initialWidgetLayout' => $this->normalizeDashboardWidgetLayout($user->dashboard_widget_layouts ?? [], $enabledWidgetIds),
+            'initialWidgetLayout' => $this->normalizeDashboardWidgetLayout($this->dashboardWidgetLayoutFor($user), $enabledWidgetIds),
             'showGetStartedQuest' => $showGetStartedQuest,
             'getStartedItems' => $getStartedItems,
             'allGetStartedItemsCompleted' => $allGetStartedItemsCompleted,
@@ -256,5 +257,27 @@ class DashboardController extends Controller
         }
 
         return array_values($normalized);
+    }
+
+    /**
+     * @return list<array{id: string, x: int, y: int, w: int, h: int}>
+     */
+    private function dashboardWidgetLayoutFor(User $user): array
+    {
+        if (is_array($user->dashboard_widget_layouts) && $user->dashboard_widget_layouts !== []) {
+            return $user->dashboard_widget_layouts;
+        }
+
+        $defaultLayout = Setting::query()
+            ->where('key', Setting::DASHBOARD_DEFAULT_WIDGET_LAYOUT_KEY)
+            ->value('value');
+
+        if (! is_string($defaultLayout)) {
+            return [];
+        }
+
+        $decodedLayout = json_decode($defaultLayout, true);
+
+        return is_array($decodedLayout) ? $decodedLayout : [];
     }
 }
