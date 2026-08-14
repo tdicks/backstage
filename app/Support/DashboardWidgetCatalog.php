@@ -2,138 +2,79 @@
 
 namespace App\Support;
 
+use App\Models\User;
+use App\Support\DashboardWidgets\DashboardWidget;
+use App\Support\DashboardWidgets\DashboardWidgetContext;
+use App\Support\DashboardWidgets\GetStartedDashboardWidget;
+
 final class DashboardWidgetCatalog
 {
     /**
-     * @var list<array{
-     *     id: string,
-     *     label: string,
-     *     component: string,
-     *     defaults: array{order: int, size: int, height: int, column: int, row: int}
-     * }>
+     * @return list<array{id: string, label: string}>
      */
-    private const PREVIEW_WIDGETS = [
-        [
-            'id' => 'getting-started',
-            'label' => 'Getting started',
-            'component' => 'dashboard.widgets.getting-started',
-            'defaults' => ['order' => 0, 'size' => 2, 'height' => 2, 'column' => 1, 'row' => 1],
-        ],
-        [
-            'id' => 'action-inbox',
-            'label' => 'Action inbox',
-            'component' => 'dashboard.widgets.action-inbox',
-            'defaults' => ['order' => 1, 'size' => 2, 'height' => 2, 'column' => 1, 'row' => 3],
-        ],
-        [
-            'id' => 'right-now',
-            'label' => 'Right now',
-            'component' => 'dashboard.widgets.right-now',
-            'defaults' => ['order' => 2, 'size' => 2, 'height' => 3, 'column' => 1, 'row' => 5],
-        ],
-        [
-            'id' => 'coming-up',
-            'label' => 'Coming up',
-            'component' => 'dashboard.widgets.coming-up',
-            'defaults' => ['order' => 3, 'size' => 3, 'height' => 2, 'column' => 1, 'row' => 8],
-        ],
-        [
-            'id' => 'quick-moves',
-            'label' => 'Quick moves',
-            'component' => 'dashboard.widgets.quick-moves',
-            'defaults' => ['order' => 4, 'size' => 1, 'height' => 2, 'column' => 3, 'row' => 1],
-        ],
-        [
-            'id' => 'looking-around',
-            'label' => 'Looking around',
-            'component' => 'dashboard.widgets.looking-around',
-            'defaults' => ['order' => 5, 'size' => 1, 'height' => 2, 'column' => 3, 'row' => 3],
-        ],
-    ];
-
-    /**
-     * @return list<array{
-     *     id: string,
-     *     label: string,
-     *     component: string,
-     *     defaults: array{order: int, size: int, height: int, column: int, row: int}
-     * }>
-     */
-    public static function previewDefinitions(): array
+    public function forContext(DashboardWidgetContext $context): array
     {
-        return self::PREVIEW_WIDGETS;
-    }
+        $widgets = [];
 
-    /**
-     * @return list<string>
-     */
-    public static function previewWidgetIds(): array
-    {
-        /** @var list<string> $widgetIds */
-        $widgetIds = array_column(self::PREVIEW_WIDGETS, 'id');
+        foreach ($this->definitions() as $definition) {
+            if (! $definition->isVisible($context)) {
+                continue;
+            }
 
-        return $widgetIds;
-    }
-
-    /**
-     * @return list<int>
-     */
-    public static function previewWidgetSizeOptions(): array
-    {
-        return [1, 2, 3];
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    public static function previewDefaultOrderByWidgetId(): array
-    {
-        return self::previewDefaultsByKey('order');
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    public static function previewDefaultSizes(): array
-    {
-        return self::previewDefaultsByKey('size');
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    public static function previewDefaultHeights(): array
-    {
-        return self::previewDefaultsByKey('height');
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    public static function previewDefaultColumns(): array
-    {
-        return self::previewDefaultsByKey('column');
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    public static function previewDefaultRows(): array
-    {
-        return self::previewDefaultsByKey('row');
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private static function previewDefaultsByKey(string $key): array
-    {
-        $values = [];
-
-        foreach (self::PREVIEW_WIDGETS as $widget) {
-            $values[$widget['id']] = $widget['defaults'][$key];
+            $widgets[] = [
+                'id' => $definition->id(),
+                'label' => $definition->label(),
+            ];
         }
 
-        return $values;
+        return $widgets;
+    }
+
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    public function forUser(User $user): array
+    {
+        return $this->forContext(new DashboardWidgetContext($user));
+    }
+
+    /**
+     * @return list<DashboardWidget>
+     */
+    private function definitions(): array
+    {
+        return [
+            new GetStartedDashboardWidget,
+            $this->alwaysVisible('action-inbox', 'Approvals and Requests'),
+            $this->alwaysVisible('coming-up', 'Next jam prep'),
+            $this->alwaysVisible('quick-moves', 'Shortcuts'),
+            $this->alwaysVisible('looking-around', 'Sets that need players'),
+        ];
+    }
+
+    private function alwaysVisible(string $id, string $label): DashboardWidget
+    {
+        return new class($id, $label) implements DashboardWidget
+        {
+            public function __construct(
+                private readonly string $id,
+                private readonly string $label,
+            ) {}
+
+            public function id(): string
+            {
+                return $this->id;
+            }
+
+            public function label(): string
+            {
+                return $this->label;
+            }
+
+            public function isVisible(DashboardWidgetContext $context): bool
+            {
+                return true;
+            }
+        };
     }
 }

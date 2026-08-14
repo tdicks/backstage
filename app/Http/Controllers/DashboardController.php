@@ -10,6 +10,8 @@ use App\Models\Slot;
 use App\Models\SlotType;
 use App\Models\User;
 use App\Services\DashboardActionQueueService;
+use App\Support\DashboardWidgetCatalog;
+use App\Support\DashboardWidgets\DashboardWidgetContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,32 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function saveLayout(Request $request, DashboardWidgetCatalog $widgetCatalog): Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
+        /** @var list<string> $enabledWidgetIds */
+        $enabledWidgetIds = array_column($widgets, 'id');
+
+        $validated = $request->validate([
+            'layout' => ['required', 'array'],
+            'layout.*.id' => ['required', 'string', 'max:100'],
+            'layout.*.x' => ['required', 'integer', 'min:0'],
+            'layout.*.y' => ['required', 'integer', 'min:0'],
+            'layout.*.w' => ['required', 'integer', 'min:1'],
+            'layout.*.h' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $layout = $this->normalizeDashboardWidgetLayout($validated['layout'], $enabledWidgetIds);
+
+        $user->forceFill([
+            'dashboard_widget_layouts' => $layout,
+        ])->save();
+
+        return response()->noContent();
+    }
+
     public function actionQueues(Request $request, DashboardActionQueueService $queueService): JsonResponse
     {
         $queueData = $queueService->queuesForUser($request->user());
@@ -52,10 +80,13 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function gridstack(Request $request, DashboardActionQueueService $queueService): View
+    public function gridstack(Request $request, DashboardActionQueueService $queueService, DashboardWidgetCatalog $widgetCatalog): View
     {
         /** @var User $user */
         $user = $request->user();
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
+        /** @var list<string> $enabledWidgetIds */
+        $enabledWidgetIds = array_column($widgets, 'id');
         [$showGetStartedQuest, $getStartedItems, $allGetStartedItemsCompleted] = $this->getStartedQuestData($user);
         $queueData = $queueService->queuesForUser($user);
         $bandTemplates = BandTemplate::query()
@@ -100,6 +131,9 @@ class DashboardController extends Controller
             : collect();
 
         return view('dashboard.gridstack', [
+            'widgetCatalog' => $widgets,
+            'enabledWidgetIds' => $enabledWidgetIds,
+            'initialWidgetLayout' => $this->normalizeDashboardWidgetLayout($user->dashboard_widget_layouts ?? [], $enabledWidgetIds),
             'showGetStartedQuest' => $showGetStartedQuest,
             'getStartedItems' => $getStartedItems,
             'allGetStartedItemsCompleted' => $allGetStartedItemsCompleted,
@@ -186,5 +220,41 @@ class DashboardController extends Controller
         }
 
         return [$showGetStartedQuest, $getStartedItems, $allGetStartedItemsCompleted];
+    }
+
+    /**
+     * @param  list<string>  $enabledWidgetIds
+     * @return list<array{id: string, x: int, y: int, w: int, h: int}>
+     */
+    private function normalizeDashboardWidgetLayout(mixed $layout, array $enabledWidgetIds): array
+    {
+        if (! is_array($layout)) {
+            return [];
+        }
+
+        $allowedIds = array_fill_keys($enabledWidgetIds, true);
+        $normalized = [];
+
+        foreach ($layout as $node) {
+            $id = is_array($node) && is_string($node['id'] ?? null) ? $node['id'] : null;
+            if (! $id || ! isset($allowedIds[$id]) || isset($normalized[$id])) {
+                continue;
+            }
+
+            $x = max(0, (int) ($node['x'] ?? 0));
+            $y = max(0, (int) ($node['y'] ?? 0));
+            $w = max(1, (int) ($node['w'] ?? 1));
+            $h = max(1, (int) ($node['h'] ?? 1));
+
+            $normalized[$id] = [
+                'id' => $id,
+                'x' => $x,
+                'y' => $y,
+                'w' => $w,
+                'h' => $h,
+            ];
+        }
+
+        return array_values($normalized);
     }
 }
