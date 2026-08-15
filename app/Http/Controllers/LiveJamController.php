@@ -142,7 +142,6 @@ class LiveJamController extends Controller
             && ! (clone $visibleSets)->where('performed', false)->exists();
 
         $sets = $visibleSets
-            ->where('performed', false)
             ->withCount('attachments')
             ->with([
                 'owner',
@@ -167,7 +166,7 @@ class LiveJamController extends Controller
 
         $setsData = $sets->map(function ($set) use ($liveState, $slotOptions, $checkedInUserIds): array {
             $stateEntry = collect($liveState['sets'] ?? [])->firstWhere('set_id', $set->id);
-            $status = $stateEntry['status'] ?? 'pending';
+            $status = $stateEntry['status'] ?? ($set->performed ? 'finished' : 'pending');
             $order = $stateEntry['order'] ?? $set->position;
             $songsCollapsed = (bool) ($stateEntry['songs_collapsed'] ?? false);
             $completedSongIds = collect($stateEntry['completed_song_ids'] ?? [])

@@ -83,6 +83,7 @@ export function initDashboardGridstackPage() {
 		let persistTimer = null;
 		let saveLayoutTimer = null;
 		let saveLayoutController = null;
+		let desktopLayout = [];
 		const hiddenWidgets = new Set();
 		const widgetPositions = new Map();
 		const widgetElements = new Map();
@@ -290,6 +291,10 @@ export function initDashboardGridstackPage() {
 		};
 
 		const persistLayout = () => {
+			if (grid.getColumn() !== 12) {
+				return;
+			}
+
 			if (persistTimer) {
 				window.clearTimeout(persistTimer);
 			}
@@ -351,6 +356,35 @@ export function initDashboardGridstackPage() {
 			}
 		}
 
+		const mobileLayoutMedia = window.matchMedia('(max-width: 767px)');
+		const applyResponsiveLayout = () => {
+			if (mobileLayoutMedia.matches) {
+				if (grid.getColumn() === 12) {
+					desktopLayout = serializeGridLayout(grid);
+					grid.column(1, 'list');
+				}
+
+				return;
+			}
+
+			if (grid.getColumn() !== 1) {
+				return;
+			}
+
+			grid.column(12, 'none');
+			grid.batchUpdate();
+
+			for (const node of desktopLayout) {
+				const widget = findWidgetElement(node.id);
+
+				if (widget instanceof HTMLElement) {
+					grid.update(widget, node);
+				}
+			}
+
+			grid.batchUpdate(false);
+		};
+
 		applyVisibilityMap(readStoredVisibility());
 
 		if (toggleButton instanceof HTMLElement) {
@@ -385,6 +419,10 @@ export function initDashboardGridstackPage() {
 		grid.on('resizestop', persistLayout);
 		grid.on('change', persistLayout);
 		grid.on('change', () => {
+			if (grid.getColumn() !== 12) {
+				return;
+			}
+
 			for (const node of serializeGridLayout(grid)) {
 				widgetPositions.set(node.id, {
 					x: node.x,
@@ -395,6 +433,10 @@ export function initDashboardGridstackPage() {
 			}
 		});
 		container.addEventListener('pointerup', persistLayout, true);
+
+		desktopLayout = serializeGridLayout(grid);
+		mobileLayoutMedia.addEventListener('change', applyResponsiveLayout);
+		applyResponsiveLayout();
 
 		applyLayoutMode();
 		updateWidgetHiddenFlags();

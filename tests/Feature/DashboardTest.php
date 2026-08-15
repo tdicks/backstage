@@ -72,6 +72,7 @@ test('dashboard shows the live session widget for a visible live session', funct
         ->assertSee('gs-id="live-session"', false)
         ->assertSee('Live now')
         ->assertSee($liveSession->name)
+        ->assertDontSee('@js(route(\'sessions.live.data\'', false)
         ->assertSee(route('sessions.live.dashboard', $liveSession), false);
 });
 

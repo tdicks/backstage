@@ -117,7 +117,7 @@ it('persists state to cache and returns it', function () {
     expect($pendingSet['order'])->toBe(2);
 });
 
-test('live data excludes performed sets', function () {
+test('live data includes performed sets as finished', function () {
     $performedSet = Set::create([
         'jam_session_id' => $this->jamSession->id,
         'name' => 'Performed Set',
@@ -139,9 +139,11 @@ test('live data excludes performed sets', function () {
     $response->assertOk();
 
     $returnedIds = collect($response->json('sets'))->pluck('id');
+    $returnedPerformedSet = collect($response->json('sets'))->firstWhere('id', $performedSet->id);
 
     expect($returnedIds)->toContain($upcomingSet->id)
-        ->and($returnedIds)->not->toContain($performedSet->id)
+        ->and($returnedIds)->toContain($performedSet->id)
+        ->and($returnedPerformedSet['status'])->toBe('finished')
         ->and($response->json('jam_finished'))->toBeFalse();
 });
 
@@ -157,7 +159,8 @@ test('live data identifies a jam as finished once every visible set is performed
     $response = $this->getJson("/sessions/{$this->jamSession->routeSlug()}/live/data");
 
     $response->assertOk()
-        ->assertJsonPath('sets', [])
+        ->assertJsonPath('sets.0.id', 1)
+        ->assertJsonPath('sets.0.status', 'finished')
         ->assertJsonPath('jam_finished', true);
 });
 
