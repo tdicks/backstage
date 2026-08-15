@@ -2,6 +2,7 @@
     panel-classes="border-slate-800 bg-slate-900/95"
     scroll-theme="dark"
     icon-frame-classes="border-emerald-700 bg-emerald-950 text-emerald-300"
+    class="min-h-[24rem]"
     :x-data="'dashboardLiveSession({ dataUrl: '.json_encode(route('sessions.live.data', $liveSession)).' })'"
     x-init="init()"
 >

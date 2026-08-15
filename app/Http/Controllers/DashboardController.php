@@ -26,9 +26,7 @@ class DashboardController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user, [
-            'live_session' => $this->liveSessionFor($user),
-        ]));
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
         /** @var list<string> $enabledWidgetIds */
         $enabledWidgetIds = array_column($widgets, 'id');
 
@@ -88,9 +86,7 @@ class DashboardController extends Controller
         /** @var User $user */
         $user = $request->user();
         $liveSession = $this->liveSessionFor($user);
-        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user, [
-            'live_session' => $liveSession,
-        ]));
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
         /** @var list<string> $enabledWidgetIds */
         $enabledWidgetIds = array_column($widgets, 'id');
         [$showGetStartedQuest, $getStartedItems, $allGetStartedItemsCompleted] = $this->getStartedQuestData($user);

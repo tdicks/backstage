@@ -69,7 +69,8 @@ test('dashboard shows the live session widget for a visible live session', funct
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('gs-id="live-session"', false)
+        ->assertSee('data-live-session-widget', false)
+        ->assertDontSee('gs-id="live-session"', false)
         ->assertSee('Live now')
         ->assertSee($liveSession->name)
         ->assertDontSee('@js(route(\'sessions.live.data\'', false)
@@ -88,6 +89,7 @@ test('dashboard excludes the live session widget when no visible session is live
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
+        ->assertDontSee('data-live-session-widget', false)
         ->assertDontSee('gs-id="live-session"', false);
 });
 
@@ -166,7 +168,7 @@ test('dashboard layout updates are saved to the authenticated user profile', fun
     expect($user->dashboard_widget_layouts)->toBe($payload['layout']);
 });
 
-test('dashboard layout saves the live session widget position while a live session is visible', function () {
+test('dashboard layout ignores the live session panel while a live session is visible', function () {
     $user = User::factory()->create();
     JamSession::query()->create([
         'name' => 'Friday Live Jam',
@@ -176,6 +178,7 @@ test('dashboard layout saves the live session widget position while a live sessi
     $payload = [
         'layout' => [
             ['id' => 'live-session', 'x' => 5, 'y' => 2, 'w' => 4, 'h' => 3],
+            ['id' => 'action-inbox', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
         ],
     ];
 
@@ -183,5 +186,7 @@ test('dashboard layout saves the live session widget position while a live sessi
         ->postJson(route('dashboard.layout.save'), $payload)
         ->assertNoContent();
 
-    expect($user->refresh()->dashboard_widget_layouts)->toBe($payload['layout']);
+    expect($user->refresh()->dashboard_widget_layouts)->toBe([
+        ['id' => 'action-inbox', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 3],
+    ]);
 });

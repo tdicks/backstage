@@ -1,6 +1,5 @@
 @php
     $enabledWidgets = array_fill_keys($enabledWidgetIds ?? [], true);
-    $showLiveSession = $enabledWidgets['live-session'] ?? false;
 @endphp
 
 <x-app-layout>
@@ -27,17 +26,15 @@
         data-widget-catalog-json='@json($widgetCatalog)'
     >
         <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
-            <section class="grid-stack dashboard-gridstack" data-gridstack-canvas>
-                @if ($enabledWidgets['live-session'] ?? false)
-                <div class="grid-stack-item" gs-id="live-session" gs-x="0" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('live-session')">
-                    <div class="grid-stack-item-content relative">
-                        @include('dashboard.widgets.live-session', ['liveSession' => $liveSession])
-                    </div>
-                </div>
-                @endif
+            @if ($liveSession)
+                <section data-live-session-widget>
+                    @include('dashboard.widgets.live-session', ['liveSession' => $liveSession])
+                </section>
+            @endif
 
+            <section class="grid-stack dashboard-gridstack" data-gridstack-canvas>
                 @if ($enabledWidgets['getting-started'] ?? false)
-                <div class="grid-stack-item" gs-id="getting-started" gs-x="{{ $showLiveSession ? 4 : 0 }}" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('getting-started')">
+                <div class="grid-stack-item" gs-id="getting-started" gs-x="0" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('getting-started')">
                     <div class="grid-stack-item-content relative">
                         @if ($showGetStartedQuest)
                             @include('dashboard.widgets.getting-started', [
@@ -59,7 +56,7 @@
                 @endif
 
                 @if ($enabledWidgets['action-inbox'] ?? false)
-                <div class="grid-stack-item" gs-id="action-inbox" gs-x="{{ $showLiveSession ? 8 : 4 }}" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('action-inbox')">
+                <div class="grid-stack-item" gs-id="action-inbox" gs-x="4" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('action-inbox')">
                     <div class="grid-stack-item-content relative">
                         <div
                             x-data="dashboardActionQueues({ refreshUrl: @js(route('dashboard.action-queues')), htmlKey: 'widget_html' })"
@@ -88,7 +85,7 @@
                 @endif
 
                 @if ($enabledWidgets['coming-up'] ?? false)
-                <div class="grid-stack-item" gs-id="coming-up" gs-x="{{ $showLiveSession ? 0 : 8 }}" gs-y="{{ $showLiveSession ? 3 : 0 }}" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('coming-up')">
+                <div class="grid-stack-item" gs-id="coming-up" gs-x="8" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('coming-up')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.coming-up', [
                             'nextNonLiveSession' => $nextNonLiveSession,
@@ -100,7 +97,7 @@
                 @endif
 
                 @if ($enabledWidgets['quick-moves'] ?? false)
-                <div class="grid-stack-item" gs-id="quick-moves" gs-x="{{ $showLiveSession ? 4 : 0 }}" gs-y="3" gs-w="{{ $showLiveSession ? 4 : 6 }}" gs-h="{{ $showLiveSession ? 3 : 2 }}" x-bind:data-widget-hidden="!isWidgetVisible('quick-moves')">
+                <div class="grid-stack-item" gs-id="quick-moves" gs-x="0" gs-y="3" gs-w="6" gs-h="2" x-bind:data-widget-hidden="!isWidgetVisible('quick-moves')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.quick-moves')
                     </div>
@@ -108,7 +105,7 @@
                 @endif
 
                 @if ($enabledWidgets['looking-around'] ?? false)
-                <div class="grid-stack-item" gs-id="looking-around" gs-x="{{ $showLiveSession ? 8 : 6 }}" gs-y="3" gs-w="{{ $showLiveSession ? 4 : 6 }}" gs-h="{{ $showLiveSession ? 3 : 2 }}" x-bind:data-widget-hidden="!isWidgetVisible('looking-around')">
+                <div class="grid-stack-item" gs-id="looking-around" gs-x="6" gs-y="3" gs-w="6" gs-h="2" x-bind:data-widget-hidden="!isWidgetVisible('looking-around')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.looking-around')
                     </div>

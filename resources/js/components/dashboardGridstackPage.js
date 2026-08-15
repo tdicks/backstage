@@ -73,7 +73,7 @@ export function initDashboardGridstackPage() {
 			column: 12,
 			margin: 16,
 			cellHeight: 90,
-			float: true,
+			float: false,
 			animate: true,
 			disableDrag: true,
 			disableResize: true,
