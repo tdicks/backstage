@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\DashboardWidgets\DashboardWidget;
 use App\Support\DashboardWidgets\DashboardWidgetContext;
 use App\Support\DashboardWidgets\GetStartedDashboardWidget;
+use App\Support\DashboardWidgets\LiveSessionDashboardWidget;
 
 final class DashboardWidgetCatalog
 {
@@ -45,6 +46,7 @@ final class DashboardWidgetCatalog
     {
         return [
             new GetStartedDashboardWidget,
+            new LiveSessionDashboardWidget,
             $this->alwaysVisible('action-inbox', 'Approvals and Requests'),
             $this->alwaysVisible('coming-up', 'Next jam prep'),
             $this->alwaysVisible('quick-moves', 'Shortcuts'),

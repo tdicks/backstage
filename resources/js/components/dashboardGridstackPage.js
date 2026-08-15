@@ -58,9 +58,10 @@ export function initDashboardGridstackPage() {
 		}
 
 		const container = root.querySelector('[data-gridstack-canvas]');
-		const summary = document.querySelector('[data-gridstack-summary]');
 		const toggleButton = document.querySelector('[data-gridstack-toggle]');
 		const widgetsButton = document.querySelector('[data-gridstack-widgets-toggle]');
+		const lockedIcon = toggleButton?.querySelector('[data-gridstack-toggle-locked-icon]');
+		const unlockedIcon = toggleButton?.querySelector('[data-gridstack-toggle-unlocked-icon]');
 		const layoutSaveUrl = root.dataset.layoutSaveUrl || null;
 		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
@@ -275,13 +276,13 @@ export function initDashboardGridstackPage() {
 			if (widgetsButton instanceof HTMLElement) {
 				widgetsButton.classList.toggle('hidden', !layoutUnlocked);
 			}
-			if (summary instanceof HTMLElement) {
-				summary.textContent = layoutUnlocked
-					? 'Layout unlocked: drag and resize widgets.'
-					: 'Layout locked: click Unlock layout to move widgets.';
-			}
 			if (toggleButton instanceof HTMLElement) {
-				toggleButton.textContent = layoutUnlocked ? 'Lock layout' : 'Unlock layout';
+				const label = layoutUnlocked ? 'Lock layout' : 'Unlock layout';
+				toggleButton.setAttribute('aria-label', label);
+				toggleButton.setAttribute('aria-pressed', layoutUnlocked.toString());
+				toggleButton.setAttribute('title', label);
+				lockedIcon?.classList.toggle('hidden', layoutUnlocked);
+				unlockedIcon?.classList.toggle('hidden', !layoutUnlocked);
 			}
 			root.dispatchEvent(new CustomEvent('dashboard-gridstack:mode-changed', {
 				detail: { unlocked: layoutUnlocked },

@@ -11,7 +11,7 @@
     <x-slot:icon>
         <x-heroicon-m-arrow-right-circle class="h-6 w-6" aria-hidden="true" />
     </x-slot:icon>
-    <x-slot:title>Three quick steps</x-slot:title>
+    <x-slot:title>Getting Started</x-slot:title>
     <x-slot:description>Here's three things you can do to get stuck in.</x-slot:description>
 
     <ul class="space-y-2 text-sm text-slate-700">

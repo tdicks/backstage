@@ -1,5 +1,6 @@
 @php
     $enabledWidgets = array_fill_keys($enabledWidgetIds ?? [], true);
+    $showLiveSession = $enabledWidgets['live-session'] ?? false;
 @endphp
 
 <x-app-layout>
@@ -7,10 +8,11 @@
         <div class="flex items-center justify-between gap-3">
             <h2 class="text-xl font-semibold leading-tight text-slate-100">Dashboard</h2>
             <div class="flex items-center gap-3">
-                <p class="hidden text-sm text-slate-300 md:block" data-gridstack-summary>Layout locked: click Unlock layout to move widgets.</p>
-                <x-secondary-button type="button" data-gridstack-toggle>
-                    Unlock layout
-                </x-secondary-button>
+                <button type="button" data-gridstack-toggle aria-label="Unlock layout" aria-pressed="false" title="Unlock layout" class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-100 shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+                    <x-heroicon-m-lock-closed class="h-4 w-4" data-gridstack-toggle-locked-icon aria-hidden="true" />
+                    <x-heroicon-m-lock-open class="hidden h-4 w-4" data-gridstack-toggle-unlocked-icon aria-hidden="true" />
+                    <span class="sr-only">Toggle dashboard layout lock</span>
+                </button>
             </div>
         </div>
     </x-slot>
@@ -26,8 +28,16 @@
     >
         <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
             <section class="grid-stack dashboard-gridstack" data-gridstack-canvas>
+                @if ($enabledWidgets['live-session'] ?? false)
+                <div class="grid-stack-item" gs-id="live-session" gs-x="0" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('live-session')">
+                    <div class="grid-stack-item-content relative">
+                        @include('dashboard.widgets.live-session', ['liveSession' => $liveSession])
+                    </div>
+                </div>
+                @endif
+
                 @if ($enabledWidgets['getting-started'] ?? false)
-                <div class="grid-stack-item" gs-id="getting-started" gs-x="0" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('getting-started')">
+                <div class="grid-stack-item" gs-id="getting-started" gs-x="{{ $showLiveSession ? 4 : 0 }}" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('getting-started')">
                     <div class="grid-stack-item-content relative">
                         @if ($showGetStartedQuest)
                             @include('dashboard.widgets.getting-started', [
@@ -49,7 +59,7 @@
                 @endif
 
                 @if ($enabledWidgets['action-inbox'] ?? false)
-                <div class="grid-stack-item" gs-id="action-inbox" gs-x="4" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('action-inbox')">
+                <div class="grid-stack-item" gs-id="action-inbox" gs-x="{{ $showLiveSession ? 8 : 4 }}" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('action-inbox')">
                     <div class="grid-stack-item-content relative">
                         <div
                             x-data="dashboardActionQueues({ refreshUrl: @js(route('dashboard.action-queues')), htmlKey: 'widget_html' })"
@@ -78,7 +88,7 @@
                 @endif
 
                 @if ($enabledWidgets['coming-up'] ?? false)
-                <div class="grid-stack-item" gs-id="coming-up" gs-x="8" gs-y="0" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('coming-up')">
+                <div class="grid-stack-item" gs-id="coming-up" gs-x="{{ $showLiveSession ? 0 : 8 }}" gs-y="{{ $showLiveSession ? 3 : 0 }}" gs-w="4" gs-h="3" x-bind:data-widget-hidden="!isWidgetVisible('coming-up')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.coming-up', [
                             'nextNonLiveSession' => $nextNonLiveSession,
@@ -90,7 +100,7 @@
                 @endif
 
                 @if ($enabledWidgets['quick-moves'] ?? false)
-                <div class="grid-stack-item" gs-id="quick-moves" gs-x="0" gs-y="3" gs-w="6" gs-h="2" x-bind:data-widget-hidden="!isWidgetVisible('quick-moves')">
+                <div class="grid-stack-item" gs-id="quick-moves" gs-x="{{ $showLiveSession ? 4 : 0 }}" gs-y="3" gs-w="{{ $showLiveSession ? 4 : 6 }}" gs-h="{{ $showLiveSession ? 3 : 2 }}" x-bind:data-widget-hidden="!isWidgetVisible('quick-moves')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.quick-moves')
                     </div>
@@ -98,7 +108,7 @@
                 @endif
 
                 @if ($enabledWidgets['looking-around'] ?? false)
-                <div class="grid-stack-item" gs-id="looking-around" gs-x="6" gs-y="3" gs-w="6" gs-h="2" x-bind:data-widget-hidden="!isWidgetVisible('looking-around')">
+                <div class="grid-stack-item" gs-id="looking-around" gs-x="{{ $showLiveSession ? 8 : 6 }}" gs-y="3" gs-w="{{ $showLiveSession ? 4 : 6 }}" gs-h="{{ $showLiveSession ? 3 : 2 }}" x-bind:data-widget-hidden="!isWidgetVisible('looking-around')">
                     <div class="grid-stack-item-content relative">
                         @include('dashboard.widgets.looking-around')
                     </div>

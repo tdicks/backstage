@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\JamSession;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,8 +37,9 @@ test('authenticated users can view the dashboard gridstack page', function () {
         ->assertSee('Dashboard')
         ->assertSee('data-dashboard-gridstack', false)
         ->assertSee('data-gridstack-canvas', false)
-        ->assertSee('Unlock layout')
-        ->assertSee('Three quick steps')
+        ->assertSee('aria-label="Unlock layout"', false)
+        ->assertSee('data-gridstack-toggle-locked-icon', false)
+        ->assertSee('Getting Started')
         ->assertSee('Approvals and Requests')
         ->assertSee('Shortcuts')
         ->assertSee('Sets that need players');
@@ -54,6 +56,38 @@ test('dashboard hides get started widget when onboarding has been dismissed', fu
         ->assertDontSee('Three quick steps')
         ->assertDontSee('gs-id="getting-started"', false)
         ->assertSee('Approvals and Requests');
+});
+
+test('dashboard shows the live session widget for a visible live session', function () {
+    $user = User::factory()->create();
+    $liveSession = JamSession::query()->create([
+        'name' => 'Friday Live Jam',
+        'date' => now(),
+        'is_live' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('gs-id="live-session"', false)
+        ->assertSee('Live now')
+        ->assertSee($liveSession->name)
+        ->assertSee(route('sessions.live.dashboard', $liveSession), false);
+});
+
+test('dashboard excludes the live session widget when no visible session is live', function () {
+    $user = User::factory()->create();
+    JamSession::query()->create([
+        'name' => 'Hidden Live Jam',
+        'date' => now(),
+        'is_hidden' => true,
+        'is_live' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('gs-id="live-session"', false);
 });
 
 test('dashboard loads initial layout from the user profile', function () {
@@ -129,4 +163,24 @@ test('dashboard layout updates are saved to the authenticated user profile', fun
     $user->refresh();
 
     expect($user->dashboard_widget_layouts)->toBe($payload['layout']);
+});
+
+test('dashboard layout saves the live session widget position while a live session is visible', function () {
+    $user = User::factory()->create();
+    JamSession::query()->create([
+        'name' => 'Friday Live Jam',
+        'date' => now(),
+        'is_live' => true,
+    ]);
+    $payload = [
+        'layout' => [
+            ['id' => 'live-session', 'x' => 5, 'y' => 2, 'w' => 4, 'h' => 3],
+        ],
+    ];
+
+    $this->actingAs($user)
+        ->postJson(route('dashboard.layout.save'), $payload)
+        ->assertNoContent();
+
+    expect($user->refresh()->dashboard_widget_layouts)->toBe($payload['layout']);
 });

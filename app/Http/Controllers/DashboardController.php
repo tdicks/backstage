@@ -26,7 +26,9 @@ class DashboardController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user, [
+            'live_session' => $this->liveSessionFor($user),
+        ]));
         /** @var list<string> $enabledWidgetIds */
         $enabledWidgetIds = array_column($widgets, 'id');
 
@@ -85,7 +87,10 @@ class DashboardController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user));
+        $liveSession = $this->liveSessionFor($user);
+        $widgets = $widgetCatalog->forContext(new DashboardWidgetContext($user, [
+            'live_session' => $liveSession,
+        ]));
         /** @var list<string> $enabledWidgetIds */
         $enabledWidgetIds = array_column($widgets, 'id');
         [$showGetStartedQuest, $getStartedItems, $allGetStartedItemsCompleted] = $this->getStartedQuestData($user);
@@ -135,6 +140,7 @@ class DashboardController extends Controller
             'widgetCatalog' => $widgets,
             'enabledWidgetIds' => $enabledWidgetIds,
             'initialWidgetLayout' => $this->normalizeDashboardWidgetLayout($this->dashboardWidgetLayoutFor($user), $enabledWidgetIds),
+            'liveSession' => $liveSession,
             'showGetStartedQuest' => $showGetStartedQuest,
             'getStartedItems' => $getStartedItems,
             'allGetStartedItemsCompleted' => $allGetStartedItemsCompleted,
@@ -279,5 +285,15 @@ class DashboardController extends Controller
         $decodedLayout = json_decode($defaultLayout, true);
 
         return is_array($decodedLayout) ? $decodedLayout : [];
+    }
+
+    private function liveSessionFor(User $user): ?JamSession
+    {
+        return JamSession::query()
+            ->visibleTo($user)
+            ->where('is_archived', false)
+            ->where('is_live', true)
+            ->orderByDesc('date')
+            ->first();
     }
 }
