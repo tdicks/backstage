@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\JamSession;
+use App\Models\Set;
 use App\Models\Setting;
+use App\Models\SlotAssignment;
+use App\Models\SongRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -56,6 +59,52 @@ test('dashboard hides get started widget when onboarding has been dismissed', fu
         ->assertDontSee('Three quick steps')
         ->assertDontSee('gs-id="getting-started"', false)
         ->assertSee('Approvals and Requests');
+});
+
+test('dashboard groups pending requests for planned sets without a jam session', function () {
+    $owner = User::factory()->create();
+    $requester = User::factory()->create();
+    $set = Set::query()->create([
+        'name' => 'Unscheduled Requests',
+        'owner_id' => $owner->id,
+        'jam_session_id' => null,
+        'lifecycle_state' => Set::LIFECYCLE_DRAFT,
+        'position' => 0,
+    ]);
+    $songRequest = SongRequest::query()->create([
+        'set_id' => $set->id,
+        'requester_user_id' => $requester->id,
+        'artist' => 'Talking Heads',
+        'title' => 'This Must Be the Place',
+        'status' => SongRequest::STATUS_PENDING,
+    ]);
+    $song = $set->songs()->create([
+        'artist' => 'Daft Punk',
+        'title' => 'Get Lucky',
+        'position' => 1,
+    ]);
+    $slot = $song->slots()->create([
+        'name' => 'guitar',
+        'position' => 1,
+    ]);
+    $slotRequest = SlotAssignment::query()->create([
+        'slot_id' => $slot->id,
+        'actor_user_id' => $requester->id,
+        'target_user_id' => $requester->id,
+        'type' => SlotAssignment::TYPE_REQUEST,
+        'status' => SlotAssignment::STATUS_PENDING,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('data-approval-planned-sets', false)
+        ->assertSee('Planned sets')
+        ->assertSee('Unscheduled Requests')
+        ->assertSee('Daft Punk - Get Lucky')
+        ->assertSee(route('planned-sets.index').'#set-'.$set->id, false)
+        ->assertSee(route('planned-sets.song-requests.respond', ['set' => $set, 'songRequest' => $songRequest]), false)
+        ->assertSee(route('planned-sets.slot-assignments.respond', ['set' => $set, 'slotAssignment' => $slotRequest]), false);
 });
 
 test('dashboard shows the live session widget for a visible live session', function () {

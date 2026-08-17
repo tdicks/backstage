@@ -28,14 +28,21 @@
     @php
         $session = $approvalSession['session'];
     @endphp
-    <section data-approval-session-id="{{ $session->id }}" class="{{ $sessionSurfaceClass }}">
+    <section @if ($session) data-approval-session-id="{{ $session->id }}" @else data-approval-planned-sets @endif class="{{ $sessionSurfaceClass }}">
         <div class="{{ $sessionHeaderClass }}">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Jam session</p>
-                <h4 class="mt-1 text-lg font-semibold text-slate-900">
-                    <a href="{{ route('sessions.show', $session) }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $session->name }}</a>
-                </h4>
-                <p class="mt-1 text-sm text-slate-600">{{ $session->date->format('D, M j, Y') }}</p>
+                @if ($session)
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Jam session</p>
+                    <h4 class="mt-1 text-lg font-semibold text-slate-900">
+                        <a href="{{ route('sessions.show', $session) }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $session->name }}</a>
+                    </h4>
+                    <p class="mt-1 text-sm text-slate-600">{{ $session->date->format('D, M j, Y') }}</p>
+                @else
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Unscheduled</p>
+                    <h4 class="mt-1 text-lg font-semibold text-slate-900">
+                        <a href="{{ route('planned-sets.index') }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">Planned sets</a>
+                    </h4>
+                @endif
             </div>
         </div>
 
@@ -43,11 +50,14 @@
             @foreach ($approvalSession['sets'] as $approvalSet)
                 @php
                     $set = $approvalSet['set'];
+                    $setUrl = $session
+                        ? route('sessions.show', $session).'#set-'.$set->id
+                        : route('planned-sets.index').'#set-'.$set->id;
                 @endphp
                 <section data-approval-set-id="{{ $set->id }}" class="{{ $setSurfaceClass }}">
                     <div class="border-b border-slate-200 px-4 py-3">
                         <h5 class="text-base font-semibold text-slate-900">
-                            <a href="{{ route('sessions.show', $set->session) }}#set-{{ $set->id }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $set->name }}</a>
+                            <a href="{{ $setUrl }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $set->name }}</a>
                         </h5>
                         <p class="mt-1 text-sm text-slate-600">{{ $set->owner->name }}</p>
                     </div>
@@ -61,7 +71,7 @@
                                 <div class="flex flex-wrap items-center gap-2">
                                     <x-heroicon-m-musical-note class="h-4 w-4 text-slate-500" aria-hidden="true" />
                                     <h6 class="font-semibold text-slate-900">
-                                        <a href="{{ route('sessions.show', $set->session) }}#song-{{ $song->id }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $song->artist }} - {{ $song->title }}</a>
+                                        <a href="{{ $session ? route('sessions.show', $session).'#song-'.$song->id : $setUrl }}" target="_blank" rel="noopener noreferrer" class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-600">{{ $song->artist }} - {{ $song->title }}</a>
                                     </h6>
                                 </div>
                                 <div class="mt-3 divide-y divide-slate-200">
@@ -71,6 +81,9 @@
                                             $slotLabel = $slotOptions[$approval->slot->name] ?? str($approval->slot->name)->replace('_', ' ')->title();
                                             $isTargetConsent = $item['type'] === 'target_consent';
                                             $isRecommendation = $approval->type === \App\Models\SlotAssignment::TYPE_PROPOSAL;
+                                            $approvalResponseUrl = $session
+                                                ? route('slot-assignments.respond', $approval)
+                                                : route('planned-sets.slot-assignments.respond', ['set' => $set, 'slotAssignment' => $approval]);
                                             $conflictingSlot = \App\Services\SlotCompatibility::conflictingSlotForSlot($approval->target_user_id, $approval->slot);
                                             $conflictingSlotLabel = $conflictingSlot ? ($slotOptions[$conflictingSlot->name] ?? str($conflictingSlot->name)->replace('_', ' ')->title()) : null;
                                         @endphp
@@ -81,7 +94,7 @@
                                                 async respond(status) {
                                                     this.busy = true; this.error = '';
                                                     try {
-                                                        const response = await fetch('{{ route('slot-assignments.respond', $approval) }}', {
+                                                        const response = await fetch('{{ $approvalResponseUrl }}', {
                                                             method: 'POST',
                                                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                                                             body: JSON.stringify({ _method: 'PATCH', status }),
@@ -138,6 +151,9 @@
                         @foreach ($approvalSet['songRequests'] as $item)
                             @php
                                 $songRequest = $item['approval'];
+                                $songRequestResponseUrl = $session
+                                    ? route('song-requests.respond', $songRequest)
+                                    : route('planned-sets.song-requests.respond', ['set' => $set, 'songRequest' => $songRequest]);
                             @endphp
                             <article
                                 class="rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-4"
@@ -207,7 +223,7 @@
                                     async respond(status) {
                                         this.busy = true; this.error = '';
                                         try {
-                                            const response = await fetch('{{ route('song-requests.respond', $songRequest) }}', {
+                                            const response = await fetch('{{ $songRequestResponseUrl }}', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                                                 body: JSON.stringify({ _method: 'PATCH', status, ...(status === 'accepted' && this.canChooseBandTemplate && this.bandTemplateId !== '' ? { band_template_id: Number(this.bandTemplateId) } : {}), ...(status === 'accepted' && this.approvedSlotNames.length > 0 ? { approved_slot_names: [...this.approvedSlotNames] } : {}) }),

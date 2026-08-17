@@ -131,8 +131,8 @@ class DashboardActionQueueService
                 'type' => 'song_request',
                 'approval' => $songRequest,
             ]))
-            ->groupBy(fn (array $item) => $item['session']->id)
-            ->sortBy(fn (Collection $items) => $items->first()['session']->date)
+            ->groupBy(fn (array $item) => $item['session'] ? 'session:'.$item['session']->id : 'planned')
+            ->sortBy(fn (Collection $items) => $items->first()['session']?->date?->timestamp ?? PHP_INT_MAX)
             ->map(function (Collection $sessionItems): array {
                 $session = $sessionItems->first()['session'];
 
