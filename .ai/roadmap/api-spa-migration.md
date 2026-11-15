@@ -58,15 +58,34 @@ work needs are listed in `.ai/roadmap/api-spa-migration-ai-rules-gap-analysis.md
 - A design-token layer that carries over the existing colour semantics (amber = action, emerald =
   success, dark emerald = live, sky = current user, red = error, purple = info).
 - TypeScript types generated from the API (Scramble → OpenAPI → `openapi-typescript`).
-- Tests: Vitest + Testing Library for components, Playwright for end-to-end and multi-user
-  concurrency scenarios.
+- Tests: Vitest + Testing Library for components; Pest browser tests (`pestphp/pest-plugin-browser`,
+  Playwright under the hood) for end-to-end and multi-user concurrency scenarios, written in PHP with
+  the existing factories.
+
+## Approved Dependencies
+Approved on 2026-11-15. Agents may install these when the relevant phase needs them without asking
+again. Anything not on this list still needs approval.
+
+| Package | Ecosystem | Purpose | Phase |
+| --- | --- | --- | --- |
+| `laravel/sanctum` | Composer | SPA cookie authentication for `/api/v1` | 1 |
+| `dedoc/scramble` | Composer (dev) | OpenAPI spec generated from controllers, requests and resources | 1 |
+| `pestphp/pest-plugin-browser` | Composer (dev) | End-to-end and multi-user browser tests in Pest | 1 |
+| `laravel/reverb` | Composer | Self-hosted WebSocket server for broadcasting | 3 |
+| `react`, `react-dom` | npm | UI library | 1 |
+| `typescript`, `@types/react`, `@types/react-dom`, `@vitejs/plugin-react` | npm (dev) | Type checking and JSX build | 1 |
+| `@tanstack/react-query` | npm | Server-state cache, refetching, mutations | 1 |
+| `react-router` (or `@tanstack/react-router`) | npm | Client-side routing; choose one in Phase 1 | 1 |
+| Radix UI primitives + shadcn/ui (and its helpers: `class-variance-authority`, `clsx`, `tailwind-merge`) | npm | Accessible component building blocks styled with Tailwind | 1 |
+| `@heroicons/react` | npm | Icon set matching the current UI | 1 |
+| `openapi-typescript` (and optionally `openapi-fetch`) | npm (dev) | TypeScript types generated from the OpenAPI spec | 1 |
+| `vitest`, `@testing-library/react`, `@testing-library/user-event`, `jsdom` | npm (dev) | Component tests | 1 |
+| `laravel-echo`, `pusher-js` | npm | Client for Reverb channels | 3 |
 
 ## Phases
 
 ### Phase 0: Decisions
-- Approve new dependencies: Sanctum; React, React DOM, TypeScript, TanStack Query, router, Radix /
-  shadcn, Heroicons React, Vitest, Testing Library; later Reverb, Laravel Echo, Scramble,
-  openapi-typescript.
+- ~~Approve new dependencies~~ Approved (2026-11-15). See "Approved Dependencies" below.
 - Confirm SPA source location (`resources/js/spa/`) and URL prefix (`/app`).
 - Confirm location for extracted domain logic (`app/Services` vs. new `app/Actions`).
 - Apply the AI rule changes from the gap analysis before writing feature code.
@@ -80,7 +99,7 @@ work needs are listed in `.ai/roadmap/api-spa-migration-ai-rules-gap-analysis.md
 - Design system: tokens, typography, buttons, modal/dialog, panel, badge, menu, toast, form fields,
   empty/loading/error states.
 - Per-user "Try the new UI" toggle and links between the two UIs for the same entity.
-- Test infrastructure: Pest API test helpers, Vitest config, Playwright project, CI wiring.
+- Test infrastructure: Pest API test helpers, Pest browser plugin, Vitest config, CI wiring.
 - Type generation pipeline.
 
 ### Phase 2: First slice: jam sessions and set cards
@@ -98,7 +117,7 @@ The surface with the most concurrency pain (`SessionController`, `JamSessionCont
 - Install Reverb + Echo, `routes/channels.php` authorization for session/set/user channels.
 - Broadcast events from the domain actions (not controllers) so both UIs trigger them.
 - SPA: subscribe per page, invalidate query keys, presence for "who's here" where useful.
-- Playwright two-browser tests: change in one, visible in the other without reload.
+- Pest browser tests with two users: change in one browser, visible in the other without reload.
 - Optionally point the legacy Alpine polling at the same events to reduce load until cutover.
 
 ### Phase 4: Remaining surfaces
@@ -131,7 +150,7 @@ Each one is a vertical slice: extract logic → API + tests → React page → p
 - While both UIs exist, domain logic lives in shared actions/services, never in only one controller.
 - New features go into the SPA only. The legacy UI gets bug fixes, not features.
 - Each slice ships with API feature tests, component tests for non-trivial UI, and at least one
-  Playwright journey.
+  Pest browser journey.
 - A slice is done when the SPA page reaches parity with the legacy page and the "Try the new UI"
   toggle routes there.
 

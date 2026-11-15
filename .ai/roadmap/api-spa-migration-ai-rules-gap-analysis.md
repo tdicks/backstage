@@ -17,11 +17,11 @@ Status key:
 ### AGENTS.md (Laravel Boost guidelines)
 | Rule | Status | Notes |
 | --- | --- | --- |
-| "Do not change dependencies without approval" | Keep | Phase 0 approval needed for the full dependency list; record the approved list in a rule so agents don't ask per package. |
+| "Do not change dependencies without approval" | Keep | The SPA dependency list was approved on 2026-11-15 and is recorded in the roadmap's "Approved Dependencies" table. Reference that table from a rule so agents don't ask per package. |
 | "Don't create new base folders without approval" | Keep | Satisfied by `resources/js/spa/`. If `app/Actions` is wanted, approve it explicitly. |
 | "APIs: default to Eloquent API Resources and API versioning" | Keep | Now directly relevant; no API exists yet, so this becomes the convention. |
 | Frontend bundling note (`npm run build`) | Adapt | Add type-check (`tsc --noEmit`) and Vitest commands. |
-| Pest test enforcement | Adapt | Still mandatory for PHP; JS changes need Vitest/Playwright equivalents. |
+| Pest test enforcement | Adapt | Still mandatory for PHP; JS changes need Vitest tests; end-to-end flows use Pest browser tests. |
 | Boost package guidelines | Adapt | Re-run `php artisan boost:install` after adding Sanctum/Reverb so package-specific guidance is generated. |
 
 ### .ai/rules/copilot-instructions.md
@@ -36,7 +36,7 @@ Status key:
 | Iconography and colour usage | Keep (Adapt wording) | Semantics carry over unchanged. Change `heroicon-m-*` Blade names to the React import names and the token names. |
 | Style guide for slots, sets, sessions, attachments | Keep (Adapt wording) | Same semantics; express as component props/variants (e.g. `<SlotBadge state="open">`). |
 | Dynamic Content: "Use Alpine.JS to update the page" | Conflict | Replace with: server state via TanStack Query, mutations via API, realtime invalidation. The underlying rule (no full page reloads, modals/inline forms) stays. |
-| Quality gates | Adapt | Add `tsc`, Vitest, Playwright, and API test commands. |
+| Quality gates | Adapt | Add `tsc`, Vitest, Pest browser, and API test commands. |
 | Safety constraints | Keep | |
 | Help page at `resources/views/static/help.blade.php` | Adapt | Phase 5 moves help into the SPA; until then, document new SPA features in the existing help page. |
 
@@ -80,7 +80,7 @@ broadcast on the user's private channel. Popup delivery moves from Blade/Alpine 
 
 ### .ai/rules/workflows/testing-and-validation.md
 Status: **Adapt**. Add commands and an area test matrix for `tests/Feature/Api/**`, Vitest, and
-Playwright. The existing matrix stays for legacy tests until cutover.
+Pest browser tests. The existing matrix stays for legacy tests until cutover.
 
 ### .ai/rules/workflows/feature-tour-targets.md
 Status: **Adapt**. "Define targets in template markup" becomes "define `data-tour` attributes in the
@@ -109,7 +109,7 @@ so agents stop picking up that work.
 | N7 | `frontend/data-fetching.md` | Query key conventions, one API client, generated types only (no hand-written response types), mutation patterns, optimistic updates with rollback, error and loading states. | Phase 1 |
 | N8 | `frontend/design-system.md` | Tokens, the component catalogue (buttons, dialog, panel, badge, menu, toast, form fields), when to add a new primitive vs. compose, Heroicons React mapping, accessibility baseline (focus, labels, keyboard). Replaces the Blade component references in copilot-instructions. | Phase 1 |
 | N9 | `frontend/forms-and-validation.md` | Mapping Laravel 422 errors onto fields, client-side validation limits (server is authoritative), modals vs. inline forms. | Phase 2 |
-| N10 | `workflows/spa-testing.md` | Vitest + Testing Library conventions, Playwright journeys including two-user concurrency tests, test data seeding for e2e, commands and smallest-scope guidance. | Phase 1 |
+| N10 | `workflows/spa-testing.md` | Vitest + Testing Library conventions, Pest browser journeys including two-user concurrency tests, factories/seeding for e2e, commands and smallest-scope guidance. | Phase 1 |
 | N11 | `workflows/migration-dual-running.md` | Legacy UI gets fixes only; new features SPA-only; definition of done for a slice; parity checklist; linking between UIs; redirect map maintenance; how to retire legacy code. | Phase 1 |
 | N12 | `components/spa-dashboard-widgets.md` | Replacement for the gridstack widget contract. | Phase 4 |
 | N13 | `workflows/spa-feature-tours.md` (or update existing) | Tour anchors in React, tour runner integration, validation. | Phase 5 |
@@ -123,7 +123,7 @@ Add path mappings:
 - `app/Services/**` (and `app/Actions/**` if approved) → N4.
 - `resources/js/spa/**` → N6, N7, N8, N9, N10, ui-copy-icons-and-colors, feature tours.
 - `tests/Feature/Api/**` → N1, N3, testing.
-- SPA test paths (Vitest, Playwright) → N10.
+- SPA test paths (Vitest, `tests/Browser/**`) → N10.
 
 Narrow existing mappings:
 - `resources/js/**` → `resources/js/components/**`, `resources/js/stores/**`, `resources/js/utils/**`
